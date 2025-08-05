@@ -1,10 +1,13 @@
 import Airtable from 'airtable';
 
 // Initialize Airtable
-const base = new Airtable({
-  apiKey: process.env.AIRTABLE_API_KEY,
-}).base(process.env.AIRTABLE_BASE_ID!);
+const getBase = () => {
+  return new Airtable({
+    apiKey: process.env.NEXT_PUBLIC_AIRTABLE_API_KEY,
+  }).base(process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID!);
+};
 
+const base = getBase();
 // Types for Airtable data
 export interface Brand {
   id: string;
@@ -199,7 +202,8 @@ export const airtableService = {
       console.log(`✅ Fetched ${records.length} records from Airtable`);
       
       console.log('🔧 Parsing records...');
-      const reviews = records.map((record, index) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const reviews = records.map((record: any, index: number) => {
         try {
           const review = parseReviewRecord(record);
           if (index < 3) { // Log first 3 records for debugging
@@ -214,7 +218,8 @@ export const airtableService = {
           return review;
         } catch (parseError) {
           console.error(`❌ Error parsing record ${index}:`, parseError);
-          console.error('Record fields:', Object.keys(record.fields));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          console.error('Record fields:', Object.keys((record as any).fields));
           throw parseError;
         }
       });

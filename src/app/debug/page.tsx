@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface ApiTestResult {
   endpoint: string;
   status: "loading" | "success" | "error";
-  data?: any;
+  data?: Record<string, string>;
   error?: string;
   timestamp: string;
 }

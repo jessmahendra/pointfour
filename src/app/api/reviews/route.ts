@@ -9,11 +9,12 @@ export async function GET(request: NextRequest) {
     const bodyType = searchParams.get('bodyType');
     const approved = searchParams.get('approved');
 
-    const filters: any = {};
-    if (garmentType) filters.garmentType = garmentType;
+    const filters: Record<string, string> = {};    if (garmentType) filters.garmentType = garmentType;
     if (priceRange) filters.priceRange = priceRange;
     if (bodyType) filters.bodyType = bodyType;
-    if (approved !== null) filters.approved = approved === 'true';
+    if (approved !== null) {
+      filters['approved'] = approved === 'true' ? 'true' : 'false';
+    }
 
     const reviews = await airtableService.getFilteredReviews(filters);
     return NextResponse.json(reviews);

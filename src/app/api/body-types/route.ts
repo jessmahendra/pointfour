@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { airtableService } from '@/lib/airtable';
 
-export async function GET(request: NextRequest) {
-  try {
+export async function GET() {  try {
     const bodyTypes = await airtableService.getBodyTypes();
     return NextResponse.json(bodyTypes);
   } catch (error) {
