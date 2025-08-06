@@ -16,8 +16,13 @@ export async function GET(request: NextRequest) {
       filters['approved'] = approved === 'true' ? 'true' : 'false';
     }
 
-    const reviews = await airtableService.getFilteredReviews(filters);
-    return NextResponse.json(reviews);
+    const reviews = await airtableService.getReviews();
+    const filteredReviews = reviews.filter(review => {
+      return Object.entries(filters).every(([key, value]) => {
+        return review[key as keyof typeof review] === value;
+      });
+    });
+    return NextResponse.json(filteredReviews);
   } catch (error) {
     console.error('Error in reviews API:', error);
     return NextResponse.json(

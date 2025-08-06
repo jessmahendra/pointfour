@@ -1290,9 +1290,9 @@ Please provide a specific answer to this follow-up question.`;
               Or browse our full directory
             </p>
             <a
-              href="https://pointfour.in"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/directory"
+              // target="_blank"
+              // rel="noopener noreferrer"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
