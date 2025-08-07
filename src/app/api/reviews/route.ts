@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
     }
 
     const reviews = await airtableService.getReviews();
-    const filteredReviews = reviews.filter(review => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filteredReviews = reviews.filter((review: any) => {
       return Object.entries(filters).every(([key, value]) => {
         return review[key as keyof typeof review] === value;
       });

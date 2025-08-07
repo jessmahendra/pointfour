@@ -1,22 +1,7 @@
 import Airtable from 'airtable';
 
-// Initialize Airtable with proper error handling
-const initializeAirtable = () => {
-  const apiKey = process.env.AIRTABLE_API_KEY;
-  const baseId = process.env.AIRTABLE_BASE_ID;
-
-  if (!apiKey || !baseId) {
-    console.error('Missing Airtable credentials:', {
-      hasApiKey: !!apiKey,
-      hasBaseId: !!baseId
-    });
-    throw new Error('Airtable API key or Base ID not configured');
-  }
-
-  return new Airtable({ apiKey }).base(baseId);
-};
-
-export interface Brand {
+// Type definitions
+interface Brand {
   id: string;
   name: string;
   category: string;
@@ -27,9 +12,28 @@ export interface Brand {
   fitNotes?: string;
   logo?: string;
   createdTime: string;
+  // Use camelCase versions (these are what your API actually returns)
+  garmentTypes?: string;
+  fitSummary?: string;
+  sizingSystem?: string;
+  bestForBodyTypes?: string;
+  commonFitInformation?: string; // Changed from commonFitIssues
+  fabricStretch?: string;
+  petiteRange?: string;
+  tallRange?: string;
+  plusRange?: string;
+  ukRetailer?: string;
+  returnPolicy?: string;
+  userQuotes?: string;
+  sourceLinks?: string;
+  confidenceScore?: string;
+  status?: string;
+  userFeedback?: string;
+  reviews?: string;
+  brandDetailsHeader?: string;
 }
 
-export interface Review {
+interface Review {
   id: string;
   brandName: string;
   itemName: string;
@@ -44,36 +48,65 @@ export interface Review {
   submissionDate: string;
 }
 
-export interface BodyType {
-  id: string;
-  name: string;
-  description?: string;
-  characteristics?: string;
+// Initialize Airtable connection
+function initializeAirtable() {
+  const base = new Airtable({
+    apiKey: process.env.AIRTABLE_API_KEY,
+  }).base(process.env.AIRTABLE_BASE_ID!);
+  
+  return base;
 }
 
-export interface GarmentType {
-  id: string;
-  name: string;
-  category?: string;
-  description?: string;
+// Helper functions for safe field access
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function safeGet(record: any, fieldName: string): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fields = (record as any).fields;
+    if (!fields) return '';
+    
+    // Try exact match first
+    if (fields[fieldName] !== undefined) {
+      return String(fields[fieldName] || '');
+    }
+    
+    // Try case-insensitive match
+    const fieldKeys = Object.keys(fields);
+    const matchingKey = fieldKeys.find(key => 
+      key.toLowerCase() === fieldName.toLowerCase()
+    );
+    
+    if (matchingKey) {
+      return String(fields[matchingKey] || '');
+    }
+    
+    return '';
+  } catch {
+    return '';
+  }
 }
 
-export interface PriceRange {
-  id: string;
-  range: string;
-  minPrice?: number;
-  maxPrice?: number;
-  description?: string;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function safeGetNumber(record: any, fieldName: string): number | undefined {
+  try {
+    const value = safeGet(record, fieldName);
+    const num = parseFloat(value);
+    return isNaN(num) ? undefined : num;
+  } catch {
+    return undefined;
+  }
 }
 
-export interface Recommendation {
-  id: string;
-  brandName: string;
-  itemName: string;
-  bodyType?: string;
-  recommendation?: string;
-  reasoning?: string;
-  createdTime: string;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function safeGetBoolean(record: any, fieldName: string): boolean | undefined {
+  try {
+    const value = safeGet(record, fieldName).toLowerCase();
+    if (value === 'true' || value === 'yes' || value === '1') return true;
+    if (value === 'false' || value === 'no' || value === '0') return false;
+    return undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export const airtableService = {
@@ -85,28 +118,60 @@ export const airtableService = {
       const tableName = process.env.AIRTABLE_BRANDS_TABLE || 'Brands';
       console.log('📋 Using table:', tableName);
       
+      // First, let's try to get records without sorting to avoid field name issues
       const records = await base(tableName)
         .select({
-          maxRecords: 100,
-          sort: [{ field: 'Brand Name', direction: 'asc' }]
+          maxRecords: 100
         })
         .all();
 
       console.log(`📦 Retrieved ${records.length} brand records`);
+      
+      // Log all available fields from the first record for debugging
+      if (records.length > 0) {
+        console.log('Available fields in first record:', records[0].fields);
+        console.log('All field keys:', Object.keys(records[0].fields));
+      }
 
-      const brands: Brand[] = records.map(record => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const brands: Brand[] = records.map((record: any) => {
+        // Map your actual Airtable field names to the interface - FIXED with correct capitalization
         const brand = {
           id: record.id,
-          name: record.get('Brand Name') as string || '',
-          category: record.get('Category') as string || '',
-          description: record.get('Description') as string || '',
-          website: record.get('Website') as string || '',
-          priceRange: record.get('Price Range') as string || '',
-          sizeRange: record.get('Size Range') as string || '',
-          fitNotes: record.get('Fit Notes') as string || '',
-          logo: record.get('Logo') as string || '',
-          createdTime: record.get('Created Time') as string || record._rawJson.createdTime
+          name: safeGet(record, 'Brand Name') || safeGet(record, 'brand name') || '',
+          category: safeGet(record, 'Category') || safeGet(record, 'category') || '',
+          description: safeGet(record, 'Brand Details Header') || safeGet(record, 'description') || '',
+          website: safeGet(record, 'UK Retailer') || safeGet(record, 'website') || '',
+          priceRange: safeGet(record, 'Price Range') || safeGet(record, 'price range') || '',
+          sizeRange: safeGet(record, 'Size Range') || safeGet(record, 'size range') || '',
+          fitNotes: safeGet(record, 'Fit Summary') || safeGet(record, 'Fit Notes') || '',
+          logo: safeGet(record, 'logo') || '',
+          createdTime: safeGet(record, 'Created Time') || record._rawJson.createdTime || '',
+          
+          // Additional mapped fields with CORRECT capitalized field names
+          garmentTypes: safeGet(record, 'Garment Types') || safeGet(record, 'garment types') || '',
+          fitSummary: safeGet(record, 'Fit Summary') || safeGet(record, 'fit summary') || '',
+          sizingSystem: safeGet(record, 'Sizing System') || safeGet(record, 'sizing system') || '',
+          bestForBodyTypes: safeGet(record, 'Best For Body Types') || safeGet(record, 'best for body types') || '',
+          commonFitInformation: safeGet(record, 'Common Fit Information') || safeGet(record, 'common fit information') || '', // Note: mapped to commonFitInformation but fetching Common Fit Information
+          fabricStretch: safeGet(record, 'Fabric Stretch') || safeGet(record, 'fabric stretch') || '',
+          petiteRange: safeGet(record, 'Petite Range') || safeGet(record, 'petite range') || '',
+          tallRange: safeGet(record, 'Tall Range') || safeGet(record, 'tall range') || '',
+          plusRange: safeGet(record, 'Plus Range') || safeGet(record, 'plus range') || '',
+          ukRetailer: safeGet(record, 'UK Retailer') || safeGet(record, 'uk retailer') || '',
+          returnPolicy: safeGet(record, 'Return Policy') || safeGet(record, 'return policy') || '',
+          userQuotes: safeGet(record, 'User Quotes') || safeGet(record, 'user quotes') || '',
+          sourceLinks: safeGet(record, 'Source Links') || safeGet(record, 'source links') || '',
+          confidenceScore: safeGet(record, 'Confidence Score') || safeGet(record, 'confidence score') || '',
+          status: safeGet(record, 'Status') || safeGet(record, 'status') || '',
+          userFeedback: safeGet(record, 'User Feedback') || safeGet(record, 'user feedback') || '',
+          reviews: safeGet(record, 'reviews') || '',
+          brandDetailsHeader: safeGet(record, 'Brand Details Header') || safeGet(record, 'brand details header') || '',
         };
+        
+        console.log(`Processed brand: ${brand.name}`);
+        console.log(`- Fit Summary: ${brand.fitSummary ? 'HAS DATA' : 'EMPTY'}`);
+        console.log(`- Best For Body Types: ${brand.bestForBodyTypes ? 'HAS DATA' : 'EMPTY'}`);
         return brand;
       });
 
@@ -124,7 +189,7 @@ export const airtableService = {
 
   async getReviews(): Promise<Review[]> {
     try {
-      console.log('📊 Initializing Airtable connection for reviews...');
+      console.log('📊 Fetching reviews from Airtable...');
       const base = initializeAirtable();
       
       const tableName = process.env.AIRTABLE_REVIEWS_TABLE || 'Reviews';
@@ -132,28 +197,33 @@ export const airtableService = {
       
       const records = await base(tableName)
         .select({
-          maxRecords: 200,
-          sort: [{ field: 'Submission Date', direction: 'desc' }]
+          maxRecords: 1000
         })
         .all();
 
       console.log(`📦 Retrieved ${records.length} review records`);
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const reviews: Review[] = records.map((record: any) => {
+        const review = {
+          id: record.id,
+          brandName: safeGet(record, 'Brand Name') || safeGet(record, 'brand name') || '',
+          itemName: safeGet(record, 'Item Name') || safeGet(record, 'item name') || '',
+          garmentType: safeGet(record, 'Garment Type') || safeGet(record, 'garment type') || '',
+          userBodyType: safeGet(record, 'User Body Type') || safeGet(record, 'user body type') || '',
+          sizeBought: safeGet(record, 'Size Bought') || safeGet(record, 'size bought') || '',
+          usualSize: safeGet(record, 'Usual Size') || safeGet(record, 'usual size') || '',
+          fitRating: safeGetNumber(record, 'Fit Rating') || safeGetNumber(record, 'fit rating'),
+          fitComments: safeGet(record, 'Fit Comments') || safeGet(record, 'fit comments') || '',
+          wouldRecommend: safeGetBoolean(record, 'Would Recommend') || safeGetBoolean(record, 'would recommend'),
+          height: safeGet(record, 'Height') || safeGet(record, 'height') || '',
+          submissionDate: safeGet(record, 'Submission Date') || safeGet(record, 'submission date') || record._rawJson.createdTime || '',
+        };
+        
+        return review;
+      });
 
-      const reviews: Review[] = records.map(record => ({
-        id: record.id,
-        brandName: record.get('Brand') as string || '',
-        itemName: record.get('Item Name') as string || '',
-        garmentType: record.get('Garment Type') as string || '',
-        userBodyType: record.get('User Body Type') as string || '',
-        sizeBought: record.get('Size Bought') as string || '',
-        usualSize: record.get('Usual Size') as string || '',
-        fitRating: record.get('Fit Rating') as number || 0,
-        fitComments: record.get('Fit Comments') as string || '',
-        wouldRecommend: record.get('Would Recommend') as boolean || false,
-        height: record.get('Height') as string || '',
-        submissionDate: record.get('Submission Date') as string || record._rawJson.createdTime
-      }));
-
+      console.log('✅ Reviews processed successfully');
       return reviews;
     } catch (error) {
       console.error('💥 Error fetching reviews:', error);
@@ -161,127 +231,36 @@ export const airtableService = {
     }
   },
 
-  async getBodyTypes(): Promise<BodyType[]> {
+  async getBodyTypes(): Promise<string[]> {
     try {
-      console.log('📊 Fetching body types from Airtable...');
-      const base = initializeAirtable();
-      
-      const tableName = process.env.AIRTABLE_BODY_TYPES_TABLE || 'Body Types';
-      
-      const records = await base(tableName)
-        .select({
-          maxRecords: 50,
-          sort: [{ field: 'Name', direction: 'asc' }]
-        })
-        .all();
-
-      console.log(`📦 Retrieved ${records.length} body type records`);
-
-      const bodyTypes: BodyType[] = records.map(record => ({
-        id: record.id,
-        name: record.get('Name') as string || '',
-        description: record.get('Description') as string || '',
-        characteristics: record.get('Characteristics') as string || ''
-      }));
-
-      return bodyTypes;
+      const reviews = await this.getReviews();
+      const bodyTypes = [...new Set(reviews.map(review => review.userBodyType).filter((type): type is string => Boolean(type)))];
+      return bodyTypes.sort();
     } catch (error) {
-      console.error('💥 Error fetching body types:', error);
-      throw new Error(`Failed to fetch body types: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error fetching body types:', error);
+      return [];
     }
   },
 
-  async getGarmentTypes(): Promise<GarmentType[]> {
+  async getGarmentTypes(): Promise<string[]> {
     try {
-      console.log('📊 Fetching garment types from Airtable...');
-      const base = initializeAirtable();
-      
-      const tableName = process.env.AIRTABLE_GARMENT_TYPES_TABLE || 'Garment Types';
-      
-      const records = await base(tableName)
-        .select({
-          maxRecords: 100,
-          sort: [{ field: 'Name', direction: 'asc' }]
-        })
-        .all();
-
-      console.log(`📦 Retrieved ${records.length} garment type records`);
-
-      const garmentTypes: GarmentType[] = records.map(record => ({
-        id: record.id,
-        name: record.get('Name') as string || '',
-        category: record.get('Category') as string || '',
-        description: record.get('Description') as string || ''
-      }));
-
-      return garmentTypes;
+      const reviews = await this.getReviews();
+      const garmentTypes = [...new Set(reviews.map(review => review.garmentType).filter((type): type is string => Boolean(type)))];
+      return garmentTypes.sort();
     } catch (error) {
-      console.error('💥 Error fetching garment types:', error);
-      throw new Error(`Failed to fetch garment types: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error fetching garment types:', error);
+      return [];
     }
   },
 
-  async getPriceRanges(): Promise<PriceRange[]> {
+  async getPriceRanges(): Promise<string[]> {
     try {
-      console.log('📊 Fetching price ranges from Airtable...');
-      const base = initializeAirtable();
-      
-      const tableName = process.env.AIRTABLE_PRICE_RANGES_TABLE || 'Price Ranges';
-      
-      const records = await base(tableName)
-        .select({
-          maxRecords: 50,
-          sort: [{ field: 'Min Price', direction: 'asc' }]
-        })
-        .all();
-
-      console.log(`📦 Retrieved ${records.length} price range records`);
-
-      const priceRanges: PriceRange[] = records.map(record => ({
-        id: record.id,
-        range: record.get('Range') as string || '',
-        minPrice: record.get('Min Price') as number || 0,
-        maxPrice: record.get('Max Price') as number || 0,
-        description: record.get('Description') as string || ''
-      }));
-
-      return priceRanges;
+      const brands = await this.getBrands();
+      const priceRanges = [...new Set(brands.map(brand => brand.priceRange).filter((range): range is string => Boolean(range)))];
+      return priceRanges.sort();
     } catch (error) {
-      console.error('💥 Error fetching price ranges:', error);
-      throw new Error(`Failed to fetch price ranges: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  },
-
-  async getRecommendations(): Promise<Recommendation[]> {
-    try {
-      console.log('📊 Fetching recommendations from Airtable...');
-      const base = initializeAirtable();
-      
-      const tableName = process.env.AIRTABLE_RECOMMENDATIONS_TABLE || 'Recommendations';
-      
-      const records = await base(tableName)
-        .select({
-          maxRecords: 200,
-          sort: [{ field: 'Created Time', direction: 'desc' }]
-        })
-        .all();
-
-      console.log(`📦 Retrieved ${records.length} recommendation records`);
-
-      const recommendations: Recommendation[] = records.map(record => ({
-        id: record.id,
-        brandName: record.get('Brand Name') as string || '',
-        itemName: record.get('Item Name') as string || '',
-        bodyType: record.get('Body Type') as string || '',
-        recommendation: record.get('Recommendation') as string || '',
-        reasoning: record.get('Reasoning') as string || '',
-        createdTime: record.get('Created Time') as string || record._rawJson.createdTime
-      }));
-
-      return recommendations;
-    } catch (error) {
-      console.error('💥 Error fetching recommendations:', error);
-      throw new Error(`Failed to fetch recommendations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error fetching price ranges:', error);
+      return [];
     }
   }
 };

@@ -1468,9 +1468,9 @@ Please provide a specific answer to this follow-up question.`;
           style={{ maxWidth: "640px", margin: "0 auto", textAlign: "center" }}
         >
           <a
-            href="https://pointfour.in"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/directory"
+            // target="_blank"
+            // rel="noopener noreferrer"
             style={{
               display: "inline-flex",
               alignItems: "center",

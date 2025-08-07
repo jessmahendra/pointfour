@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 interface Brand {
   id: string;
@@ -16,6 +17,7 @@ interface Brand {
 }
 
 export default function DirectoryPage() {
+  const router = useRouter();
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,11 +94,14 @@ export default function DirectoryPage() {
     return matchesSearch && matchesPriceRange && matchesType;
   });
 
-  const handleAnalyzeBrand = (brandName: string) => {
-    // TODO: Navigate to brand analysis page
-    console.log("Analyzing brand:", brandName);
-    // You can implement navigation here later
-    alert(`Analyzing ${brandName} - This feature will be implemented next!`);
+  const handleAnalyzeBrand = (brandId: string, brandName: string) => {
+    // Create URL-friendly slug from brand name
+    const brandSlug = brandName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    // Navigate to brand details page
+    router.push(`/directory/brand/${brandSlug}?id=${brandId}`);
   };
 
   if (loading) {
@@ -237,10 +242,10 @@ export default function DirectoryPage() {
               </div>
 
               <button
-                onClick={() => handleAnalyzeBrand(brand.name)}
+                onClick={() => handleAnalyzeBrand(brand.id, brand.name)}
                 className="w-full bg-stone-200 text-stone-800 px-4 py-2 rounded-lg hover:bg-stone-300 transition-colors flex items-center justify-center gap-2 font-medium"
               >
-                Analyze Brand
+                View Brand Details
                 <span>→</span>
               </button>
             </div>
