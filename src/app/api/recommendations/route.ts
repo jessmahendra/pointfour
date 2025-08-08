@@ -11,10 +11,32 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     query = body.query;
     
-    const AIRTABLE_BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID;
-    const AIRTABLE_API_KEY = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY;
+    console.log('=== DEBUG: Starting recommendation request ===');
+    console.log('Query received:', query);
+    console.log('OpenAI API Key exists:', !!process.env.OPENAI_API_KEY);
+    console.log('OpenAI API Key preview:', process.env.OPENAI_API_KEY?.substring(0, 10) + '...');
+    
+    // DEBUG: Log all environment variables
+    console.log('=== DEBUG: Environment Variables ===');
+    console.log('NEXT_PUBLIC_AIRTABLE_BASE_ID:', process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID);
+    console.log('NEXT_PUBLIC_AIRTABLE_API_KEY exists:', !!process.env.NEXT_PUBLIC_AIRTABLE_API_KEY);
+    console.log('NEXT_PUBLIC_AIRTABLE_API_KEY preview:', process.env.NEXT_PUBLIC_AIRTABLE_API_KEY?.substring(0, 10) + '...');
+    console.log('All env vars with AIRTABLE:', Object.keys(process.env).filter(key => key.includes('AIRTABLE')));
+    
+    const AIRTABLE_BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
+    const AIRTABLE_API_KEY = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY || process.env.AIRTABLE_API_KEY;
+    
+    console.log('=== DEBUG: Checking required vars ===');
+    console.log('AIRTABLE_BASE_ID value:', AIRTABLE_BASE_ID);
+    console.log('AIRTABLE_API_KEY value:', AIRTABLE_API_KEY ? 'EXISTS' : 'MISSING');
+    
+    if (!AIRTABLE_BASE_ID || !AIRTABLE_API_KEY) {
+      console.log('Missing Airtable config - BASE_ID:', !!AIRTABLE_BASE_ID, 'API_KEY:', !!AIRTABLE_API_KEY);
+      throw new Error(`Missing Airtable configuration. BASE_ID: ${!!AIRTABLE_BASE_ID}, API_KEY: ${!!AIRTABLE_API_KEY}`);
+    }
     
     // Fetch your real brand data
+    console.log('=== DEBUG: Fetching Airtable data ===');
     const response = await fetch(
       `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Brands`,
       {
@@ -24,7 +46,12 @@ export async function POST(request: NextRequest) {
       }
     );
     
+    if (!response.ok) {
+      throw new Error(`Airtable fetch failed: ${response.status} ${response.statusText}`);
+    }
+    
     const data = await response.json();
+    console.log('Airtable records fetched:', data.records?.length || 0);
     
     // Process your Airtable data for AI
     interface Brand {
@@ -84,9 +111,16 @@ export async function POST(request: NextRequest) {
      imageURL: record.fields['Image'] || record.fields['Photo'] || ''
     })).filter((brand: { name: string }) => brand.name);
     
+    console.log('Processed brands:', brands.length);
+    console.log('Sample brand:', brands[0]);
+    
     // Enhanced analysis: Check if this is a detailed brand analysis vs follow-up
     const isDetailedAnalysis = query.includes('Category:') && query.includes('Fit preference:');
     const isFollowUp = query.includes('Follow-up question about');
+    
+    console.log('=== DEBUG: Request type ===');
+    console.log('Is detailed analysis:', isDetailedAnalysis);
+    console.log('Is follow-up:', isFollowUp);
     
     let prompt;
     
@@ -114,16 +148,23 @@ ${brand.name} (${brand.category}):
 
 Provide a focused, helpful answer to their specific follow-up question. Include real customer quotes when available using quotation marks. Keep under 200 words and be conversational.`;
 
-    } else     if (isDetailedAnalysis) {
+    } else if (isDetailedAnalysis) {
       // Extract the brand name from the user query
       const queryLines = query.split('\n');
       const brandLine = queryLines.find(line => line.startsWith('Brand/Item:'));
       const requestedBrand = brandLine ? brandLine.replace('Brand/Item:', '').trim() : '';
+      
+      console.log('=== DEBUG: Brand matching ===');
+      console.log('Requested brand:', requestedBrand);
+      
       // Find the specific brand in our database
       const matchingBrand = brands.find((brand: { name: string }) => 
         brand.name.toLowerCase().includes(requestedBrand.toLowerCase()) ||
         requestedBrand.toLowerCase().includes(brand.name.toLowerCase())
       );
+
+      console.log('Matching brand found:', !!matchingBrand);
+      console.log('Matching brand data:', matchingBrand);
 
       if (matchingBrand) {
         // Analyze the SPECIFIC brand that was requested
@@ -167,6 +208,7 @@ Focus ONLY on ${matchingBrand.name}. Do not mention or recommend other brands.`;
 
       } else {
         // Brand not found in database - provide limited analysis
+        console.log('=== DEBUG: Brand not found, using fallback ===');
         prompt = `The user is asking about "${requestedBrand}" but this brand is not in our database.
 
 User request: ${query}
@@ -192,7 +234,7 @@ Be honest that you don't have specific data for this brand.`;
       }
 
     } else {
-      // General recommendations
+      // General recommendations (shouldn't happen in analyze route, but just in case)
       prompt = `You are a critical fashion analyst who gives honest, balanced recommendations based on real user data.
 
 User's request: "${query}"
@@ -223,6 +265,13 @@ Format your response with these sections:
 Be honest about sizing issues and negative reviews. Keep under 250 words.`;
     }
 
+    console.log('=== DEBUG: About to call OpenAI ===');
+    console.log('Prompt length:', prompt.length);
+    
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key is missing');
+    }
+
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -243,20 +292,66 @@ Be honest about sizing issues and negative reviews. Keep under 250 words.`;
       temperature: 0.6
     });
 
+    console.log('=== DEBUG: OpenAI Response ===');
+    console.log('Choices length:', completion.choices?.length || 0);
+    console.log('Response preview:', completion.choices[0]?.message?.content?.substring(0, 100));
+
     const recommendation = completion.choices[0]?.message?.content || 'Sorry, I could not generate a recommendation.';
 
+    console.log('=== DEBUG: Success - returning response ===');
+    
     return NextResponse.json({
       query,
       recommendation,
       totalBrands: brands.length
     });
 
-     } catch (error) {
-     console.error('Error:', error);
-     return NextResponse.json({
-       query,
-       recommendation: "Sorry, I'm having trouble accessing the fashion database right now. Please try again in a moment.",
-       error: true
-     });
-   }
- }
+  } catch (error) {
+    console.error('=== DEBUG: Error occurred ===');
+    console.error('Error details:', error);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    
+    // Generate a meaningful fallback based on the query
+    let fallbackResponse = '';
+    
+    if (query.includes('Category:') && query.includes('Brand/Item:')) {
+      // This is a brand analysis request
+      const queryLines = query.split('\n');
+      const brandLine = queryLines.find(line => line.startsWith('Brand/Item:'));
+      const brandName = brandLine ? brandLine.replace('Brand/Item:', '').trim() : 'this brand';
+      
+      fallbackResponse = `**Recommendation**
+Unable to access our full database right now, but I can provide general guidance for ${brandName}.
+
+**Sizing**
+Without specific data, I recommend checking the brand's official size guide and reading customer reviews on retailer websites.
+
+**⚠️ Warning**
+Since we can't access detailed sizing data right now, be sure to check the return policy before ordering.
+
+**Price**
+Check retailer websites for current pricing and availability.
+
+**Customer Reviews**
+Look for customer reviews on the brand's website, ASOS, Net-a-Porter, or other major retailers for the most current feedback.`;
+    } else {
+      // This is a chat follow-up
+      fallbackResponse = `I'm having trouble accessing our full database right now. For the most accurate information about sizing, pricing, and customer reviews, I'd recommend:
+
+• Checking the brand's official website for size guides
+• Reading customer reviews on retailer sites
+• Contacting the brand's customer service directly
+• Looking at social media for real customer photos and feedback
+
+Is there a specific aspect I can help you with using general fashion knowledge?`;
+    }
+  
+    return NextResponse.json({
+      query,
+      recommendation: fallbackResponse,
+      totalBrands: 0,
+      error: error instanceof Error ? error.message : String(error),
+      debug: true // Flag to indicate this was a fallback response
+    });
+  }
+}

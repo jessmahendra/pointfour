@@ -143,8 +143,8 @@ export default function DirectoryPage() {
             <div className="mb-4 flex justify-center">
               <Link href="/">
                 <svg
-                  width="62"
-                  height="16"
+                  width="93"
+                  height="24"
                   viewBox="0 0 62 16"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
