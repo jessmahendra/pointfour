@@ -26,7 +26,7 @@ export default function HomePage() {
         </div>
 
         {/* Main Action Cards */}
-        <div className="flex justify-center items-start gap-6 mb-12 w-full">
+        <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-12 w-full">
           {/* Review a Brand Card */}
           <Link href="/analyze" className="flex-shrink-0">
             <div
