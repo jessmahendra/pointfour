@@ -7,12 +7,12 @@
   <style>
     body {
       width: 320px;
-      min-height: 200px;
+      min-height: 240px;
       margin: 0;
       padding: 20px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
+      background: #fafaf9; /* stone-50 - very light beige */
+      color: #292524; /* stone-800 - dark text */
     }
     
     .header {
@@ -24,22 +24,22 @@
       margin: 0;
       font-size: 18px;
       font-weight: 600;
-      color: white;
+      color: #292524; /* stone-800 */
     }
     
     .info-card {
-      background: rgba(255, 255, 255, 0.1);
+      background: #f5f5f4; /* stone-100 - light beige */
       border-radius: 12px;
       padding: 16px;
       margin-bottom: 16px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border: 1px solid #e7e5e4; /* stone-200 - medium beige border */
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     
     .info-label {
       font-size: 12px;
       font-weight: 500;
-      color: rgba(255, 255, 255, 0.8);
+      color: #78716c; /* stone-500 - medium beige text */
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 4px;
@@ -48,34 +48,55 @@
     .info-value {
       font-size: 14px;
       font-weight: 500;
-      color: white;
+      color: #292524; /* stone-800 - dark text */
       word-break: break-word;
     }
     
     .no-item {
       text-align: center;
-      color: rgba(255, 255, 255, 0.7);
+      color: #a8a29e; /* stone-400 - lighter beige */
       font-style: italic;
     }
     
     .loading {
       text-align: center;
-      color: rgba(255, 255, 255, 0.8);
+      color: #78716c; /* stone-500 */
     }
     
     .spinner {
       display: inline-block;
       width: 16px;
       height: 16px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
+      border: 2px solid #d6d3d1; /* stone-300 */
       border-radius: 50%;
-      border-top-color: white;
+      border-top-color: #78716c; /* stone-500 */
       animation: spin 1s ease-in-out infinite;
       margin-right: 8px;
     }
     
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    .status-available {
+      color: #16a34a; /* green-600 */
+      font-weight: 600;
+    }
+
+    .status-unavailable {
+      color: #78716c; /* stone-500 */
+      font-weight: 500;
+    }
+
+    .status-loading {
+      color: #78716c; /* stone-500 */
+      font-style: italic;
+    }
+
+    .review-count {
+      font-size: 12px;
+      color: #78716c; /* stone-500 */
+      margin-top: 4px;
     }
   </style>
 </head>
@@ -92,6 +113,31 @@
   <div class="info-card">
     <div class="info-label">Item</div>
     <div class="info-value" id="item">Loading...</div>
+  </div>
+
+  <div class="info-card">
+    <div class="info-label">Brand</div>
+    <div class="info-value" id="brand">Loading...</div>
+  </div>
+
+  <div class="info-card">
+    <div class="info-label">Review Data</div>
+    <div class="info-value" id="review-status">Checking...</div>
+    <div class="review-count" id="review-count"></div>
+  </div>
+  
+  <div class="info-card">
+    <button id="test-cors-btn" style="
+      width: 100%;
+      padding: 8px 16px;
+      background: #78716c;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+    ">Test CORS Connection</button>
   </div>
   
   <script src="popup.js"></script>
