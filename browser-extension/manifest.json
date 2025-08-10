@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Fashion Item Detector",
+  "version": "1.0",
+  "description": "Detect fashion items while shopping online and get personalized recommendations",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Fashion Item Detector"
+  }
+}
