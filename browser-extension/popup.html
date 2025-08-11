@@ -20,11 +20,22 @@
       margin-bottom: 20px;
     }
     
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .logo svg {
+      color: #292524;
+    }
+    
     .header h1 {
       margin: 0;
       font-size: 18px;
       font-weight: 600;
-      color: #292524; /* stone-800 */
+      color: #292524;
     }
     
     .info-card {
@@ -48,8 +59,9 @@
     .info-value {
       font-size: 14px;
       font-weight: 500;
-      color: #292524; /* stone-800 - dark text */
+      color: #292524;
       word-break: break-word;
+      white-space: pre-line;
     }
     
     .no-item {
@@ -102,12 +114,15 @@
 </head>
 <body>
   <div class="header">
-    <h1>Fashion Item Detector</h1>
-  </div>
-  
-  <div class="info-card">
-    <div class="info-label">Website</div>
-    <div class="info-value" id="website">Loading...</div>
+    <div class="logo">
+      <!-- TODO: Replace with the proper pointfour serif logo SVG from your app -->
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h1>pointfour</h1>
+    </div>
   </div>
   
   <div class="info-card">
@@ -126,18 +141,9 @@
     <div class="review-count" id="review-count"></div>
   </div>
   
-  <div class="info-card">
-    <button id="test-cors-btn" style="
-      width: 100%;
-      padding: 8px 16px;
-      background: #78716c;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 500;
-    ">Test CORS Connection</button>
+  <div class="info-card" id="fit-summary-section" style="display: none;">
+    <div class="info-label">Fit Summary</div>
+    <div class="info-value" id="fit-summary">Loading...</div>
   </div>
   
   <script src="popup.js"></script>

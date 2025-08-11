@@ -203,11 +203,28 @@ export const airtableService = {
 
       console.log(`📦 Retrieved ${records.length} review records`);
       
+      // Log sample records for debugging
+      if (records.length > 0) {
+        console.log('📋 Sample review record fields:', Object.keys(records[0].fields));
+        console.log('📋 Sample review record:', records[0].fields);
+        
+        // DEBUG: Log the first few records to see exact field values
+        console.log('📋 First 3 review records (raw):');
+        records.slice(0, 3).forEach((record, index) => {
+          console.log(`  Record ${index + 1}:`, {
+            id: record.id,
+            fields: record.fields,
+            brandNameField: record.fields['Brand Name'] || record.fields['brand name'] || 'NOT FOUND',
+            itemNameField: record.fields['Item Name'] || record.fields['item name'] || 'NOT FOUND'
+          });
+        });
+      }
+      
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const reviews: Review[] = records.map((record: any) => {
         const review = {
           id: record.id,
-          brandName: safeGet(record, 'Brand Name') || safeGet(record, 'brand name') || '',
+          brandName: safeGet(record, 'Brand') || safeGet(record, 'brand') || safeGet(record, 'Brand Name') || safeGet(record, 'brand name') || '',
           itemName: safeGet(record, 'Item Name') || safeGet(record, 'item name') || '',
           garmentType: safeGet(record, 'Garment Type') || safeGet(record, 'garment type') || '',
           userBodyType: safeGet(record, 'User Body Type') || safeGet(record, 'user body type') || '',
@@ -220,9 +237,33 @@ export const airtableService = {
           submissionDate: safeGet(record, 'Submission Date') || safeGet(record, 'submission date') || record._rawJson.createdTime || '',
         };
         
+        // Debug logging for each review with brand name details
+        if (review.brandName) {
+          console.log(`📝 Review: "${review.brandName}" - ${review.itemName} (${review.garmentType})`);
+          console.log(`   Raw brand name field: "${record.fields['Brand'] || record.fields['brand'] || 'NOT FOUND'}"`);
+        } else {
+          console.log(`⚠️ Review missing brand name: ${review.itemName} (${review.garmentType})`);
+          console.log(`   Available fields:`, Object.keys(record.fields));
+          console.log(`   Raw brand field values:`, {
+            'Brand': record.fields['Brand'],
+            'brand': record.fields['brand'],
+            'Brand Name': record.fields['Brand Name'],
+            'brand name': record.fields['brand name']
+          });
+        }
+        
         return review;
       });
 
+      // Log summary of reviews by brand
+      const brandCounts = reviews.reduce((acc, review) => {
+        if (review.brandName) {
+          acc[review.brandName] = (acc[review.brandName] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+      
+      // console.log('📊 Reviews by brand:', brandCounts);
       console.log('✅ Reviews processed successfully');
       return reviews;
     } catch (error) {
