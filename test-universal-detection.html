@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Universal Fashion Website Detection</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .test-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .test-title {
+            text-align: center;
+            color: #1f2937;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .test-button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.2s ease;
+        }
+        .test-button:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        .test-button.success {
+            background: #10b981;
+        }
+        .test-button.success:hover {
+            background: #059669;
+        }
+        .test-button.warning {
+            background: #f59e0b;
+        }
+        .test-button.warning:hover {
+            background: #d97706;
+        }
+        .test-button.danger {
+            background: #ef4444;
+        }
+        .test-button.danger:hover {
+            background: #b91c1c;
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .result-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .result-card h4 {
+            margin: 0 0 12px 0;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .result-card .score {
+            font-size: 24px;
+            font-weight: 700;
+            color: #3b82f6;
+            margin: 8px 0;
+        }
+        .result-card .details {
+            font-size: 14px;
+            color: #6b7280;
+            margin: 8px 0;
+        }
+        .confidence-high {
+            color: #10b981;
+        }
+        .confidence-medium {
+            color: #f59e0b;
+        }
+        .confidence-low {
+            color: #ef4444;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        .status.warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .code-block {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+        .detection-summary {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .detection-summary h3 {
+            margin: 0 0 15px 0;
+            color: #065f46;
+        }
+        .detection-summary .confidence-bar {
+            background: #e5e7eb;
+            border-radius: 10px;
+            height: 20px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .detection-summary .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">🌐 Universal Fashion Website Detection Test</h1>
+        
+        <div class="test-section">
+            <h2>🎯 What This System Does</h2>
+            <p>Instead of relying on a hardcoded list of known brands, this system can detect <strong>ANY fashion website</strong> by analyzing:</p>
+            
+            <div class="results-grid">
+                <div class="result-card">
+                    <h4>📝 Content Analysis (40% weight)</h4>
+                    <p>Scans page text for fashion terms, product categories, and materials</p>
+                </div>
+                <div class="result-card">
+                    <h4>🛒 E-commerce Patterns (30% weight)</h4>
+                    <p>Detects shopping carts, product grids, size selectors, and pricing</p>
+                </div>
+                <div class="result-card">
+                    <h4>🔗 URL Analysis (20% weight)</h4>
+                    <p>Analyzes domain names, paths, and platform indicators</p>
+                </div>
+                <div class="result-card">
+                    <h4>👁️ Visual Elements (10% weight)</h4>
+                    <p>Identifies product images, color swatches, and fashion layouts</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🧪 Test the Detection System</h2>
+            <p>Use these buttons to test different aspects of the universal detection:</p>
+            
+            <div style="text-align: center;">
+                <button class="test-button success" onclick="runFullDetection()">🚀 Run Full Detection</button>
+                <button class="test-button" onclick="testContentAnalysis()">📝 Test Content Analysis</button>
+                <button class="test-button" onclick="testEcommercePatterns()">🛒 Test E-commerce Patterns</button>
+                <button class="test-button" onclick="testUrlAnalysis()">🔗 Test URL Analysis</button>
+                <button class="test-button" onclick="testVisualAnalysis()">👁️ Test Visual Analysis</button>
+                <button class="test-button warning" onclick="testBrandExtraction()">🏷️ Test Brand Extraction</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Detection Results</h2>
+            <div id="detection-results" class="detection-summary">
+                <h3>Ready to test universal detection...</h3>
+                <p>Click the buttons above to start testing the detection system.</p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 Console Commands</h2>
+            <p>Developers can also test directly in the console:</p>
+            
+            <div class="code-block">
+// Run full universal detection
+window.testFashionWidget.universalDetection()
+
+// Test individual components
+window.testFashionWidget.analyzeContent()
+window.testFashionWidget.analyzeEcommerce()
+window.testFashionWidget.analyzeUrl()
+window.testFashionWidget.analyzeVisual()
+
+// Extract brand from context
+window.testFashionWidget.extractBrand()
+
+// Check detection results
+console.log(window.testFashionWidget.widget)
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📋 Expected Results</h2>
+            <div class="detection-summary">
+                <h3>High Confidence (80-100):</h3>
+                <p>✅ Strong fashion website indicators - widget appears automatically</p>
+                
+                <h3>Medium Confidence (60-79):</h3>
+                <p>✅ Fashion website detected - widget appears with detected brand</p>
+                
+                <h3>Low Confidence (30-59):</h3>
+                <p>⚠️ Some fashion indicators - manual brand input appears</p>
+                
+                <h3>No Confidence (0-29):</h3>
+                <p>❌ Not a fashion website - fallback widget appears</p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Current Status</h2>
+            <div id="status" class="status info">
+                Ready to test universal detection system...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function updateDetectionResults(results) {
+            const resultsEl = document.getElementById('detection-results');
+          
+            if (!results) {
+                resultsEl.innerHTML = '<h3>No detection results available</h3>';
+                return;
+            }
+            
+            const confidenceClass = results.confidence >= 80 ? 'confidence-high' : 
+                                  results.confidence >= 60 ? 'confidence-medium' : 'confidence-low';
+            
+            const confidenceBarWidth = Math.min(results.confidence, 100);
+            
+            resultsEl.innerHTML = `
+                <h3>Detection Results</h3>
+                <div class="score ${confidenceClass}">Confidence: ${results.confidence}%</div>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" style="width: ${confidenceBarWidth}%"></div>
+                </div>
+                
+                <div class="details">
+                    <strong>Is Fashion Website:</strong> ${results.isFashionWebsite ? '✅ Yes' : '❌ No'}<br>
+                    <strong>Detected Brand:</strong> ${results.detectedBrand || 'None detected'}<br>
+                    <strong>Fashion Type:</strong> ${results.fashionType || 'Unknown'}<br>
+                    <strong>Target Demographic:</strong> ${results.targetDemographic || 'Unknown'}
+                </div>
+                
+                <h4>Detection Indicators:</h4>
+                <ul>
+                    ${results.indicators.map(indicator => `<li>${indicator}</li>`).join('')}
+                </ul>
+                
+                <h4>Detection Reasons:</h4>
+                <ul>
+                    ${results.reasons.map(reason => `<li>${reason}</li>`).join('')}
+                </ul>
+            `;
+        }
+        
+        function runFullDetection() {
+            updateStatus('Running full universal detection...', 'info');
+            
+            if (window.testFashionWidget && window.testFashionWidget.universalDetection) {
+                const results = window.testFashionWidget.universalDetection();
+                updateDetectionResults(results);
+                updateStatus('Full detection completed! Check results above.', 'success');
+            } else {
+                updateStatus('Universal detection method not available.', 'warning');
+            }
+        }
+        
+        function testContentAnalysis() {
+            updateStatus('Testing content analysis...', 'info');
+            
+            if (window.testFashionWidget && window.testFashionWidget.analyzeContent) {
+                const results = window.testFashionWidget.analyzeContent();
+                updateDetectionResults({
+                    isFashionWebsite: false,
+                    confidence: results.score,
+                    detectedBrand: null,
+                    fashionType: null,
+                    targetDemographic: null,
+                    indicators: [`Content analysis: ${results.score}/100 (${results.totalTerms} terms found)`],
+                    reasons: [`Content analysis found ${results.totalTerms} fashion-related terms`]
+                });
+                updateStatus('Content analysis completed!', 'success');
+            } else {
+                updateStatus('Content analysis method not available.', 'warning');
+            }
+        }
+        
+        function testEcommercePatterns() {
+            updateStatus('Testing e-commerce patterns...', 'info');
+            
+            if (window.testFashionWidget && window.testFashionWidget.analyzeEcommerce) {
+                const results = window.testFashionWidget.analyzeEcommerce();
+                updateDetectionResults({
+                    isFashionWebsite: false,
+                    confidence: results.score,
+                    detectedBrand: null,
+                    fashionType: null,
+                    targetDemographic: null,
+                    indicators: [`E-commerce patterns: ${results.score}/100 (${results.totalPatterns} patterns found)`],
+                    reasons: [`E-commerce analysis found ${results.totalPatterns} patterns`]
+                });
+                updateStatus('E-commerce pattern analysis completed!', 'success');
+            } else {
+                updateStatus('E-commerce analysis method not available.', 'warning');
+            }
+        }
+        
+        function testUrlAnalysis() {
+            updateStatus('Testing URL analysis...', 'info');
+            
+            if (window.testFashionWidget && window.testFashionWidget.analyzeUrl) {
+                const results = window.testFashionWidget.analyzeUrl();
+                updateDetectionResults({
+                    isFashionWebsite: false,
+                    confidence: results.score,
+                    detectedBrand: null,
+                    fashionType: null,
+                    targetDemographic: null,
+                    indicators: [`URL analysis: ${results.score}/100 (${results.totalPatterns} patterns found)`],
+                    reasons: [`URL analysis found ${results.totalPatterns} patterns`]
+                });
+                updateStatus('URL analysis completed!', 'success');
+            } else {
+                updateStatus('URL analysis method not available.', 'warning');
+            }
+        }
+        
+        function testVisualAnalysis() {
+            updateStatus('Testing visual analysis...', 'info');
+            
+            if (window.testFashionWidget && window.testFashionWidget.analyzeVisual) {
+                const results = window.testFashionWidget.analyzeVisual();
+                updateDetectionResults({
+                    isFashionWebsite: false,
+                    confidence: results.score,
+                    detectedBrand: null,
+                    fashionType: null,
+                    targetDemographic: null,
+                    indicators: [`Visual analysis: ${results.score}/100 (${results.totalElements} elements found)`],
+                    reasons: [`Visual analysis found ${results.totalElements} fashion-related elements`]
+                });
+                updateStatus('Visual analysis completed!', 'success');
+            } else {
+                updateStatus('Visual analysis method not available.', 'warning');
+            }
+        }
+        
+        function testBrandExtraction() {
+            updateStatus('Testing brand extraction...', 'info');
+            
+            if (window.testFashionWidget && window.testFashionWidget.extractBrand) {
+                const brand = window.testFashionWidget.extractBrand();
+                updateDetectionResults({
+                    isFashionWebsite: false,
+                    confidence: brand ? 50 : 0,
+                    detectedBrand: brand,
+                    fashionType: null,
+                    targetDemographic: null,
+                    indicators: ['Brand extraction test'],
+                    reasons: brand ? [`Brand extracted: ${brand}`] : ['No brand could be extracted']
+                });
+                updateStatus(brand ? 'Brand extraction successful!' : 'No brand extracted.', brand ? 'success' : 'warning');
+            } else {
+                updateStatus('Brand extraction method not available.', 'warning');
+            }
+        }
+        
+        // Check for widget every second
+        const checkInterval = setInterval(() => {
+            if (window.testFashionWidget) {
+                updateStatus('Universal detection system ready for testing!', 'success');
+                clearInterval(checkInterval);
+            }
+        }, 1000);
+        
+        // Log page load
+        console.log('🌐 Universal detection test page loaded - waiting for enhanced FashionWidget...');
+        console.log('🎯 This page tests the new universal fashion website detection system');
+    </script>
+</body>
+</html>

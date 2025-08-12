@@ -1,10 +1,13 @@
+/* Import Inter font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 /* Base widget styles */
 .fashion-fit-widget {
-  /* position: fixed !important; - Let JavaScript handle positioning */
+  position: fixed !important;
   z-index: 10000 !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
   font-size: 14px !important;
-  line-height: 1.4 !important;
+  line-height: 1.5 !important;
   color: #44403c !important; /* stone-700 */
   background: rgba(245, 245, 244, 0.98) !important; /* stone-100 with transparency */
   border: 1px solid rgba(168, 162, 158, 0.2) !important; /* stone-300 with transparency */
@@ -14,6 +17,8 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   max-width: 400px !important;
   min-width: 320px !important;
+  max-height: 80vh !important;
+  overflow-y: auto !important;
 }
 
 .fashion-fit-widget:hover {
@@ -26,11 +31,13 @@
   background: rgba(245, 245, 244, 0.95) !important; /* stone-100 with transparency */
   border: 1px solid rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
+  cursor: pointer !important;
 }
 
 .fashion-fit-widget.minimal:hover {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
   border-color: rgba(168, 162, 158, 0.25) !important; /* stone-300 with more opacity */
+  transform: translateY(-2px) !important;
 }
 
 /* Expanded mode */
@@ -45,61 +52,126 @@
   border-color: rgba(168, 162, 158, 0.35) !important; /* stone-300 with more opacity */
 }
 
-/* Header */
+/* Minimal mode specific styles */
+.fashion-fit-widget.minimal .widget-header {
+  padding: 12px 16px !important;
+  border-bottom: none !important;
+}
+
+.minimal-content {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.brand-info {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.brand-name {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #292524 !important; /* stone-800 */
+  line-height: 1.2 !important;
+}
+
+.fit-summary {
+  font-size: 13px !important;
+  color: #57534e !important; /* stone-600 */
+  line-height: 1.3 !important;
+}
+
+.click-hint {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 11px !important;
+  color: #78716c !important; /* stone-500 */
+  padding: 6px 8px !important;
+  background: rgba(168, 162, 158, 0.08) !important; /* stone-300 with transparency */
+  border-radius: 6px !important;
+  border: 1px solid rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
+}
+
+.hint-icon {
+  font-size: 12px !important;
+}
+
+.hint-text {
+  font-weight: 500 !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* Widget header */
 .widget-header {
-  padding: 16px 20px 12px;
-  border-bottom: 1px solid rgba(168, 162, 158, 0.15); /* stone-300 with transparency */
-  position: relative;
+  padding: 16px 20px 12px !important;
+  border-bottom: 1px solid rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
+  position: relative !important;
 }
 
 .widget-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #292524; /* stone-800 */
-  margin: 0;
-  line-height: 1.2;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #292524 !important; /* stone-800 */
+  margin: 0 !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.025em !important;
 }
 
 .brand-meta {
-  margin-top: 8px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  margin-top: 8px !important;
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
 }
 
 .meta-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #78716c; /* stone-500 */
-  background: rgba(168, 162, 158, 0.08); /* stone-300 with transparency */
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(168, 162, 158, 0.15); /* stone-300 with transparency */
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #78716c !important; /* stone-500 */
+  background: rgba(168, 162, 158, 0.08) !important; /* stone-300 with transparency */
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
+  letter-spacing: -0.01em !important;
 }
 
 .meta-icon {
-  font-size: 14px;
+  font-size: 14px !important;
 }
 
-/* Content sections */
+/* Widget content */
 .widget-content {
-  padding: 16px 20px;
+  padding: 20px !important;
 }
 
 .fit-summary-section {
-  margin-bottom: 20px;
+  margin-bottom: 20px !important;
+}
+
+.fit-summary-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #292524 !important; /* stone-800 */
+  margin: 0 0 12px 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
 }
 
 .fit-summary-text {
-  color: #44403c; /* stone-700 */
-  line-height: 1.6;
-  margin-bottom: 16px;
-  background: rgba(168, 162, 158, 0.03); /* stone-300 with transparency */
-  padding: 12px;
-  border-radius: 8px;
-  border-left: 3px solid #a3a3a3; /* neutral-400 */
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  color: #44403c !important; /* stone-700 */
+  padding: 12px !important;
+  background: rgba(250, 250, 249, 0.5) !important; /* stone-50 with transparency */
+  border-radius: 8px !important;
+  border: 1px solid rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
 }
 
 .fit-tips-section {
@@ -179,75 +251,75 @@
 
 /* Buttons */
 .widget-btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  padding: 8px 16px !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-family: inherit !important;
+  letter-spacing: -0.01em !important;
 }
 
 .widget-btn.primary {
-  background: linear-gradient(135deg, #78716c 0%, #57534e 100%); /* stone-500 to stone-600 */
-  color: #fafaf9; /* stone-50 */
-  box-shadow: 0 2px 8px rgba(120, 113, 108, 0.3); /* stone-500 with transparency */
+  background: rgba(168, 162, 158, 0.9) !important; /* stone-300 with transparency */
+  color: #44403c !important; /* stone-700 */
+  border-color: rgba(168, 162, 158, 0.9) !important; /* stone-300 with transparency */
 }
 
 .widget-btn.primary:hover {
-  background: linear-gradient(135deg, #57534e 0%, #44403c 100%); /* stone-600 to stone-700 */
-  box-shadow: 0 4px 12px rgba(120, 113, 108, 0.4); /* stone-500 with transparency */
+  background: rgba(168, 162, 158, 1) !important; /* stone-300 solid */
+  border-color: rgba(168, 162, 158, 1) !important; /* stone-300 solid */
+  transform: translateY(-1px) !important;
 }
 
 .widget-btn.primary:active {
-  box-shadow: 0 2px 8px rgba(120, 113, 108, 0.3); /* stone-500 with transparency */
+  box-shadow: 0 2px 8px rgba(120, 113, 108, 0.3) !important; /* stone-500 with transparency */
 }
 
 .widget-btn.secondary {
-  background: rgba(168, 162, 158, 0.08); /* stone-300 with transparency */
-  color: #57534e; /* stone-600 */
-  border: 1px solid rgba(168, 162, 158, 0.2); /* stone-300 with transparency */
+  background: rgba(168, 162, 158, 0.08) !important; /* stone-300 with transparency */
+  color: #57534e !important; /* stone-600 */
+  border: 1px solid rgba(168, 162, 158, 0.2) !important; /* stone-300 with transparency */
 }
 
 .widget-btn.secondary:hover {
-  background: rgba(168, 162, 158, 0.12); /* stone-300 with more opacity */
-  color: #44403c; /* stone-700 */
-  border-color: rgba(168, 162, 158, 0.3); /* stone-300 with more opacity */
+  background: rgba(168, 162, 158, 0.12) !important; /* stone-300 with more opacity */
+  color: #44403c !important; /* stone-700 */
+  border-color: rgba(168, 162, 158, 0.3) !important; /* stone-300 with more opacity */
 }
 
 .widget-btn.secondary:active {
-  background: rgba(168, 162, 158, 0.16); /* stone-300 with more opacity */
-  color: #44403c; /* stone-700 */
-  border-color: rgba(168, 162, 158, 0.4); /* stone-300 with more opacity */
+  background: rgba(168, 162, 158, 0.16) !important; /* stone-300 with more opacity */
+  color: #44403c !important; /* stone-700 */
+  border-color: rgba(168, 162, 158, 0.4) !important; /* stone-300 with more opacity */
 }
 
 /* Close button */
 .widget-close {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: rgba(168, 162, 158, 0.1); /* stone-300 with transparency */
-  color: #78716c; /* stone-500 */
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  transition: all 0.2s ease;
-  line-height: 1;
+  position: absolute !important;
+  top: 16px !important;
+  right: 20px !important;
+  background: none !important;
+  border: none !important;
+  font-size: 20px !important;
+  color: #78716c !important; /* stone-500 */
+  cursor: pointer !important;
+  padding: 4px !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+  font-family: 'Inter', sans-serif !important;
+  line-height: 1 !important;
 }
 
 .widget-close:hover {
-  background: rgba(168, 162, 158, 0.2); /* stone-300 with more opacity */
-  color: #57534e; /* stone-600 */
+  background: rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
+  color: #57534e !important; /* stone-600 */
 }
 
 .widget-close:active {
@@ -798,3 +870,385 @@
 .position-indicator.top-right { top: 8px; right: 8px; }
 .position-indicator.bottom-left { bottom: 8px; left: 8px; }
 .position-indicator.bottom-right { bottom: 8px; right: 8px; }
+
+/* Manual Brand Input Overlay */
+#fashion-widget-manual-input {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 10001 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  animation: fadeIn 0.3s ease-out !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+.manual-input-overlay {
+  background: white !important;
+  border-radius: 16px !important;
+  padding: 32px !important;
+  max-width: 500px !important;
+  width: 90% !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+  animation: slideUp 0.3s ease-out !important;
+  font-family: inherit !important;
+}
+
+.manual-input-content h3 {
+  margin: 0 0 16px 0 !important;
+  color: #1f2937 !important;
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.025em !important;
+  font-family: inherit !important;
+}
+
+.manual-input-content p {
+  margin: 0 0 16px 0 !important;
+  color: #6b7280 !important;
+  text-align: center !important;
+  line-height: 1.5 !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.01em !important;
+  font-family: inherit !important;
+}
+
+#manual-brand-input {
+  width: 100% !important;
+  padding: 12px 16px !important;
+  border: 2px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  margin-bottom: 20px !important;
+  transition: border-color 0.2s ease !important;
+  font-family: inherit !important;
+  letter-spacing: -0.01em !important;
+}
+
+#manual-brand-input:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+.manual-input-buttons {
+  display: flex !important;
+  gap: 12px !important;
+  margin-bottom: 24px !important;
+}
+
+.btn-primary {
+  flex: 1 !important;
+  background: #3b82f6 !important;
+  color: white !important;
+  border: none !important;
+  padding: 12px 20px !important;
+  border-radius: 8px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: background 0.2s ease !important;
+  font-family: inherit !important;
+  letter-spacing: -0.01em !important;
+}
+
+.btn-primary:hover {
+  background: #2563eb !important;
+}
+
+.btn-secondary {
+  flex: 1 !important;
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+  border: 1px solid #d1d5db !important;
+  padding: 12px 20px !important;
+  border-radius: 8px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  font-family: inherit !important;
+  letter-spacing: -0.01em !important;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb !important;
+  border-color: #9ca3af !important;
+}
+
+.manual-input-suggestions {
+  text-align: center !important;
+}
+
+.manual-input-suggestions p {
+  margin: 0 0 12px 0 !important;
+  font-size: 14px !important;
+  color: #6b7280 !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+  font-family: inherit !important;
+}
+
+.brand-suggestions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  justify-content: center !important;
+}
+
+.brand-suggestion {
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+  padding: 6px 12px !important;
+  border-radius: 20px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  border: 1px solid #e5e7eb !important;
+  font-family: inherit !important;
+  letter-spacing: -0.01em !important;
+}
+
+.brand-suggestion:hover {
+  background: #3b82f6 !important;
+  color: white !important;
+  border-color: #3b82f6 !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .manual-input-overlay {
+    padding: 24px;
+    margin: 20px;
+  }
+  
+  .manual-input-buttons {
+    flex-direction: column;
+  }
+  
+  .brand-suggestions {
+    justify-content: center;
+  }
+}
+
+/* Review sections */
+.reviews-section,
+.item-reviews-section,
+.source-reviews-section,
+.external-reviews-section {
+  margin-top: 20px !important;
+  padding: 16px !important;
+  background: rgba(250, 250, 249, 0.5) !important; /* stone-50 with transparency */
+  border-radius: 8px !important;
+  border: 1px solid rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
+}
+
+.reviews-title,
+.item-reviews-title,
+.source-reviews-title,
+.external-reviews-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #292524 !important; /* stone-800 */
+  margin: 0 0 12px 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.reviews-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 12px !important;
+  font-size: 12px !important;
+  color: #78716c !important; /* stone-500 */
+}
+
+.reviews-count {
+  font-weight: 500 !important;
+}
+
+.reviews-status {
+  padding: 2px 8px !important;
+  background: rgba(34, 197, 94, 0.1) !important; /* green-500 with transparency */
+  color: #16a34a !important; /* green-600 */
+  border-radius: 4px !important;
+  font-size: 11px !important;
+}
+
+/* Review items */
+.review-item {
+  padding: 12px !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-radius: 6px !important;
+  margin-bottom: 8px !important;
+  border: 1px solid rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
+}
+
+.review-source {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #57534e !important; /* stone-600 */
+  margin-bottom: 4px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.review-text {
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  color: #44403c !important; /* stone-700 */
+  margin-bottom: 8px !important;
+}
+
+.review-meta {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  font-size: 11px !important;
+  color: #78716c !important; /* stone-500 */
+}
+
+/* Fit tips section */
+.fit-tips-section {
+  margin-top: 20px !important;
+  padding: 16px !important;
+  background: rgba(250, 250, 249, 0.5) !important; /* stone-50 with transparency */
+  border-radius: 8px !important;
+  border: 1px solid rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
+}
+
+.fit-tips-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #292524 !important; /* stone-800 */
+  margin: 0 0 12px 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.fit-tip-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 8px !important;
+  padding: 8px 0 !important;
+  border-bottom: 1px solid rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
+}
+
+.fit-tip-item:last-child {
+  border-bottom: none !important;
+}
+
+.tip-icon {
+  font-size: 16px !important;
+  margin-top: 2px !important;
+}
+
+.tip-text {
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  color: #44403c !important; /* stone-700 */
+  flex: 1 !important;
+}
+
+/* Source tabs */
+.source-tabs {
+  display: flex !important;
+  gap: 4px !important;
+  margin-bottom: 12px !important;
+}
+
+.source-tab {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #78716c !important; /* stone-500 */
+  background: rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
+  border: 1px solid rgba(168, 162, 158, 0.2) !important; /* stone-300 with transparency */
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.source-tab:hover {
+  background: rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
+  border-color: rgba(168, 162, 158, 0.3) !important; /* stone-300 with transparency */
+}
+
+.source-tab.active {
+  background: rgba(34, 197, 94, 0.1) !important; /* green-500 with transparency */
+  color: #16a34a !important; /* green-600 */
+  border-color: rgba(34, 197, 94, 0.3) !important; /* green-500 with transparency */
+}
+
+/* Widget footer */
+.widget-footer {
+  padding: 16px 20px !important;
+  border-top: 1px solid rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
+  display: flex !important;
+  gap: 12px !important;
+  justify-content: flex-end !important;
+}
+
+.widget-btn {
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.widget-btn.secondary {
+  background: rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
+  color: #57534e !important; /* stone-600 */
+  border-color: rgba(168, 162, 158, 0.2) !important; /* stone-300 with transparency */
+}
+
+.widget-btn.secondary:hover {
+  background: rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
+  border-color: rgba(168, 162, 158, 0.3) !important; /* stone-300 with transparency */
+}
+
+.widget-btn.primary {
+  background: rgba(168, 162, 158, 0.9) !important; /* stone-300 with transparency */
+  color: #44403c !important; /* stone-700 */
+  border-color: rgba(168, 162, 158, 0.9) !important; /* stone-300 with transparency */
+}
+
+.widget-btn.primary:hover {
+  background: rgba(168, 162, 158, 1) !important; /* stone-300 solid */
+  border-color: rgba(168, 162, 158, 1) !important; /* stone-300 solid */
+  transform: translateY(-1px) !important;
+}
