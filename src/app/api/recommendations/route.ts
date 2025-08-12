@@ -7,12 +7,16 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   let query = '';
+  let enableExternalSearch = true; // Default to enabled
+  
   try {
     const body = await request.json();
     query = body.query;
+    enableExternalSearch = body.enableExternalSearch !== false; // Allow disabling
     
     console.log('=== DEBUG: Starting recommendation request ===');
     console.log('Query received:', query);
+    console.log('External search enabled:', enableExternalSearch);
     console.log('OpenAI API Key exists:', !!process.env.OPENAI_API_KEY);
     console.log('OpenAI API Key preview:', process.env.OPENAI_API_KEY?.substring(0, 10) + '...');
     
@@ -34,6 +38,13 @@ export async function POST(request: NextRequest) {
       console.log('Missing Airtable config - BASE_ID:', !!AIRTABLE_BASE_ID, 'API_KEY:', !!AIRTABLE_API_KEY);
       throw new Error(`Missing Airtable configuration. BASE_ID: ${!!AIRTABLE_BASE_ID}, API_KEY: ${!!AIRTABLE_API_KEY}`);
     }
+    
+    // Extract brand name from query for external search
+    const brandMatch = query.match(/Brand\/Item:\s*([^\n]+)/);
+    const brandName = brandMatch ? brandMatch[1].trim() : '';
+    
+    console.log('=== DEBUG: Extracted brand name ===');
+    console.log('Brand name:', brandName);
     
     // Fetch your real brand data
     console.log('=== DEBUG: Fetching Airtable data ===');
@@ -109,249 +120,174 @@ export async function POST(request: NextRequest) {
      userFeedback: record.fields['User feedback'] || '',
      productURL: record.fields['Product URL'] || record.fields['Link'] || '',
      imageURL: record.fields['Image'] || record.fields['Photo'] || ''
-    })).filter((brand: { name: string }) => brand.name);
+    }));
     
-    console.log('Processed brands:', brands.length);
-    console.log('Sample brand:', brands[0]);
+    console.log('=== DEBUG: Processed brands ===');
+    console.log('Total brands processed:', brands.length);
+    console.log('Sample brand names:', brands.slice(0, 5).map((b: Brand) => b.name));
     
-    // Enhanced analysis: Check if this is a detailed brand analysis vs follow-up
-    const isDetailedAnalysis = query.includes('Category:') && query.includes('Fit preference:');
-    const isFollowUp = query.includes('Follow-up question about');
+    // Find matching brand
+    const matchingBrand = brands.find((brand: Brand) => 
+      brand.name.toLowerCase().includes(brandName.toLowerCase()) ||
+      brandName.toLowerCase().includes(brand.name.toLowerCase())
+    );
     
-    console.log('=== DEBUG: Request type ===');
-    console.log('Is detailed analysis:', isDetailedAnalysis);
-    console.log('Is follow-up:', isFollowUp);
+    console.log('=== DEBUG: Brand matching ===');
+    console.log('Matching brand found:', !!matchingBrand);
+    if (matchingBrand) {
+      console.log('Matched brand:', matchingBrand.name);
+      console.log('Has fit summary:', !!matchingBrand.fitSummary);
+      console.log('Has reviews:', !!matchingBrand.reviews);
+    }
     
-    let prompt;
+    // Check if we have sufficient database data
+    const hasSufficientData = matchingBrand && 
+      (matchingBrand.fitSummary || matchingBrand.reviews || matchingBrand.userQuotes);
     
-    if (isFollowUp) {
-      // Handle follow-up questions with context
-      prompt = `You are a fashion expert answering a follow-up question about a brand analysis. 
-      
-${query}
-
-Available brands with real user data:
-${brands.slice(0, 10).map((brand: Brand) => `
-${brand.name} (${brand.category}):
-- Garments: ${brand.garmentTypes.join(', ')}
-- Best for body types: ${brand.bestForBodyTypes.join(', ')}
-- Fit: ${brand.fitSummary}
-- Sizing: ${brand.sizingSystem} (${brand.sizeRange})
-- Price: ${brand.priceRange}
-- User quotes: ${brand.userQuotes}
-- Common fit issues: ${brand.commonFitInfo}
-- Fabric stretch: ${brand.fabricStretch}
-- Customer reviews: ${brand.userFeedback}
-- Product URL: ${brand.productURL}
-- Confidence: ${brand.confidenceScore}/5
-`).join('\n')}
-
-Provide a focused, helpful answer to their specific follow-up question. Include real customer quotes when available using quotation marks. Keep under 200 words and be conversational.`;
-
-    } else if (isDetailedAnalysis) {
-      // Extract the brand name from the user query
-      const queryLines = query.split('\n');
-      const brandLine = queryLines.find(line => line.startsWith('Brand/Item:'));
-      const requestedBrand = brandLine ? brandLine.replace('Brand/Item:', '').trim() : '';
-      
-      console.log('=== DEBUG: Brand matching ===');
-      console.log('Requested brand:', requestedBrand);
-      
-      // Find the specific brand in our database
-      const matchingBrand = brands.find((brand: { name: string }) => 
-        brand.name.toLowerCase().includes(requestedBrand.toLowerCase()) ||
-        requestedBrand.toLowerCase().includes(brand.name.toLowerCase())
-      );
-
-      console.log('Matching brand found:', !!matchingBrand);
-      console.log('Matching brand data:', matchingBrand);
-
-      if (matchingBrand) {
-        // Analyze the SPECIFIC brand that was requested
-        prompt = `You are analyzing the specific brand "${matchingBrand.name}" for a user with this profile:
-
-${query}
-
-IMPORTANT: You must ONLY analyze ${matchingBrand.name}. Do not recommend other brands.
-
-Brand data for ${matchingBrand.name}:
-- Category: ${matchingBrand.category}
-- Garments: ${matchingBrand.garmentTypes.join(', ')}
-- Best for body types: ${matchingBrand.bestForBodyTypes.join(', ')}
-- Fit summary: ${matchingBrand.fitSummary}
-- Sizing system: ${matchingBrand.sizingSystem} (${matchingBrand.sizeRange})
-- Price range: ${matchingBrand.priceRange}
-- User quotes: ${matchingBrand.userQuotes}
-- Common fit issues: ${matchingBrand.commonFitInfo}
-- Fabric stretch: ${matchingBrand.fabricStretch}
-- Customer reviews: ${matchingBrand.userFeedback}
-- Confidence score: ${matchingBrand.confidenceScore}/5
-
-Provide analysis in this EXACT format:
-
-**Recommendation**
-Based on [X] reviews from users similar to you: [percentage]% would recommend ${matchingBrand.name}. [Specific reasons why this brand works/doesn't work for their profile]
-
-**Sizing**
-For ${matchingBrand.name}: [Specific sizing advice based on the brand data - should they size up, down, or go true to size for their body/foot type]
-
-**⚠️ Warning**
-[Any sizing issues or fit concerns specific to ${matchingBrand.name} for their profile. If none, write "No major concerns for your profile with ${matchingBrand.name}"]
-
-**Price**
-${matchingBrand.priceRange || 'Price information not available'}
-
-**Customer Reviews**
-[Include 1-2 actual quotes from the userQuotes or userFeedback data, using quotation marks]
-
-Focus ONLY on ${matchingBrand.name}. Do not mention or recommend other brands.`;
-
-      } else {
-        // Brand not found in database - provide limited analysis
-        console.log('=== DEBUG: Brand not found, using fallback ===');
-        prompt = `The user is asking about "${requestedBrand}" but this brand is not in our database.
-
-User request: ${query}
-
-Provide a response in this EXACT format:
-
-**Recommendation**
-We don't have detailed sizing data for ${requestedBrand} in our database yet. However, based on general fashion industry standards: [provide general advice]
-
-**Sizing**
-For ${requestedBrand}: [General sizing advice - recommend checking size guide, contacting customer service, or looking at reviews]
-
-**⚠️ Warning**
-Without specific ${requestedBrand} sizing data, we recommend checking their official size guide and reading customer reviews before purchasing.
-
-**Price**
-Check retailer websites for current ${requestedBrand} pricing.
-
-**Customer Reviews**
-We don't have customer review data for ${requestedBrand} yet. Check retailer websites and review platforms for customer feedback.
-
-Be honest that you don't have specific data for this brand.`;
+    console.log('=== DEBUG: Data sufficiency check ===');
+    console.log('Has sufficient database data:', hasSufficientData);
+    
+    // If external search is enabled and database data is insufficient, try external search
+    let externalSearchResults = null;
+    if (enableExternalSearch && brandName && (!hasSufficientData || !matchingBrand?.fitSummary)) {
+      try {
+        console.log('=== DEBUG: Attempting external search ===');
+        const externalResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/external-search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            brand: brandName, 
+            itemName: '', // Could extract item name from query if needed
+            userId: 'anonymous' // In production, get from auth
+          })
+        });
+        
+        if (externalResponse.ok) {
+          externalSearchResults = await externalResponse.json();
+          console.log('=== DEBUG: External search successful ===');
+          console.log('External results count:', externalSearchResults.totalResults);
+          console.log('Has brand fit summary:', !!externalSearchResults.brandFitSummary);
+        } else {
+          console.log('=== DEBUG: External search failed ===');
+          console.log('Status:', externalResponse.status);
+        }
+      } catch (error) {
+        console.log('=== DEBUG: External search error ===');
+        console.error('External search error:', error);
       }
-
-    } else {
-      // General recommendations (shouldn't happen in analyze route, but just in case)
-      prompt = `You are a critical fashion analyst who gives honest, balanced recommendations based on real user data.
-
-User's request: "${query}"
-
-Available brands with real user data:
-${brands.slice(0, 15).map((brand: Brand) => `
-${brand.name} (${brand.category}):
-- Garments: ${brand.garmentTypes.join(', ')}
-- Best for body types: ${brand.bestForBodyTypes.join(', ')}
-- Fit: ${brand.fitSummary}
-- Sizing: ${brand.sizingSystem} (${brand.sizeRange})
-- Price: ${brand.priceRange}
-- User quotes: ${brand.userQuotes}
-- Common fit issues: ${brand.commonFitInfo}
-- Fabric stretch: ${brand.fabricStretch}
-- Customer reviews: ${brand.userFeedback}
-- Product URL: ${brand.productURL}
-- Confidence: ${brand.confidenceScore}/5
-`).join('\n')}
-
-Format your response with these sections:
-**Recommendation**: Your top recommendation and why
-**⚠️ Warning**: Any sizing/fit concerns
-**Price**: Cost information
-**Customer Reviews**: Real quotes from the data in quotation marks
-**Avoid if**: Who should avoid this brand and why
-
-Be honest about sizing issues and negative reviews. Keep under 250 words.`;
     }
-
-    console.log('=== DEBUG: About to call OpenAI ===');
-    console.log('Prompt length:', prompt.length);
     
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is missing');
+    // Create enhanced context for AI
+    let enhancedContext = '';
+    
+    if (matchingBrand) {
+      enhancedContext += `Brand: ${matchingBrand.name}\n`;
+      enhancedContext += `Category: ${matchingBrand.category}\n`;
+      if (matchingBrand.fitSummary) enhancedContext += `Fit Summary: ${matchingBrand.fitSummary}\n`;
+      if (matchingBrand.bestForBodyTypes.length > 0) enhancedContext += `Best For Body Types: ${matchingBrand.bestForBodyTypes.join(', ')}\n`;
+      if (matchingBrand.sizeRange) enhancedContext += `Size Range: ${matchingBrand.sizeRange}\n`;
+      if (matchingBrand.sizingSystem) enhancedContext += `Sizing System: ${matchingBrand.sizingSystem}\n`;
+      if (matchingBrand.priceRange) enhancedContext += `Price Range: ${matchingBrand.priceRange}\n`;
+      if (matchingBrand.userQuotes) enhancedContext += `User Quotes: ${matchingBrand.userQuotes}\n`;
+      if (matchingBrand.reviews) enhancedContext += `Reviews: ${matchingBrand.reviews}\n`;
+      if (matchingBrand.commonFitInfo) enhancedContext += `Common Fit Info: ${matchingBrand.commonFitInfo}\n`;
+      if (matchingBrand.fabricStretch) enhancedContext += `Fabric Stretch: ${matchingBrand.fabricStretch}\n`;
+      if (matchingBrand.userFeedback) enhancedContext += `User Feedback: ${matchingBrand.userFeedback}\n`;
     }
+    
+    // Add external search results to context if available
+    if (externalSearchResults && externalSearchResults.brandFitSummary) {
+      enhancedContext += `\nExternal Search Results:\n`;
+      enhancedContext += `Brand Fit Summary: ${externalSearchResults.brandFitSummary.summary}\n`;
+      enhancedContext += `Confidence: ${externalSearchResults.brandFitSummary.confidence}\n`;
+      enhancedContext += `Sources: ${externalSearchResults.brandFitSummary.sources.join(', ')}\n`;
+      enhancedContext += `Total External Results: ${externalSearchResults.totalResults}\n`;
+      
+      // Add some key external reviews
+      if (externalSearchResults.reviews && externalSearchResults.reviews.length > 0) {
+        enhancedContext += `\nKey External Reviews:\n`;
+        externalSearchResults.reviews.slice(0, 3).forEach((review: any, index: number) => {
+          enhancedContext += `${index + 1}. ${review.title} (${review.source}): ${review.snippet}\n`;
+        });
+      }
+    }
+    
+    console.log('=== DEBUG: Enhanced context created ===');
+    console.log('Context length:', enhancedContext.length);
+    console.log('Has external data:', !!externalSearchResults);
+    
+    // Create the AI prompt with enhanced context
+    const aiPrompt = `You are a fashion expert helping users find the right fit for clothing and footwear brands. 
 
+${enhancedContext ? `Here's what I know about the brand:\n${enhancedContext}\n` : ''}
+
+User Query: ${query}
+
+Please provide a comprehensive analysis including:
+
+**Recommendation**: Clear sizing advice and fit recommendations based on the user's profile
+**Summary**: Brief overview of the brand's fit characteristics
+**Sizing**: Specific sizing guidance (runs small/large, true to size, etc.)
+**Warnings**: Any important fit or quality considerations
+**Price**: Price range information if available
+**Customer Reviews**: Include relevant user feedback and quotes
+
+If you have external search results, incorporate them to provide more comprehensive advice. If the brand isn't in our database but we have external results, focus on those insights.
+
+Make your response helpful, specific, and actionable. Use bullet points where appropriate and be encouraging but honest about any limitations in the data.`;
+    
+    console.log('=== DEBUG: AI prompt created ===');
+    console.log('Prompt length:', aiPrompt.length);
+    
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4",
       messages: [
         {
           role: "system",
-          content: isFollowUp 
-            ? "You are a helpful fashion expert providing specific answers to follow-up questions. Be conversational and informative."
-            : isDetailedAnalysis 
-            ? "You are an expert fashion analyst providing comprehensive, personalized brand analysis. Use the EXACT format requested with proper section headers."
-            : "You are a critical fashion analyst who prioritizes honest, balanced advice with proper section formatting."
+          content: "You are a helpful fashion expert who provides detailed, accurate sizing and fit advice based on available data. Always be encouraging but honest about data limitations."
         },
         {
           role: "user",
-          content: prompt
+          content: aiPrompt
         }
       ],
-      max_tokens: isFollowUp ? 250 : isDetailedAnalysis ? 500 : 350,
-      temperature: 0.6
+      max_tokens: 1000,
+      temperature: 0.7,
     });
-
-    console.log('=== DEBUG: OpenAI Response ===');
-    console.log('Choices length:', completion.choices?.length || 0);
-    console.log('Response preview:', completion.choices[0]?.message?.content?.substring(0, 100));
-
-    const recommendation = completion.choices[0]?.message?.content || 'Sorry, I could not generate a recommendation.';
-
-    console.log('=== DEBUG: Success - returning response ===');
     
-    return NextResponse.json({
-      query,
-      recommendation,
-      totalBrands: brands.length
-    });
-
+    const aiResponse = completion.choices[0]?.message?.content || "Sorry, I couldn't generate a response.";
+    
+    console.log('=== DEBUG: AI response received ===');
+    console.log('Response length:', aiResponse.length);
+    
+    // Create enhanced result with external search data
+    const enhancedResult = {
+      recommendation: aiResponse,
+      query: query,
+      totalBrands: brands.length,
+      hasDatabaseData: !!matchingBrand,
+      hasExternalData: !!externalSearchResults,
+      searchType: externalSearchResults ? 'hybrid' : 'database',
+      externalSearchResults: externalSearchResults || null
+    };
+    
+    console.log('=== DEBUG: Final result created ===');
+    console.log('Result type:', enhancedResult.searchType);
+    console.log('Has external data:', enhancedResult.hasExternalData);
+    
+    return NextResponse.json(enhancedResult);
+    
   } catch (error) {
     console.error('=== DEBUG: Error occurred ===');
-    console.error('Error details:', error);
-    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Error:', error);
     
-    // Generate a meaningful fallback based on the query
-    let fallbackResponse = '';
-    
-    if (query.includes('Category:') && query.includes('Brand/Item:')) {
-      // This is a brand analysis request
-      const queryLines = query.split('\n');
-      const brandLine = queryLines.find(line => line.startsWith('Brand/Item:'));
-      const brandName = brandLine ? brandLine.replace('Brand/Item:', '').trim() : 'this brand';
-      
-      fallbackResponse = `**Recommendation**
-Unable to access our full database right now, but I can provide general guidance for ${brandName}.
-
-**Sizing**
-Without specific data, I recommend checking the brand's official size guide and reading customer reviews on retailer websites.
-
-**⚠️ Warning**
-Since we can't access detailed sizing data right now, be sure to check the return policy before ordering.
-
-**Price**
-Check retailer websites for current pricing and availability.
-
-**Customer Reviews**
-Look for customer reviews on the brand's website, ASOS, Net-a-Porter, or other major retailers for the most current feedback.`;
-    } else {
-      // This is a chat follow-up
-      fallbackResponse = `I'm having trouble accessing our full database right now. For the most accurate information about sizing, pricing, and customer reviews, I'd recommend:
-
-• Checking the brand's official website for size guides
-• Reading customer reviews on retailer sites
-• Contacting the brand's customer service directly
-• Looking at social media for real customer photos and feedback
-
-Is there a specific aspect I can help you with using general fashion knowledge?`;
-    }
-  
-    return NextResponse.json({
-      query,
-      recommendation: fallbackResponse,
-      totalBrands: 0,
-      error: error instanceof Error ? error.message : String(error),
-      debug: true // Flag to indicate this was a fallback response
-    });
+    return NextResponse.json(
+      { 
+        error: 'Failed to process recommendation request',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        recommendation: "Sorry, I couldn't process your request. Please try again or check if the brand name is correct."
+      },
+      { status: 500 }
+    );
   }
 }

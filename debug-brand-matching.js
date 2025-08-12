@@ -7,7 +7,7 @@ async function debugBrandMatching() {
   try {
     // Test the API endpoint with LESET
     console.log('📡 Testing LESET brand lookup...');
-    const response = await fetch('http://localhost:3001/api/extension/check-brand', {
+    const response = await fetch('http://localhost:3000/api/extension/check-brand', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -45,7 +45,7 @@ async function debugBrandMatching() {
       console.log(`📡 Testing brand variation: "${variation}"`);
       
       try {
-        const response = await fetch('http://localhost:3001/api/extension/check-brand', {
+        const response = await fetch('http://localhost:3000/api/extension/check-brand', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -72,7 +72,7 @@ async function debugBrandMatching() {
 
 // Test the brand matching
 console.log('🚀 Starting brand name matching debug test...');
-console.log('Make sure your server is running on http://localhost:3001');
+console.log('Make sure your server is running on http://localhost:3000');
 console.log('');
 
 debugBrandMatching().catch(console.error);

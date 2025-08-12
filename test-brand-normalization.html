@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brand Normalization Test - Fashion Extension</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .brand-example {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+        .expected {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .current {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Brand Normalization Test</h1>
+        <p>Testing multi-word brand name handling in the fashion extension</p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Cases</h2>
+        
+        <div class="brand-example">
+            <h3>Wax London</h3>
+            <p><strong>Expected:</strong> <span class="expected">"Wax London" (with space)</span></p>
+            <p><strong>Current Issue:</strong> <span class="current">"waxlondon" (no space)</span></p>
+            <p><strong>Domain:</strong> waxlondon.com</p>
+        </div>
+
+        <div class="brand-example">
+            <h3>Rohe Frames</h3>
+            <p><strong>Expected:</strong> <span class="expected">"Rohe Frames" (with space)</span></p>
+            <p><strong>Current Issue:</strong> <span class="current">"roheframes" (no space)</span></p>
+            <p><strong>Domain:</strong> roheframes.com</p>
+        </div>
+
+        <div class="brand-example">
+            <h3>GANNI</h3>
+            <p><strong>Expected:</strong> <span class="expected">"GANNI" (exact match)</span></p>
+            <p><strong>Domain:</strong> ganni.com</p>
+        </div>
+
+        <div class="brand-example">
+            <h3>Reformation</h3>
+            <p><strong>Expected:</strong> <span class="expected">"Reformation" (exact match)</span></p>
+            <p><strong>Domain:</strong> thereformation.com</p>
+        </div>
+    </div>
+
+    <div class="instructions">
+        <h3>Testing Instructions:</h3>
+        <ol>
+            <li>Open the browser extension popup on this page</li>
+            <li>Check the console for brand detection logs</li>
+            <li>Look for these specific log messages:
+                <ul>
+                    <li><code>🔍 Domain brand extraction: { original: "domain.com", extracted: "Brand Name" }</code></li>
+                    <li><code>Detected brand: "Brand Name"</code></li>
+                    <li><code>Normalized brand: "Brand Name"</code></li>
+                </ul>
+            </li>
+            <li>Verify that multi-word brands maintain their spaces</li>
+        </ol>
+        
+        <h3>Expected Console Output:</h3>
+        <pre><code>🔍 Domain brand extraction: { original: "waxlondon.com", extracted: "Wax London" }
+Detected brand: Wax London
+Normalized brand: Wax London</code></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>What Was Fixed</h2>
+        <ul>
+            <li><strong>Domain Parsing:</strong> Added intelligent splitting for run-together domain names</li>
+            <li><strong>Brand Pattern Recognition:</strong> Added common brand patterns to detect</li>
+            <li><strong>CamelCase Handling:</strong> Added logic to split camelCase domain names</li>
+            <li><strong>Enhanced Debugging:</strong> Added detailed logging for brand extraction process</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Next Steps</h2>
+        <ol>
+            <li><strong>Test the extension</strong> on this page to verify brand normalization</li>
+            <li><strong>Check console logs</strong> for proper brand name extraction</li>
+            <li><strong>Test with real brands</strong> like Wax London and Rohe Frames</li>
+            <li><strong>Verify search queries</strong> use proper brand names with spaces</li>
+        </ol>
+    </div>
+</body>
+</html>

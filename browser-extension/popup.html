@@ -107,8 +107,340 @@
 
     .review-count {
       font-size: 12px;
-      color: #78716c; /* stone-500 */
+      color: #78716c; /* stone-500 - medium beige text */
       margin-top: 4px;
+    }
+
+    .review-item {
+      border-bottom: 1px solid #e7e5e4; /* stone-200 */
+      padding: 12px 0;
+      margin-bottom: 8px;
+    }
+
+    .review-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    .review-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .review-item-name {
+      font-weight: 600;
+      font-size: 13px;
+      color: #292524;
+    }
+
+    .review-garment-type {
+      font-size: 11px;
+      color: #78716c;
+      background: #f5f5f4;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: capitalize;
+    }
+
+    .review-rating {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .rating-stars {
+      color: #f59e0b; /* amber-500 */
+      font-size: 12px;
+    }
+
+    .rating-text {
+      font-size: 11px;
+      color: #78716c;
+      font-weight: 500;
+    }
+
+    .review-details {
+      font-size: 11px;
+      color: #78716c;
+      margin-bottom: 6px;
+    }
+
+    .review-comments {
+      font-size: 12px;
+      color: #292524;
+      line-height: 1.4;
+      font-style: italic;
+    }
+
+    .review-recommendation {
+      font-size: 11px;
+      font-weight: 500;
+      margin-top: 6px;
+    }
+
+    .recommend-yes {
+      color: #16a34a; /* green-600 */
+    }
+
+    .recommend-no {
+      color: #dc2626; /* red-600 */
+    }
+
+    .no-reviews {
+      text-align: center;
+      color: #a8a29e;
+      font-style: italic;
+      padding: 20px 0;
+    }
+
+    .load-more-reviews {
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    .load-more-btn {
+      background: #f5f5f4;
+      border: 1px solid #e7e5e4;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 11px;
+      color: #78716c;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .load-more-btn:hover {
+      background: #e7e5e4;
+      color: #292524;
+    }
+
+    /* Dynamic review styles */
+    .dynamic-notification {
+      background: #fef3c7; /* amber-100 */
+      border: 1px solid #f59e0b; /* amber-500 */
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+      font-size: 11px;
+      color: #92400e; /* amber-800 */
+      text-align: center;
+    }
+
+    .dynamic-notification.fallback {
+      background: #fef2f2; /* red-50 */
+      border: 1px solid #ef4444; /* red-500 */
+      color: #991b1b; /* red-800 */
+    }
+
+    .dynamic-review {
+      border-left: 3px solid #f59e0b; /* amber-500 */
+      background: #fefce8; /* yellow-50 */
+    }
+
+    .dynamic-review.item-specific {
+      border-left: 3px solid #16a34a; /* green-500 */
+      background: #f0fdf4; /* green-50 */
+      border: 1px solid #bbf7d0; /* green-200 */
+    }
+
+    .dynamic-review.item-specific .review-header {
+      background: #dcfce7; /* green-100 */
+      margin: -12px -12px 8px -12px;
+      padding: 8px 12px;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .dynamic-review.item-specific .review-item-name {
+      color: #15803d; /* green-700 */
+      font-weight: 700;
+    }
+
+    .source-badge {
+      font-size: 10px;
+      color: #78716c;
+      background: #f5f5f4;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .fit-notes {
+      font-size: 11px;
+      color: #16a34a; /* green-600 */
+      font-weight: 500;
+      margin: 6px 0;
+      padding: 4px 8px;
+      background: #f0fdf4; /* green-50 */
+      border-radius: 4px;
+      border-left: 2px solid #16a34a;
+    }
+
+    .review-source {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      font-size: 10px;
+      color: #78716c;
+    }
+
+    .review-source a {
+      color: #3b82f6; /* blue-500 */
+      text-decoration: none;
+    }
+
+    .review-source a:hover {
+      text-decoration: underline;
+    }
+
+    .confidence-badge {
+      font-size: 9px;
+      color: #78716c;
+      background: #f5f5f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    .relevance-badge {
+      font-size: 9px;
+      color: #15803d;
+      background: #dcfce7;
+      padding: 2px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* Brand fit summary styles */
+    .brand-fit-summary {
+      background: #f0fdf4; /* green-50 */
+      border: 1px solid #16a34a; /* green-500 */
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .brand-fit-summary h4 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: #16a34a;
+      font-weight: 600;
+    }
+
+    .summary-content {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .summary-text {
+      font-size: 13px;
+      color: #292524;
+      font-weight: 500;
+    }
+
+    .summary-meta {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .sources {
+      color: #78716c;
+    }
+
+    /* Review tags */
+    .review-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin: 8px 0;
+    }
+
+    .tag {
+      font-size: 9px;
+      color: #78716c;
+      background: #f5f5f4;
+      padding: 2px 6px;
+      border-radius: 12px;
+      text-transform: lowercase;
+    }
+
+    /* Section headers */
+    .reviews-content h4 {
+      margin: 16px 0 8px 0;
+      font-size: 13px;
+      color: #78716c;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #e7e5e4;
+      padding-bottom: 4px;
+    }
+
+    /* Category-specific styling */
+    .reviews-content h4:contains("Primary Sources") {
+      color: #dc2626; /* red-600 */
+      border-bottom-color: #fca5a5; /* red-200 */
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .reviews-content h4:contains("Social Media") {
+      color: #ec4899; /* pink-500 */
+      border-bottom-color: #f9a8d4; /* pink-200 */
+    }
+
+    .reviews-content h4:contains("Fashion Publications") {
+      color: #8b5cf6; /* violet-500 */
+      border-bottom-color: #c4b5fd; /* violet-200 */
+    }
+
+    .reviews-content h4:contains("Video Reviews") {
+      color: #ef4444; /* red-500 */
+      border-bottom-color: #fca5a5; /* red-200 */
+    }
+
+    .reviews-content h4:contains("Blog Reviews") {
+      color: #10b981; /* emerald-500 */
+      border-bottom-color: #6ee7b7; /* emerald-200 */
+    }
+
+    .reviews-content h4:contains("Community Reviews") {
+      color: #f59e0b; /* amber-500 */
+      border-bottom-color: #fcd34d; /* amber-200 */
+    }
+
+    /* Toggle styles */
+    .dynamic-search-toggle {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #e7e5e4;
+    }
+
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 11px;
+      color: #78716c;
+    }
+
+    .toggle-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #f59e0b;
+    }
+
+    .toggle-text {
+      font-weight: 500;
     }
   </style>
 </head>
@@ -139,11 +471,22 @@
     <div class="info-label">Review Data</div>
     <div class="info-value" id="review-status">Checking...</div>
     <div class="review-count" id="review-count"></div>
+    <div class="dynamic-search-toggle">
+      <label class="toggle-label">
+        <input type="checkbox" id="dynamic-search-toggle" checked>
+        <span class="toggle-text">Enable live search</span>
+      </label>
+    </div>
   </div>
   
   <div class="info-card" id="fit-summary-section" style="display: none;">
     <div class="info-label">Fit Summary</div>
     <div class="info-value" id="fit-summary">Loading...</div>
+  </div>
+  
+  <div class="info-card" id="reviews-section" style="display: none;">
+    <div class="info-label">User Reviews</div>
+    <div class="info-value" id="reviews-content">Loading reviews...</div>
   </div>
   
   <script src="popup.js"></script>

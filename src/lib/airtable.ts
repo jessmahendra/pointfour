@@ -224,8 +224,8 @@ export const airtableService = {
       const reviews: Review[] = records.map((record: any) => {
         const review = {
           id: record.id,
-          brandName: safeGet(record, 'Brand') || safeGet(record, 'brand') || safeGet(record, 'Brand Name') || safeGet(record, 'brand name') || '',
-          itemName: safeGet(record, 'Item Name') || safeGet(record, 'item name') || '',
+          brandName: record.fields['Brand'] || record.fields['brand'] || '',
+          itemName: record.fields['Item Name'] || '',
           garmentType: safeGet(record, 'Garment Type') || safeGet(record, 'garment type') || '',
           userBodyType: safeGet(record, 'User Body Type') || safeGet(record, 'user body type') || '',
           sizeBought: safeGet(record, 'Size Bought') || safeGet(record, 'size bought') || '',

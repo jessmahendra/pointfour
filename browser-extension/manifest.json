@@ -4,7 +4,7 @@
   "version": "1.1",
   "description": "Detect fashion items while shopping online and get personalized recommendations",
   "permissions": ["activeTab", "scripting"],
-  "host_permissions": ["http://localhost:3000/*", "http://localhost:3001/*"],
+      "host_permissions": ["http://localhost:3000/*"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Fashion Item Detector"

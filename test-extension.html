@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Brand - Fashion Extension Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .product-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+        .brand-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .product-name {
+            font-size: 18px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Fashion Extension Test Page</h1>
+        <p>This page is designed to test the dynamic review search functionality</p>
+    </div>
+
+    <div class="product-info">
+        <div class="brand-name">TestFashionBrand</div>
+        <div class="product-name">Premium Cotton T-Shirt</div>
+        <p>This is a test product from a brand that should not exist in your Airtable database.</p>
+    </div>
+
+    <div class="instructions">
+        <h3>Testing Instructions:</h3>
+        <ol>
+            <li>Make sure your Next.js server is running on localhost:3000</li>
+            <li>Open the browser extension popup on this page</li>
+            <li>The extension should detect "TestFashionBrand" as the brand</li>
+            <li>Since this brand isn't in Airtable, it should trigger dynamic search</li>
+            <li>You should see "Searching for reviews..." then dynamic results</li>
+            <li>Check the browser console for debug information</li>
+        </ol>
+        
+        <h3>Expected Behavior:</h3>
+        <ul>
+            <li>Brand detection: "TestFashionBrand"</li>
+            <li>Item detection: "Premium Cotton T-Shirt"</li>
+            <li>Status: Should show "Searching for reviews..." then "Dynamic reviews found"</li>
+            <li>Results: Live search results from Serper API (Reddit, blogs, videos)</li>
+            <li>Brand fit summary with confidence scoring</li>
+            <li>Reviews grouped by source type (community, blogs, videos)</li>
+        </ul>
+        
+        <h3>New Features:</h3>
+        <ul>
+            <li>🔍 Real web search using Serper API</li>
+            <li>📊 Brand fit summary generation</li>
+            <li>🏷️ Content classification and tagging</li>
+            <li>📱 Grouped reviews by source type</li>
+            <li>⚡ Smart caching (1 hour for searches, 1 week for brand summaries)</li>
+            <li>🎯 Confidence scoring (high/medium/low)</li>
+        </ul>
+    </div>
+
+    <div class="product-info">
+        <h3>Alternative Test Brands:</h3>
+        <p>You can also test with these brand names that likely aren't in your database:</p>
+        <ul>
+            <li><strong>ZaraTest</strong> - Modified version of Zara</li>
+            <li><strong>NewFashionHouse</strong> - Completely fictional brand</li>
+            <li><strong>TestBrand2024</strong> - Test brand with year</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -9,7 +9,7 @@ async function testBrandAPI() {
     console.log('='.repeat(50));
     
     try {
-      const response = await fetch('http://localhost:3001/api/extension/check-brand', {
+      const response = await fetch('http://localhost:3000/api/extension/check-brand', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -44,7 +44,7 @@ async function testBrandAPI() {
 
 // Test the API
 console.log('🚀 Starting browser extension API debug test...');
-console.log('Make sure your server is running on http://localhost:3001');
+console.log('Make sure your server is running on http://localhost:3000');
 console.log('');
 
 testBrandAPI().catch(console.error);
