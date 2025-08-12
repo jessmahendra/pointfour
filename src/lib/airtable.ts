@@ -210,12 +210,12 @@ export const airtableService = {
         
         // DEBUG: Log the first few records to see exact field values
         console.log('📋 First 3 review records (raw):');
-        records.slice(0, 3).forEach((record, index) => {
+        records.slice(0, 3).forEach((record: { id: string; fields: Record<string, unknown> }, index: number) => {
           console.log(`  Record ${index + 1}:`, {
             id: record.id,
             fields: record.fields,
-            brandNameField: record.fields['Brand Name'] || record.fields['brand name'] || 'NOT FOUND',
-            itemNameField: record.fields['Item Name'] || record.fields['item name'] || 'NOT FOUND'
+            brandNameField: safeGet(record, 'Brand Name') || safeGet(record, 'brand name') || 'NOT FOUND',
+            itemNameField: safeGet(record, 'Item Name') || safeGet(record, 'item name') || 'NOT FOUND'
           });
         });
       }
@@ -263,7 +263,7 @@ export const airtableService = {
         return acc;
       }, {} as Record<string, number>);
       
-      // console.log('📊 Reviews by brand:', brandCounts);
+      console.log('📊 Reviews by brand:', brandCounts);
       console.log('✅ Reviews processed successfully');
       return reviews;
     } catch (error) {
@@ -275,7 +275,7 @@ export const airtableService = {
   async getBodyTypes(): Promise<string[]> {
     try {
       const reviews = await this.getReviews();
-      const bodyTypes = [...new Set(reviews.map(review => review.userBodyType).filter((type): type is string => Boolean(type)))];
+      const bodyTypes = Array.from(new Set(reviews.map(review => review.userBodyType).filter((type): type is string => Boolean(type))));
       return bodyTypes.sort();
     } catch (error) {
       console.error('Error fetching body types:', error);
@@ -286,7 +286,7 @@ export const airtableService = {
   async getGarmentTypes(): Promise<string[]> {
     try {
       const reviews = await this.getReviews();
-      const garmentTypes = [...new Set(reviews.map(review => review.garmentType).filter((type): type is string => Boolean(type)))];
+      const garmentTypes = Array.from(new Set(reviews.map(review => review.garmentType).filter((type): type is string => Boolean(type))));
       return garmentTypes.sort();
     } catch (error) {
       console.error('Error fetching garment types:', error);
@@ -297,7 +297,7 @@ export const airtableService = {
   async getPriceRanges(): Promise<string[]> {
     try {
       const brands = await this.getBrands();
-      const priceRanges = [...new Set(brands.map(brand => brand.priceRange).filter((range): range is string => Boolean(range)))];
+      const priceRanges = Array.from(new Set(brands.map(brand => brand.priceRange).filter((range): range is string => Boolean(range))));
       return priceRanges.sort();
     } catch (error) {
       console.error('Error fetching price ranges:', error);

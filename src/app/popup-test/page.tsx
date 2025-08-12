@@ -226,8 +226,9 @@ export default function PopupTestPage() {
                 combination
               </li>
               <li>
-                Fuzzy Matching: Should handle item name variations (e.g., "Val
-                Jeans" vs "Val 90s Mid Rise Straight Jeans")
+                Fuzzy Matching: Should handle item name variations (e.g.,
+                &quot;Val Jeans&quot; vs &quot;Val 90s Mid Rise Straight
+                Jeans&quot;)
               </li>
             </ul>
           </div>

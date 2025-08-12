@@ -232,7 +232,7 @@ async function generateRecommendationsWithRealData(
 // FIXED: Enhanced brand filtering with quality control
 function filterBrandsByItem(brands: Brand[], itemQuery: string, isFootwear: boolean): Brand[] {
   const queryWords = itemQuery.toLowerCase().split(' ').filter(word => word.length > 2);
-  const specificItem = itemQuery.toLowerCase().trim();
+  // const specificItem = itemQuery.toLowerCase().trim();
   
   const filteredBrands = brands.filter(brand => {
     // STRICT category filtering - this is critical
@@ -255,35 +255,35 @@ function filterBrandsByItem(brands: Brand[], itemQuery: string, isFootwear: bool
     // Check for exact item type matches first (highest priority)
     const exactMatches = [
       // Bottoms - more specific matching
-      specificItem.includes('linen pants') && (allBrandText.includes('linen') || allBrandText.includes('pant')),
-      specificItem.includes('jeans') && allBrandText.includes('jeans'),
-      specificItem.includes('trousers') && (allBrandText.includes('trousers') || allBrandText.includes('pants')),
-      specificItem.includes('pants') && allBrandText.includes('pants'),
-      specificItem.includes('shorts') && allBrandText.includes('shorts'),
-      specificItem.includes('skirt') && allBrandText.includes('skirt'),
+      itemQuery.includes('linen pants') && (allBrandText.includes('linen') || allBrandText.includes('pant')),
+      itemQuery.includes('jeans') && allBrandText.includes('jeans'),
+      itemQuery.includes('trousers') && (allBrandText.includes('trousers') || allBrandText.includes('pants')),
+      itemQuery.includes('pants') && allBrandText.includes('pants'),
+      itemQuery.includes('shorts') && allBrandText.includes('shorts'),
+      itemQuery.includes('skirt') && allBrandText.includes('skirt'),
       
       // Tops
-      specificItem.includes('t-shirt') && (allBrandText.includes('t-shirt') || allBrandText.includes('tshirt') || allBrandText.includes('tee')),
-      specificItem.includes('shirt') && allBrandText.includes('shirt') && !specificItem.includes('t-shirt'),
-      specificItem.includes('blouse') && allBrandText.includes('blouse'),
-      specificItem.includes('sweater') && (allBrandText.includes('sweater') || allBrandText.includes('jumper')),
-      specificItem.includes('hoodie') && allBrandText.includes('hoodie'),
+      itemQuery.includes('t-shirt') && (allBrandText.includes('t-shirt') || allBrandText.includes('tshirt') || allBrandText.includes('tee')),
+      itemQuery.includes('shirt') && allBrandText.includes('shirt') && !itemQuery.includes('t-shirt'),
+      itemQuery.includes('blouse') && allBrandText.includes('blouse'),
+      itemQuery.includes('sweater') && (allBrandText.includes('sweater') || allBrandText.includes('jumper')),
+      itemQuery.includes('hoodie') && allBrandText.includes('hoodie'),
       
       // Outerwear
-      specificItem.includes('jacket') && allBrandText.includes('jacket'),
-      specificItem.includes('blazer') && allBrandText.includes('blazer'),
-      specificItem.includes('coat') && allBrandText.includes('coat'),
-      specificItem.includes('cardigan') && allBrandText.includes('cardigan'),
+      itemQuery.includes('jacket') && allBrandText.includes('jacket'),
+      itemQuery.includes('blazer') && allBrandText.includes('blazer'),
+      itemQuery.includes('coat') && allBrandText.includes('coat'),
+      itemQuery.includes('cardigan') && allBrandText.includes('cardigan'),
       
       // Dresses
-      specificItem.includes('dress') && allBrandText.includes('dress'),
+      itemQuery.includes('dress') && allBrandText.includes('dress'),
       
       // Footwear
-      specificItem.includes('boots') && allBrandText.includes('boots'),
-      specificItem.includes('sneakers') && (allBrandText.includes('sneakers') || allBrandText.includes('trainers')),
-      specificItem.includes('sandals') && allBrandText.includes('sandals'),
-      specificItem.includes('flats') && (allBrandText.includes('flats') || allBrandText.includes('ballet')),
-      specificItem.includes('heels') && allBrandText.includes('heels'),
+      itemQuery.includes('boots') && allBrandText.includes('boots'),
+      itemQuery.includes('sneakers') && (allBrandText.includes('sneakers') || allBrandText.includes('trainers')),
+      itemQuery.includes('sandals') && allBrandText.includes('sandals'),
+      itemQuery.includes('flats') && (allBrandText.includes('flats') || allBrandText.includes('ballet')),
+      itemQuery.includes('heels') && allBrandText.includes('heels'),
     ];
     
     // If we have exact matches, prioritize those
@@ -327,8 +327,6 @@ function filterBrandsByItem(brands: Brand[], itemQuery: string, isFootwear: bool
 function findReviewsForBrand(brandName: string, allReviews: Review[], itemQuery: string, isFootwear: boolean): Review[] {
   const normalizedBrandName = brandName.toLowerCase().trim();
   const queryWords = itemQuery.toLowerCase().split(' ').filter(word => word.length > 2);
-  const specificItem = itemQuery.toLowerCase().trim();
-  
   // First, get all reviews for the brand
   const brandReviews = allReviews.filter(review => {
     const brandFields = [
@@ -347,12 +345,13 @@ function findReviewsForBrand(brandName: string, allReviews: Review[], itemQuery:
     const itemName = review.itemName?.toLowerCase() || '';
     const garmentType = review.garmentType?.toLowerCase() || '';
     const fitComments = review.fitComments?.toLowerCase() || '';
-    const allReviewText = `${itemName} ${garmentType} ${fitComments}`;
+    // const allReviewText = `${itemName} ${garmentType} ${fitComments}`;
     
     // Define clear footwear vs clothing terms
     const footwearTerms = ['shoe', 'boot', 'sandal', 'sneaker', 'heel', 'loafer', 'flat', 'trainer', 'pump', 'oxford', 'derby', 'mule', 'slipper'];
     const clothingTerms = ['dress', 'jean', 'pant', 'trouser', 'skirt', 'short', 'blouse', 'shirt', 't-shirt', 'tshirt', 'sweater', 'jumper', 'hoodie', 'jacket', 'coat', 'blazer', 'cardigan', 'top'];
     
+    const allReviewText = `${itemName} ${garmentType} ${fitComments}`;
     const hasFootwearMention = footwearTerms.some(term => allReviewText.includes(term));
     const hasClothingMention = clothingTerms.some(term => allReviewText.includes(term));
     
@@ -381,7 +380,6 @@ function findReviewsForBrand(brandName: string, allReviews: Review[], itemQuery:
     const itemName = review.itemName?.toLowerCase() || '';
     const garmentType = review.garmentType?.toLowerCase() || '';
     const fitComments = review.fitComments?.toLowerCase() || '';
-    const allReviewText = `${itemName} ${garmentType} ${fitComments}`;
     
     // If no specific item mentioned, include it (generic brand review)
     if (!itemName && !garmentType) {
@@ -536,7 +534,7 @@ function generateRealReason(
   itemQuery: string
 ): string {
   const reasons = [];
-  const itemCategory = isFootwear ? 'footwear' : 'clothing';
+  // const itemCategory = isFootwear ? 'footwear' : 'clothing';
   
   // Check if brand specializes in the searched item type
   const garmentTypes = brand.garmentTypes?.toLowerCase() || '';
@@ -592,6 +590,7 @@ function generateRealReason(
   }
   
   // Add category-appropriate reasons
+  const itemCategory = isFootwear ? 'footwear' : 'clothing';
   if (brand.category && brand.category.toLowerCase().includes(itemCategory)) {
     if (reasons.length === 0) {
       reasons.push(`a reliable ${itemCategory} brand`);
@@ -619,7 +618,6 @@ function generateRealFitAdvice(
   userProfile: UserProfile,
   isFootwear: boolean
 ): string {
-  const itemCategory = isFootwear ? 'footwear' : 'clothing';
   
   // Generate advice from reviews if available (prioritize this over brand data)
   if (brandReviews.length > 0) {

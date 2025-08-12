@@ -8,9 +8,7 @@ const nextConfig: NextConfig = {
     AIRTABLE_REVIEWS_TABLE: process.env.AIRTABLE_REVIEWS_TABLE,
   },
   // Ensure environment variables are available at build time
-  experimental: {
-    serverComponentsExternalPackages: ['airtable'],
-  },
+  serverExternalPackages: ['airtable'],
 };
 
 export default nextConfig;

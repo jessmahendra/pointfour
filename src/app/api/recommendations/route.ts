@@ -84,26 +84,8 @@ export async function POST(request: NextRequest) {
       imageURL: string;
     }
     
-    const brands = data.records.map((record: { fields: {  
-      'Brand Name'?: string;
-      'Category'?: string;
-      'Garment Types'?: string[] | string;
-      'Fit Summary'?: string;
-      'Best For Body Types'?: string[] | string;
-      'Size Range'?: string;
-      'Sizing System'?: string;
-      'Price Range'?: string;
-      'User Quotes'?: string;
-      'Reviews'?: string;
-      'Confidence Score'?: number;
-      'Common Fit Information'?: string;
-      'Fabric Stretch'?: string;
-      'User feedback'?: string;
-      'Product URL'?: string;
-      'Link'?: string;
-      'Image'?: string;
-      'Photo'?: string;
-    }}) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const brands = data.records.map((record: any) => ({
      name: record.fields['Brand Name'] || '',
      category: record.fields['Category'] || '',
      garmentTypes: Array.isArray(record.fields['Garment Types']) ? record.fields['Garment Types'] : [record.fields['Garment Types'] || ''],
@@ -206,7 +188,7 @@ export async function POST(request: NextRequest) {
       // Add some key external reviews
       if (externalSearchResults.reviews && externalSearchResults.reviews.length > 0) {
         enhancedContext += `\nKey External Reviews:\n`;
-        externalSearchResults.reviews.slice(0, 3).forEach((review: any, index: number) => {
+        externalSearchResults.reviews.slice(0, 3).forEach((review: { title: string, source: string, snippet: string }, index: number) => {
           enhancedContext += `${index + 1}. ${review.title} (${review.source}): ${review.snippet}\n`;
         });
       }
