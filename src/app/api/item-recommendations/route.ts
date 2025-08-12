@@ -379,7 +379,6 @@ function findReviewsForBrand(brandName: string, allReviews: Review[], itemQuery:
   const itemRelevantReviews = categoryFilteredReviews.filter(review => {
     const itemName = review.itemName?.toLowerCase() || '';
     const garmentType = review.garmentType?.toLowerCase() || '';
-    const fitComments = review.fitComments?.toLowerCase() || '';
     
     // If no specific item mentioned, include it (generic brand review)
     if (!itemName && !garmentType) {
@@ -759,7 +758,7 @@ function generateFallbackRecommendations(
     { name: "COS", priceRange: "£50-£150", specialty: "minimalist clothing" },
   ];
 
-  return mockBrands.map((brand, index) => ({
+  return mockBrands.map((brand) => ({
     brandName: brand.name,
     confidence: 75 + Math.random() * 15,
     reason: `Recommended for ${itemQuery} based on ${brand.specialty}`,

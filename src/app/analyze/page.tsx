@@ -18,11 +18,11 @@ interface AnalysisResult {
   totalBrands: number;
   hasDatabaseData?: boolean;
   hasExternalData?: boolean;
-  searchType?: 'database' | 'hybrid';
+  searchType?: "database" | "hybrid";
   externalSearchResults?: {
     brandFitSummary: {
       summary: string | null;
-      confidence: 'high' | 'medium' | 'low';
+      confidence: "high" | "medium" | "low";
       sources: string[];
       totalResults: number;
     } | null;
@@ -32,19 +32,89 @@ interface AnalysisResult {
       url: string;
       source: string;
       tags: string[];
-      confidence: 'high' | 'medium' | 'low';
+      confidence: "high" | "medium" | "low";
       brandLevel: boolean;
       fullContent: string;
       isFallback?: boolean;
     }>;
     groupedReviews: {
-      primary: any[];
-      community: any[];
-      blogs: any[];
-      videos: any[];
-      social: any[];
-      publications: any[];
-      other: any[];
+      primary: Array<{
+        title: string;
+        snippet: string;
+        url: string;
+        source: string;
+        tags: string[];
+        confidence: "high" | "medium" | "low";
+        brandLevel: boolean;
+        fullContent: string;
+        isFallback?: boolean;
+      }>;
+      community: Array<{
+        title: string;
+        snippet: string;
+        url: string;
+        source: string;
+        tags: string[];
+        confidence: "high" | "medium" | "low";
+        brandLevel: boolean;
+        fullContent: string;
+        isFallback?: boolean;
+      }>;
+      blogs: Array<{
+        title: string;
+        snippet: string;
+        url: string;
+        source: string;
+        tags: string[];
+        confidence: "high" | "medium" | "low";
+        brandLevel: boolean;
+        fullContent: string;
+        isFallback?: boolean;
+      }>;
+      videos: Array<{
+        title: string;
+        snippet: string;
+        url: string;
+        source: string;
+        tags: string[];
+        confidence: "high" | "medium" | "low";
+        brandLevel: boolean;
+        fullContent: string;
+        isFallback?: boolean;
+      }>;
+      social: Array<{
+        title: string;
+        snippet: string;
+        url: string;
+        source: string;
+        tags: string[];
+        confidence: "high" | "medium" | "low";
+        brandLevel: boolean;
+        fullContent: string;
+        isFallback?: boolean;
+      }>;
+      publications: Array<{
+        title: string;
+        snippet: string;
+        url: string;
+        source: string;
+        tags: string[];
+        confidence: "high" | "medium" | "low";
+        brandLevel: boolean;
+        fullContent: string;
+        isFallback?: boolean;
+      }>;
+      other: Array<{
+        title: string;
+        snippet: string;
+        url: string;
+        source: string;
+        tags: string[];
+        confidence: "high" | "medium" | "low";
+        brandLevel: boolean;
+        fullContent: string;
+        isFallback?: boolean;
+      }>;
     };
     totalResults: number;
     isDynamic?: boolean;
@@ -1270,39 +1340,48 @@ Please provide a specific answer to this follow-up question.`;
 
           {/* External Search Toggle */}
           <div style={{ marginBottom: "24px" }}>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "16px",
-              backgroundColor: "#F8F7F4",
-              borderRadius: "8px",
-              border: "1px solid #E9DED5"
-            }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "16px",
+                backgroundColor: "#F8F7F4",
+                borderRadius: "8px",
+                border: "1px solid #E9DED5",
+              }}
+            >
               <div>
-                <label style={{
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  color: "#333",
-                  marginBottom: "4px",
-                  display: "block"
-                }}>
+                <label
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    color: "#333",
+                    marginBottom: "4px",
+                    display: "block",
+                  }}
+                >
                   🌐 Include Web Reviews
                 </label>
-                <p style={{
-                  fontSize: "12px",
-                  color: "#666",
-                  margin: "0"
-                }}>
-                  Search Reddit, Substack, and fashion blogs for additional insights
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    margin: "0",
+                  }}
+                >
+                  Search Reddit, Substack, and fashion blogs for additional
+                  insights
                 </p>
               </div>
-              <label style={{
-                position: "relative",
-                display: "inline-block",
-                width: "44px",
-                height: "24px"
-              }}>
+              <label
+                style={{
+                  position: "relative",
+                  display: "inline-block",
+                  width: "44px",
+                  height: "24px",
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={enableExternalSearch}
@@ -1310,32 +1389,38 @@ Please provide a specific answer to this follow-up question.`;
                   style={{
                     opacity: 0,
                     width: 0,
-                    height: 0
+                    height: 0,
                   }}
                 />
-                <span style={{
-                  position: "absolute",
-                  cursor: "pointer",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: enableExternalSearch ? "#DC2626" : "#ccc",
-                  transition: ".4s",
-                  borderRadius: "24px"
-                }}>
-                  <span style={{
+                <span
+                  style={{
                     position: "absolute",
-                    content: "",
-                    height: "18px",
-                    width: "18px",
-                    left: "3px",
-                    bottom: "3px",
-                    backgroundColor: "white",
+                    cursor: "pointer",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: enableExternalSearch ? "#DC2626" : "#ccc",
                     transition: ".4s",
-                    borderRadius: "50%",
-                    transform: enableExternalSearch ? "translateX(20px)" : "translateX(0)"
-                  }} />
+                    borderRadius: "24px",
+                  }}
+                >
+                  <span
+                    style={{
+                      position: "absolute",
+                      content: "",
+                      height: "18px",
+                      width: "18px",
+                      left: "3px",
+                      bottom: "3px",
+                      backgroundColor: "white",
+                      transition: ".4s",
+                      borderRadius: "50%",
+                      transform: enableExternalSearch
+                        ? "translateX(20px)"
+                        : "translateX(0)",
+                    }}
+                  />
                 </span>
               </label>
             </div>
@@ -1513,26 +1598,34 @@ Please provide a specific answer to this follow-up question.`;
           >
             {/* Search Type Indicator */}
             {analysisResult.searchType && (
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "16px",
-                padding: "8px 12px",
-                backgroundColor: analysisResult.searchType === 'hybrid' ? "#FEF3C7" : "#DBEAFE",
-                borderRadius: "8px",
-                fontSize: "12px",
-                color: analysisResult.searchType === 'hybrid' ? "#92400E" : "#1E40AF"
-              }}>
-                {analysisResult.searchType === 'hybrid' ? '🔍' : '📊'}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginBottom: "16px",
+                  padding: "8px 12px",
+                  backgroundColor:
+                    analysisResult.searchType === "hybrid"
+                      ? "#FEF3C7"
+                      : "#DBEAFE",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  color:
+                    analysisResult.searchType === "hybrid"
+                      ? "#92400E"
+                      : "#1E40AF",
+                }}
+              >
+                {analysisResult.searchType === "hybrid" ? "🔍" : "📊"}
                 <span>
-                  {analysisResult.searchType === 'hybrid' 
-                    ? 'Combined database + web search results' 
-                    : 'Database results only'}
+                  {analysisResult.searchType === "hybrid"
+                    ? "Combined database + web search results"
+                    : "Database results only"}
                 </span>
               </div>
             )}
-            
+
             {formatRecommendation(analysisResult.recommendation)}
           </div>
         )}
@@ -1550,67 +1643,97 @@ Please provide a specific answer to this follow-up question.`;
             }}
           >
             <div style={{ marginBottom: "24px" }}>
-              <h3 style={{
-                fontSize: "20px",
-                fontWeight: "600",
-                color: "#333",
-                margin: "0 0 16px 0",
-                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-              }}>
+              <h3
+                style={{
+                  fontSize: "20px",
+                  fontWeight: "600",
+                  color: "#333",
+                  margin: "0 0 16px 0",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                }}
+              >
                 🌐 Additional Web Reviews
               </h3>
-              <p style={{
-                fontSize: "14px",
-                color: "#666",
-                margin: "0 0 16px 0",
-                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-              }}>
-                Found {analysisResult.externalSearchResults.totalResults} additional reviews from across the web
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: "#666",
+                  margin: "0 0 16px 0",
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                }}
+              >
+                Found {analysisResult.externalSearchResults.totalResults}{" "}
+                additional reviews from across the web
               </p>
             </div>
 
             {/* Brand Fit Summary from External Search */}
             {analysisResult.externalSearchResults.brandFitSummary && (
-              <div style={{
-                backgroundColor: "#F8F7F4",
-                padding: "20px",
-                borderRadius: "12px",
-                marginBottom: "24px",
-                border: "1px solid #E9DED5"
-              }}>
-                <h4 style={{
-                  fontSize: "16px",
-                  fontWeight: "600",
-                  color: "#333",
-                  margin: "0 0 12px 0",
-                  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                }}>
+              <div
+                style={{
+                  backgroundColor: "#F8F7F4",
+                  padding: "20px",
+                  borderRadius: "12px",
+                  marginBottom: "24px",
+                  border: "1px solid #E9DED5",
+                }}
+              >
+                <h4
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    color: "#333",
+                    margin: "0 0 12px 0",
+                    fontFamily:
+                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  }}
+                >
                   📏 Brand Fit Summary
                 </h4>
-                <p style={{
-                  fontSize: "14px",
-                  color: "#333",
-                  margin: "0 0 8px 0",
-                  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                }}>
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: "#333",
+                    margin: "0 0 8px 0",
+                    fontFamily:
+                      'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  }}
+                >
                   {analysisResult.externalSearchResults.brandFitSummary.summary}
                 </p>
-                <div style={{
-                  display: "flex",
-                  gap: "16px",
-                  fontSize: "12px",
-                  color: "#666"
-                }}>
-                  <span>Confidence: {analysisResult.externalSearchResults.brandFitSummary.confidence}</span>
-                  <span>Sources: {analysisResult.externalSearchResults.brandFitSummary.sources.join(', ')}</span>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "16px",
+                    fontSize: "12px",
+                    color: "#666",
+                  }}
+                >
+                  <span>
+                    Confidence:{" "}
+                    {
+                      analysisResult.externalSearchResults.brandFitSummary
+                        .confidence
+                    }
+                  </span>
+                  <span>
+                    Sources:{" "}
+                    {analysisResult.externalSearchResults.brandFitSummary.sources.join(
+                      ", "
+                    )}
+                  </span>
                 </div>
               </div>
             )}
 
             {/* Grouped Reviews */}
-            {Object.entries(analysisResult.externalSearchResults.groupedReviews).map(([category, reviews]) => {
+            {Object.entries(
+              analysisResult.externalSearchResults.groupedReviews
+            ).map(([category, reviews]) => {
               if (!reviews || reviews.length === 0) return null;
-              
+
               const categoryNames: Record<string, string> = {
                 primary: "🔥 Primary Sources (Reddit & Substack)",
                 community: "💬 Community Forums",
@@ -1618,95 +1741,139 @@ Please provide a specific answer to this follow-up question.`;
                 videos: "🎥 Video Reviews",
                 social: "📱 Social Media",
                 publications: "📰 Fashion Publications",
-                other: "🌐 Other Sources"
+                other: "🌐 Other Sources",
               };
-              
+
               return (
                 <div key={category} style={{ marginBottom: "24px" }}>
-                  <h4 style={{
-                    fontSize: "16px",
-                    fontWeight: "600",
-                    color: category === 'primary' ? '#DC2626' : '#333',
-                    margin: "0 0 16px 0",
-                    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                  }}>
+                  <h4
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: category === "primary" ? "#DC2626" : "#333",
+                      margin: "0 0 16px 0",
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    }}
+                  >
                     {categoryNames[category]}
                   </h4>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    {reviews.map((review: any, index: number) => (
-                      <div key={index} style={{
-                        backgroundColor: "#F8F7F4",
-                        padding: "16px",
-                        borderRadius: "8px",
-                        border: "1px solid #E9DED5"
-                      }}>
-                        <div style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          marginBottom: "8px"
-                        }}>
-                          <h5 style={{
-                            fontSize: "14px",
-                            fontWeight: "600",
-                            color: "#333",
-                            margin: "0",
-                            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                          }}>
-                            {review.title}
-                          </h5>
-                          <span style={{
-                            fontSize: "11px",
-                            color: "#666",
-                            backgroundColor: "#E9DED5",
-                            padding: "2px 6px",
-                            borderRadius: "4px"
-                          }}>
-                            {review.source}
-                          </span>
-                        </div>
-                        <p style={{
-                          fontSize: "13px",
-                          color: "#666",
-                          margin: "0 0 8px 0",
-                          lineHeight: "1.4",
-                          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                        }}>
-                          {review.snippet}
-                        </p>
-                        <div style={{
-                          display: "flex",
-                          gap: "8px",
-                          flexWrap: "wrap"
-                        }}>
-                          {review.tags.slice(0, 3).map((tag: string, tagIndex: number) => (
-                            <span key={tagIndex} style={{
-                              fontSize: "10px",
-                              color: "#666",
-                              backgroundColor: "#E9DED5",
-                              padding: "2px 6px",
-                              borderRadius: "4px"
-                            }}>
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        <a 
-                          href={review.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "16px",
+                    }}
+                  >
+                    {reviews.map(
+                      (
+                        review: {
+                          title: string;
+                          snippet: string;
+                          url: string;
+                          source: string;
+                          tags: string[];
+                          confidence: "high" | "medium" | "low";
+                          brandLevel: boolean;
+                          fullContent: string;
+                          isFallback?: boolean;
+                        },
+                        index: number
+                      ) => (
+                        <div
+                          key={index}
                           style={{
-                            fontSize: "12px",
-                            color: "#DC2626",
-                            textDecoration: "none",
-                            marginTop: "8px",
-                            display: "inline-block"
+                            backgroundColor: "#F8F7F4",
+                            padding: "16px",
+                            borderRadius: "8px",
+                            border: "1px solid #E9DED5",
                           }}
                         >
-                          Read full review →
-                        </a>
-                      </div>
-                    ))}
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-start",
+                              marginBottom: "8px",
+                            }}
+                          >
+                            <h5
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                color: "#333",
+                                margin: "0",
+                                fontFamily:
+                                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                              }}
+                            >
+                              {review.title}
+                            </h5>
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                color: "#666",
+                                backgroundColor: "#E9DED5",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              {review.source}
+                            </span>
+                          </div>
+                          <p
+                            style={{
+                              fontSize: "13px",
+                              color: "#666",
+                              margin: "0 0 8px 0",
+                              lineHeight: "1.4",
+                              fontFamily:
+                                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            }}
+                          >
+                            {review.snippet}
+                          </p>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            {review.tags
+                              .slice(0, 3)
+                              .map((tag: string, tagIndex: number) => (
+                                <span
+                                  key={tagIndex}
+                                  style={{
+                                    fontSize: "10px",
+                                    color: "#666",
+                                    backgroundColor: "#E9DED5",
+                                    padding: "2px 6px",
+                                    borderRadius: "4px",
+                                  }}
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                          </div>
+                          <a
+                            href={review.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: "12px",
+                              color: "#DC2626",
+                              textDecoration: "none",
+                              marginTop: "8px",
+                              display: "inline-block",
+                            }}
+                          >
+                            Read full review →
+                          </a>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               );

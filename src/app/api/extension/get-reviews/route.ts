@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       // Filter reviews by brand (case-insensitive)
       const normalizedBrand = brand.toLowerCase().trim();
       
-      let brandReviews = allReviews.filter(review => {
+      const brandReviews = allReviews.filter(review => {
         // Handle case where brandName might be empty or null
         if (!review.brandName) {
           console.log(`⚠️ Review missing brand name: ${review.itemName}`);
@@ -95,12 +95,12 @@ export async function POST(request: Request) {
           }
           
           // 3. Word-based matching (handle variations like "Val Jeans" vs "Val 90s Mid Rise Straight Jeans")
-          const itemWords = normalizedItemName.split(/\s+/).filter(word => word.length > 2);
-          const reviewWords = reviewItemName.split(/\s+/).filter(word => word.length > 2);
+          const itemWords = normalizedItemName.split(/\s+/).filter((word: string) => word.length > 2);
+          const reviewWords = reviewItemName.split(/\s+/).filter((word: string) => word.length > 2);
           
           // Check if key words match (e.g., "Val" and "Jeans")
-          const keyWords = itemWords.filter(word => 
-            reviewWords.some(reviewWord => 
+          const keyWords = itemWords.filter((word: string) => 
+            reviewWords.some((reviewWord: string) => 
               reviewWord.includes(word) || word.includes(reviewWord)
             )
           );
@@ -206,7 +206,7 @@ export async function POST(request: Request) {
       );
     }
 
-  } catch (error) {
+  } catch {
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { 

@@ -179,7 +179,7 @@ export async function POST(request: Request) {
       }
     );
 
-  } catch (error) {
+  } catch {
     // console.error('💥 API: Error checking brand:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
