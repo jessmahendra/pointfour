@@ -3,278 +3,479 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zara - Fashion Demo</title>
+  <title>Pointfour Fashion Assistant - Demo</title>
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #f8fafc;
-    }
-    
-    .header {
-      text-align: center;
-      margin-bottom: 40px;
-    }
-    
-    .header h1 {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
       color: #1f2937;
-      margin-bottom: 8px;
     }
-    
-    .header p {
-      color: #6b7280;
-      font-size: 18px;
-    }
-    
-    .product-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
+
+    .container {
       max-width: 1200px;
       margin: 0 auto;
+      padding: 40px 20px;
     }
-    
-    .product-card {
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 60px;
+    }
+
+    .header h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .header p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 30px;
+      margin-bottom: 60px;
+    }
+
+    .feature-card {
       background: white;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-      border: 1px solid #e5e7eb;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 0, 0, 0.05);
     }
-    
-    .product-image {
-      width: 100%;
-      height: 300px;
-      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-      border-radius: 8px;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #9ca3af;
-      font-size: 14px;
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
     }
-    
-    .product-title {
-      font-size: 18px;
+
+    .feature-icon {
+      font-size: 3rem;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .feature-title {
+      font-size: 1.5rem;
       font-weight: 600;
-      color: #1f2937;
-      margin-bottom: 8px;
-    }
-    
-    .product-price {
-      font-size: 20px;
-      font-weight: 600;
-      color: #dc2626;
       margin-bottom: 16px;
+      color: #111827;
     }
-    
-    .product-description {
+
+    .feature-description {
       color: #6b7280;
       line-height: 1.6;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
     }
-    
-    .size-guide {
-      background: #fef3c7;
-      border: 1px solid #fde68a;
-      border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 16px;
+
+    .feature-list {
+      list-style: none;
+      padding: 0;
     }
-    
-    .size-guide h4 {
-      margin: 0 0 8px 0;
-      color: #92400e;
-      font-size: 14px;
+
+    .feature-list li {
+      padding: 8px 0;
+      color: #4b5563;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-    
-    .size-guide p {
-      margin: 0;
-      color: #92400e;
-      font-size: 13px;
+
+    .feature-list li::before {
+      content: '✓';
+      color: #10b981;
+      font-weight: bold;
+      font-size: 1.1rem;
     }
-    
-    .cta-button {
-      background: #dc2626;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      width: 100%;
+
+    .demo-section {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      margin-bottom: 40px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
     }
-    
-    .cta-button:hover {
-      background: #b91c1c;
-    }
-    
-    .demo-notice {
-      background: #dbeafe;
-      border: 1px solid #93c5fd;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 24px;
+
+    .demo-section h2 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 30px;
+      color: #111827;
       text-align: center;
     }
-    
-    .demo-notice h3 {
-      margin: 0 0 8px 0;
-      color: #1e40af;
-      font-size: 16px;
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
     }
-    
-    .demo-notice p {
-      margin: 0;
-      color: #1e40af;
-      font-size: 14px;
+
+    .demo-item {
+      text-align: center;
+      padding: 20px;
+      border: 2px dashed #e5e7eb;
+      border-radius: 12px;
+      transition: all 0.3s ease;
     }
-    
-    .extension-info {
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 24px;
+
+    .demo-item:hover {
+      border-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.02);
     }
-    
-    .extension-info h3 {
-      margin: 0 0 8px 0;
-      color: #166534;
-      font-size: 16px;
+
+    .demo-item h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #374151;
     }
-    
-    .extension-info ul {
-      margin: 0;
-      padding-left: 20px;
-      color: #166534;
-      font-size: 14px;
+
+    .demo-item p {
+      color: #6b7280;
+      line-height: 1.5;
     }
-    
-    .extension-info li {
-      margin-bottom: 4px;
+
+    .cta-section {
+      text-align: center;
+      background: white;
+      border-radius: 20px;
+      padding: 60px 40px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .cta-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #111827;
+    }
+
+    .cta-description {
+      font-size: 1.1rem;
+      color: #6b7280;
+      margin-bottom: 40px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      display: inline-block;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      color: white;
+      box-shadow: 0 4px 20px rgba(220, 38, 38, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(220, 38, 38, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(0, 0, 0, 0.05);
+      color: #374151;
+      border: 2px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(0, 0, 0, 0.1);
+      border-color: rgba(0, 0, 0, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .stats-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 30px;
+      margin: 60px 0;
+    }
+
+    .stat-item {
+      text-align: center;
+      color: white;
+    }
+
+    .stat-number {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-label {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px;
+      }
+      
+      .header h1 {
+        font-size: 2rem;
+      }
+      
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .demo-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .cta-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .btn {
+        width: 100%;
+        max-width: 300px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="demo-notice">
-    <h3>🧪 Demo Mode</h3>
-    <p>This is a demo page to test the Pointfour Fashion Assistant extension. The extension should automatically detect this as a Zara website and show brand fit information.</p>
-  </div>
-  
-  <div class="extension-info">
-    <h3>🔧 Extension Testing</h3>
-    <ul>
-      <li>Make sure the extension is loaded in Chrome</li>
-      <li>Check that the extension has permission for this page</li>
-      <li>Look for the floating widget in the top-right corner</li>
-      <li>Try clicking the widget to expand it</li>
-      <li>Check the browser console for any error messages</li>
-    </ul>
-  </div>
-
-  <div class="header">
-    <h1>Zara Fashion</h1>
-    <p>Discover the latest trends in women's and men's fashion</p>
-  </div>
-
-  <div class="product-grid">
-    <div class="product-card">
-      <div class="product-image">Product Image Placeholder</div>
-      <h3 class="product-title">High Waist Straight Leg Jeans</h3>
-      <div class="product-price">£49.99</div>
-      <p class="product-description">Classic high waist jeans with a straight leg fit. Made from premium denim with a comfortable stretch.</p>
-      <div class="size-guide">
-        <h4>📏 Size Guide</h4>
-        <p>This style typically runs small. We recommend sizing up one size for the best fit.</p>
-      </div>
-      <button class="cta-button">Add to Cart</button>
+  <div class="container">
+    <div class="header">
+      <h1>⚡ Pointfour Fashion Assistant</h1>
+      <p>Proactive browser extension that automatically displays brand fit information when users visit fashion websites, with an expandable interface for detailed item reviews.</p>
     </div>
 
-    <div class="product-card">
-      <div class="product-image">Product Image Placeholder</div>
-      <h3 class="product-title">Oversized Blazer</h3>
-      <div class="product-price">£89.99</div>
-      <p class="product-description">Contemporary oversized blazer with a relaxed fit. Perfect for both casual and formal occasions.</p>
-      <div class="size-guide">
-        <h4>📏 Size Guide</h4>
-        <p>True to size with an intentionally oversized fit. Choose your usual size for the intended look.</p>
+    <div class="stats-section">
+      <div class="stat-item">
+        <div class="stat-number">50+</div>
+        <div class="stat-label">Fashion Brands</div>
       </div>
-      <button class="cta-button">Add to Cart</button>
+      <div class="stat-item">
+        <div class="stat-number">6</div>
+        <div class="stat-label">Categories</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">5</div>
+        <div class="stat-label">Widget Positions</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">∞</div>
+        <div class="stat-label">Customizable</div>
+      </div>
     </div>
 
-    <div class="product-card">
-      <div class="product-image">Product Image Placeholder</div>
-      <h3 class="product-title">Ribbed Knit Dress</h3>
-      <div class="product-price">£39.99</div>
-      <p class="product-description">Elegant ribbed knit dress with a flattering silhouette. Perfect for everyday wear and special occasions.</p>
-      <div class="size-guide">
-        <h4>📏 Size Guide</h4>
-        <p>Fitted through the body with some stretch. Choose your usual size for a close fit.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">🎯</span>
+        <h3 class="feature-title">Auto-Detection</h3>
+        <p class="feature-description">Automatically detect when users visit fashion websites with intelligent brand recognition.</p>
+        <ul class="feature-list">
+          <li>Smart domain detection</li>
+          <li>Brand pattern matching</li>
+          <li>Category classification</li>
+          <li>Real-time monitoring</li>
+        </ul>
       </div>
-      <button class="cta-button">Add to Cart</button>
+
+      <div class="feature-card">
+        <span class="feature-icon">✨</span>
+        <h3 class="feature-title">Ambient Display</h3>
+        <p class="feature-description">Show subtle notification/widget with brand fit summary that doesn't interfere with browsing.</p>
+        <ul class="feature-list">
+          <li>Glassmorphism design</li>
+          <li>Backdrop blur effects</li>
+          <li>Smart positioning</li>
+          <li>Non-intrusive placement</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">🔍</span>
+        <h3 class="feature-title">Progressive Disclosure</h3>
+        <p class="feature-description">Expandable interface that reveals detailed information progressively without overwhelming users.</p>
+        <ul class="feature-list">
+          <li>Minimal to detailed view</li>
+          <li>Smooth animations</li>
+          <li>Fit tips extraction</li>
+          <li>External reviews integration</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">🧠</span>
+        <h3 class="feature-title">Smart Memory</h3>
+        <p class="feature-description">Remember user preferences and collapsed/expanded state per site for personalized experience.</p>
+        <ul class="feature-list">
+          <li>Per-site state tracking</li>
+          <li>User preference storage</li>
+          <li>Session persistence</li>
+          <li>Cross-tab synchronization</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">🎨</span>
+        <h3 class="feature-title">Customizable Interface</h3>
+        <p class="feature-description">Extensive customization options for widget appearance, behavior, and positioning.</p>
+        <ul class="feature-list">
+          <li>6 positioning options</li>
+          <li>Light/dark themes</li>
+          <li>Opacity controls</li>
+          <li>Auto-hide timing</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon">⚡</span>
+        <h3 class="feature-title">Performance Optimized</h3>
+        <p class="feature-description">Built with performance in mind, featuring intelligent caching and efficient resource usage.</p>
+        <ul class="feature-list">
+          <li>Smart caching system</li>
+          <li>Background processing</li>
+          <li>Memory management</li>
+          <li>Efficient animations</li>
+        </ul>
+      </div>
     </div>
 
-    <div class="product-card">
-      <div class="product-image">Product Image Placeholder</div>
-      <h3 class="product-title">Wide Leg Trousers</h3>
-      <div class="product-price">£59.99</div>
-      <p class="product-description">Sophisticated wide leg trousers with a high waist. Made from flowing fabric for elegant movement.</p>
-      <div class="size-guide">
-        <h4>📏 Size Guide</h4>
-        <p>High waist with a relaxed fit through the leg. Choose your usual size for the best fit.</p>
+    <div class="demo-section">
+      <h2>🎭 User Experience Flow</h2>
+      <div class="demo-grid">
+        <div class="demo-item">
+          <h3>1. Visit Fashion Site</h3>
+          <p>User navigates to Zara.com, ASOS, or any supported fashion website</p>
+        </div>
+        <div class="demo-item">
+          <h3>2. Auto-Detection</h3>
+          <p>Extension automatically detects the brand and loads relevant fit information</p>
+        </div>
+        <div class="demo-item">
+          <h3>3. Ambient Widget</h3>
+          <p>Subtle widget slides in: "Zara typically runs small • Click for details"</p>
+        </div>
+        <div class="demo-item">
+          <h3>4. Progressive Disclosure</h3>
+          <p>User can click to expand for full analysis, tips, and external reviews</p>
+        </div>
+        <div class="demo-item">
+          <h3>5. Smart Actions</h3>
+          <p>Get full analysis, dismiss, or configure preferences for future visits</p>
+        </div>
+        <div class="demo-item">
+          <h3>6. Memory & Learning</h3>
+          <p>Extension remembers preferences and provides personalized experience</p>
+        </div>
       </div>
-      <button class="cta-button">Add to Cart</button>
     </div>
 
-    <div class="product-card">
-      <div class="product-image">Product Image Placeholder</div>
-      <h3 class="product-title">Crop Top</h3>
-      <div class="product-price">£29.99</div>
-      <p class="product-description">Trendy crop top with a fitted silhouette. Perfect for pairing with high waist bottoms.</p>
-      <div class="size-guide">
-        <h4>📏 Size Guide</h4>
-        <p>Fitted through the body with minimal stretch. Choose your usual size for a close fit.</p>
+    <div class="demo-section">
+      <h2>🏗️ Technical Architecture</h2>
+      <div class="demo-grid">
+        <div class="demo-item">
+          <h3>Content Script</h3>
+          <p>Always active, injects on fashion domains, manages floating widget, handles animations</p>
+        </div>
+        <div class="demo-item">
+          <h3>Background Service</h3>
+          <p>Maintains brand detection logic, caches data, manages API calls, cross-tab state</p>
+        </div>
+        <div class="demo-item">
+          <h3>Floating Widget</h3>
+          <p>Minimal mode summary, expanded mode analysis, smooth animations, responsive design</p>
+        </div>
+        <div class="demo-item">
+          <h3>Smart Positioning</h3>
+          <p>Non-intrusive placement, intersection observer monitoring, automatic repositioning</p>
+        </div>
+        <div class="demo-item">
+          <h3>State Management</h3>
+          <p>Chrome storage sync, tab state tracking, preference persistence, cache management</p>
+        </div>
+        <div class="demo-item">
+          <h3>API Integration</h3>
+          <p>Pointfour recommendations API, external search results, fit tips, size guides</p>
+        </div>
       </div>
-      <button class="cta-button">Add to Cart</button>
     </div>
 
-    <div class="product-card">
-      <div class="product-image">Product Image Placeholder</div>
-      <h3 class="product-title">Midi Skirt</h3>
-      <div class="product-price">£44.99</div>
-      <p class="product-description">Elegant midi skirt with a flared silhouette. Made from premium fabric for a luxurious feel.</p>
-      <div class="size-guide">
-        <h4>📏 Size Guide</h4>
-        <p>Fitted at the waist with a flared skirt. Choose your usual size for the best fit.</p>
+    <div class="cta-section">
+      <h2 class="cta-title">Ready to Transform Your Fashion Shopping?</h2>
+      <p class="cta-description">Experience the future of fashion shopping with proactive brand fit information, intelligent recommendations, and a seamless user experience that adapts to your preferences.</p>
+      <div class="cta-buttons">
+        <a href="#" class="btn btn-primary">Install Extension</a>
+        <a href="#" class="btn btn-secondary">View Documentation</a>
       </div>
-      <button class="cta-button">Add to Cart</button>
     </div>
   </div>
 
   <script>
-    // Simulate a fashion website environment
-    console.log('🧪 Zara demo page loaded');
-    console.log('🔍 Pointfour extension should detect this as a fashion website');
-    
     // Add some interactive elements
-    document.querySelectorAll('.cta-button').forEach(button => {
-      button.addEventListener('click', () => {
-        alert('This is a demo page. The extension should have shown brand fit information!');
+    document.addEventListener('DOMContentLoaded', () => {
+      // Animate feature cards on scroll
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+          }
+        });
+      }, observerOptions);
+
+      // Observe all feature cards
+      document.querySelectorAll('.feature-card').forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.6s ease';
+        observer.observe(card);
       });
-    });
-    
-    // Simulate page interactions
-    let clickCount = 0;
-    document.addEventListener('click', () => {
-      clickCount++;
-      if (clickCount === 5) {
-        console.log('🎯 Extension should be monitoring page interactions');
-      }
+
+      // Add click handlers for demo buttons
+      document.querySelectorAll('.btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          // Add your action here
+          console.log('Button clicked:', btn.textContent);
+        });
+      });
     });
   </script>
 </body>

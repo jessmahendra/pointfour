@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zara - Test Fashion Site</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            color: #6b7280;
+            font-size: 18px;
+        }
+        
+        .debug-info {
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        
+        .debug-info h3 {
+            margin: 0 0 8px 0;
+            color: #1e40af;
+            font-size: 16px;
+        }
+        
+        .debug-info p {
+            margin: 0;
+            color: #1e40af;
+            font-size: 14px;
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        .product-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .product-price {
+            font-size: 20px;
+            font-weight: 600;
+            color: #dc2626;
+            margin-bottom: 16px;
+        }
+        
+        .product-description {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        
+        .size-guide {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .size-guide h4 {
+            margin: 0 0 8px 0;
+            color: #92400e;
+            font-size: 14px;
+        }
+        
+        .size-guide p {
+            margin: 0;
+            color: #92400e;
+            font-size: 13px;
+        }
+        
+        .cta-button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+        
+        .cta-button:hover {
+            background: #b91c1c;
+        }
+        
+        .extension-status {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        
+        .extension-status h3 {
+            margin: 0 0 8px 0;
+            color: #166534;
+            font-size: 16px;
+        }
+        
+        .extension-status ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #166534;
+            font-size: 14px;
+            text-align: left;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .extension-status li {
+            margin-bottom: 4px;
+        }
+        
+        .test-controls {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        
+        .test-controls h3 {
+            margin: 0 0 12px 0;
+            color: #92400e;
+            font-size: 16px;
+        }
+        
+        .test-button {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 0 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .test-button:hover {
+            background: #d97706;
+        }
+        
+        .console-output {
+            background: #1f2937;
+            color: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 24px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .console-output h4 {
+            margin: 0 0 12px 0;
+            color: #60a5fa;
+        }
+        
+        .console-output .log {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        
+        .console-output .error {
+            color: #f87171;
+        }
+        
+        .console-output .success {
+            color: #34d399;
+        }
+        
+        .console-output .info {
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-info">
+        <h3>🧪 Extension Test Page</h3>
+        <p>This page simulates a Zara fashion website to test the Pointfour extension's auto-detection</p>
+    </div>
+    
+    <div class="extension-status">
+        <h3>🔧 Extension Testing Checklist</h3>
+        <ul>
+            <li>✅ Extension is installed and enabled</li>
+            <li>✅ Extension has permissions for this page</li>
+            <li>✅ Background script is running</li>
+            <li>✅ Content script is injected</li>
+            <li>✅ Brand detection is working</li>
+            <li>✅ Widget appears automatically</li>
+        </ul>
+    </div>
+    
+    <div class="test-controls">
+        <h3>🧪 Test Controls</h3>
+        <button class="test-button" onclick="testBrandDetection()">Test Brand Detection</button>
+        <button class="test-button" onclick="testWidgetToggle()">Toggle Widget</button>
+        <button class="test-button" onclick="clearConsole()">Clear Console</button>
+        <button class="test-button" onclick="checkExtensionStatus()">Check Status</button>
+    </div>
+
+    <div class="header">
+        <h1>Zara Fashion</h1>
+        <p>Discover the latest trends in women's and men's fashion</p>
+    </div>
+
+    <div class="product-grid">
+        <div class="product-card">
+            <div class="product-image">Product Image Placeholder</div>
+            <h3 class="product-title">High Waist Straight Leg Jeans</h3>
+            <div class="product-price">£49.99</div>
+            <p class="product-description">Classic high waist jeans with a straight leg fit. Made from premium denim with a comfortable stretch.</p>
+            <div class="size-guide">
+                <h4>📏 Size Guide</h4>
+                <p>This style typically runs small. We recommend sizing up one size for the best fit.</p>
+            </div>
+            <button class="cta-button">Add to Cart</button>
+        </div>
+
+        <div class="product-card">
+            <div class="product-image">Product Image Placeholder</div>
+            <h3 class="product-title">Oversized Blazer</h3>
+            <div class="product-price">£89.99</div>
+            <p class="product-description">Contemporary oversized blazer with a relaxed fit. Perfect for both casual and formal occasions.</p>
+            <div class="size-guide">
+                <h4>📏 Size Guide</h4>
+                <p>True to size with an intentionally oversized fit. Choose your usual size for the intended look.</p>
+            </div>
+            <button class="cta-button">Add to Cart</button>
+        </div>
+
+        <div class="product-card">
+            <div class="product-image">Product Image Placeholder</div>
+            <h3 class="product-title">Ribbed Knit Dress</h3>
+            <div class="product-price">£39.99</div>
+            <p class="product-description">Elegant ribbed knit dress with a flattering silhouette. Perfect for everyday wear and special occasions.</p>
+            <div class="size-guide">
+                <h4>📏 Size Guide</h4>
+                <p>Fitted through the body with some stretch. Choose your usual size for a close fit.</p>
+            </div>
+            <button class="cta-button">Add to Cart</button>
+        </div>
+    </div>
+
+    <div class="console-output">
+        <h4>📊 Extension Console Output</h4>
+        <div id="console-logs"></div>
+    </div>
+
+    <script>
+        // Simulate a Zara fashion website environment
+        console.log('🧪 Zara test page loaded');
+        console.log('🔍 Pointfour extension should detect this as a fashion website');
+        
+        // Add console output to the page
+        const consoleLogs = document.getElementById('console-logs');
+        
+        function addLog(message, type = 'info') {
+            const logElement = document.createElement('div');
+            logElement.className = `log ${type}`;
+            logElement.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleLogs.appendChild(logElement);
+            consoleLogs.scrollTop = consoleLogs.scrollHeight;
+        }
+        
+        // Override console.log to show in the page
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog(args.join(' '), 'info');
+        };
+        
+        // Override console.error to show in the page
+        const originalError = console.error;
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog(args.join(' '), 'error');
+        };
+        
+        // Test functions
+        function testBrandDetection() {
+            addLog('🧪 Testing brand detection...', 'info');
+            
+            // Simulate the extension detecting this as Zara
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                addLog('✅ Chrome extension API available', 'success');
+                
+                // Try to send a message to the extension
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'TEST_BRAND_DETECTION',
+                        data: { brand: 'Zara', domain: 'test-zara.com' }
+                    }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            addLog(`❌ Extension not responding: ${chrome.runtime.lastError.message}`, 'error');
+                        } else {
+                            addLog('✅ Extension responded to test message', 'success');
+                        }
+                    });
+                } catch (error) {
+                    addLog(`❌ Error testing extension: ${error.message}`, 'error');
+                }
+            } else {
+                addLog('❌ Chrome extension API not available', 'error');
+            }
+        }
+        
+        function testWidgetToggle() {
+            addLog('🧪 Testing widget toggle...', 'info');
+            
+            // Try to send a message to toggle the widget
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'TOGGLE_WIDGET'
+                    }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            addLog(`❌ Extension not responding: ${chrome.runtime.lastError.message}`, 'error');
+                        } else {
+                            addLog('✅ Toggle message sent to extension', 'success');
+                        }
+                    });
+                } catch (error) {
+                    addLog(`❌ Error toggling widget: ${error.message}`, 'error');
+                }
+            } else {
+                addLog('❌ Chrome extension API not available', 'error');
+            }
+        }
+        
+        function clearConsole() {
+            consoleLogs.innerHTML = '<h4>📊 Extension Console Output</h4>';
+            addLog('🧹 Console cleared', 'info');
+        }
+        
+        function checkExtensionStatus() {
+            addLog('🔍 Checking extension status...', 'info');
+            
+            // Check if extension is installed
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                addLog('✅ Chrome extension API available', 'success');
+                
+                // Check if our extension is installed
+                chrome.runtime.sendMessage({
+                    type: 'PING'
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        addLog(`❌ Extension not responding: ${chrome.runtime.lastError.message}`, 'error');
+                        addLog('💡 Try reloading the extension in chrome://extensions/', 'info');
+                    } else {
+                        addLog('✅ Extension is responding', 'success');
+                    }
+                });
+            } else {
+                addLog('❌ Chrome extension API not available', 'error');
+                addLog('💡 This page must be opened in Chrome with the extension installed', 'info');
+            }
+        }
+        
+        // Auto-check extension status when page loads
+        setTimeout(() => {
+            checkExtensionStatus();
+        }, 1000);
+        
+        // Monitor for extension messages
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+                addLog(`📨 Received message: ${message.type}`, 'info');
+                
+                if (message.type === 'BRAND_DETECTED') {
+                    addLog(`🎯 Brand detected: ${message.data.brandName}`, 'success');
+                    addLog(`📊 Data: ${JSON.stringify(message.data, null, 2)}`, 'info');
+                }
+                
+                sendResponse({ received: true });
+            });
+        }
+        
+        // Add some interactive elements
+        document.querySelectorAll('.cta-button').forEach(button => {
+            button.addEventListener('click', () => {
+                addLog('🛒 Add to Cart button clicked', 'info');
+                alert('This is a test page. The extension should have shown brand fit information!');
+            });
+        });
+        
+        // Simulate page interactions
+        let clickCount = 0;
+        document.addEventListener('click', () => {
+            clickCount++;
+            if (clickCount === 5) {
+                addLog('🎯 Extension should be monitoring page interactions', 'info');
+            }
+        });
+        
+        // Log page load
+        addLog('🚀 Test page loaded successfully', 'success');
+        addLog('🔍 Looking for Pointfour extension...', 'info');
+    </script>
+</body>
+</html>

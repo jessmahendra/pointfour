@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Widget Positioning Fix</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .test-title {
+            color: #1f2937;
+            margin-bottom: 20px;
+        }
+        .test-description {
+            color: #6b7280;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .test-button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.2s ease;
+        }
+        .test-button:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        .test-button.success {
+            background: #10b981;
+        }
+        .test-button.success:hover {
+            background: #059669;
+        }
+        .test-button.warning {
+            background: #f59e0b;
+        }
+        .test-button.warning:hover {
+            background: #d97706;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        .status.warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .instructions {
+            margin-top: 30px;
+            text-align: left;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">🎯 Test Widget Positioning Fix</h1>
+        <p class="test-description">
+            This page tests the fixed widget positioning. The widget should appear in the top-right corner 
+            and stay visible without sliding away or getting clipped.
+        </p>
+        
+        <div>
+            <button class="test-button" onclick="testWidget()">🚀 Test Widget</button>
+            <button class="test-button success" onclick="forceShow()">👁️ Force Show</button>
+            <button class="test-button warning" onclick="reposition()">📍 Reposition</button>
+            <button class="test-button" onclick="checkStatus()">📊 Check Status</button>
+        </div>
+        
+        <div id="status" class="status info">
+            Ready to test widget positioning...
+        </div>
+        
+        <div class="instructions">
+            <h3>Expected Behavior:</h3>
+            <ul>
+                <li>✅ Widget appears in <strong>top-right corner</strong></li>
+                <li>✅ Widget stays visible (doesn't slide away)</li>
+                <li>✅ Widget doesn't go beyond screen width</li>
+                <li>✅ Widget is not clipped or cut off</li>
+                <li>✅ Smooth fade-in animation</li>
+                <li>✅ Clickable and expandable</li>
+            </ul>
+            
+            <h3>If Widget Still Doesn't Appear:</h3>
+            <ol>
+                <li>Check browser console for "🎯 FashionWidget" messages</li>
+                <li>Try the "Force Show" button</li>
+                <li>Try the "Reposition" button</li>
+                <li>Check if extension is loaded and enabled</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function testWidget() {
+            updateStatus('Testing widget...', 'info');
+            
+            if (window.testFashionWidget) {
+                window.testFashionWidget.show();
+                updateStatus('Widget test completed! Check top-right corner.', 'success');
+            } else {
+                updateStatus('Widget not available. Check console for errors.', 'error');
+            }
+        }
+        
+        function forceShow() {
+            updateStatus('Forcing widget to show...', 'warning');
+            
+            if (window.testFashionWidget) {
+                window.testFashionWidget.forceShow();
+                updateStatus('Widget force shown! Check top-right corner.', 'success');
+            } else {
+                updateStatus('Widget not available.', 'error');
+            }
+        }
+        
+        function reposition() {
+            updateStatus('Repositioning widget...', 'warning');
+            
+            if (window.testFashionWidget) {
+                window.testFashionWidget.position();
+                updateStatus('Widget repositioned!', 'success');
+            } else {
+                updateStatus('Widget not available.', 'error');
+            }
+        }
+        
+        function checkStatus() {
+            if (window.testFashionWidget) {
+                const widget = window.testFashionWidget.widget;
+                if (widget) {
+                    const rect = widget.getBoundingClientRect();
+                    const isVisible = widget.style.opacity === '1';
+                    const isHidden = widget.style.visibility === 'hidden';
+                    const display = widget.style.display;
+                    const position = widget.style.cssText.match(/top:\s*(\d+)px;\s*right:\s*(\d+)px/);
+                    
+                    let statusMessage = `Widget Status: Visible=${isVisible}, Hidden=${isHidden}, Display=${display}`;
+                    if (position) {
+                        statusMessage += `, Position: top=${position[1]}px, right=${position[2]}px`;
+                    }
+                    statusMessage += `, Bounds: ${rect.top.toFixed(0)},${rect.right.toFixed(0)},${rect.bottom.toFixed(0)},${rect.left.toFixed(0)}`;
+                    
+                    updateStatus(statusMessage, 'info');
+                } else {
+                    updateStatus('Widget element not found', 'error');
+                }
+            } else {
+                updateStatus('Widget not initialized', 'error');
+            }
+        }
+        
+        // Check for widget every second
+        const checkInterval = setInterval(() => {
+            if (window.testFashionWidget) {
+                updateStatus('Widget ready for testing!', 'success');
+                clearInterval(checkInterval);
+            }
+        }, 1000);
+        
+        // Log page load
+        console.log('🎯 Test positioning fix page loaded - waiting for FashionWidget...');
+        
+        // Add some visual indicators
+        const corners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+        corners.forEach(corner => {
+            const indicator = document.createElement('div');
+            indicator.style.cssText = `
+                position: fixed;
+                width: 20px;
+                height: 20px;
+                background: rgba(59, 130, 246, 0.3);
+                border: 2px solid #3b82f6;
+                border-radius: 50%;
+                z-index: 9999;
+            `;
+            
+            switch (corner) {
+                case 'top-left':
+                    indicator.style.top = '10px';
+                    indicator.style.left = '10px';
+                    break;
+                case 'top-right':
+                    indicator.style.top = '10px';
+                    indicator.style.right = '10px';
+                    break;
+                case 'bottom-left':
+                    indicator.style.bottom = '10px';
+                    indicator.style.left = '10px';
+                    break;
+                case 'bottom-right':
+                    indicator.style.bottom = '10px';
+                    indicator.style.right = '10px';
+                    break;
+            }
+            
+            document.body.appendChild(indicator);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Fashion Widget Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f4;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .test-title {
+            text-align: center;
+            color: #292524;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #fafaf9;
+            border-radius: 8px;
+            border: 1px solid #e7e5e4;
+        }
+        .test-button {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.2s ease;
+        }
+        .test-button:hover {
+            background: #047857;
+        }
+        .test-button.secondary {
+            background: #6b7280;
+        }
+        .test-button.secondary:hover {
+            background: #4b5563;
+        }
+        .brand-info {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        .brand-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #065f46;
+            margin-bottom: 8px;
+        }
+        .brand-description {
+            color: #047857;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">🧪 Enhanced Fashion Widget Test</h1>
+        
+        <div class="test-section">
+            <h2>Test the Enhanced Widget</h2>
+            <p>This page simulates a fashion website to test the enhanced widget functionality. The widget should:</p>
+            <ul>
+                <li>✅ Automatically detect the brand (GANNI)</li>
+                <li>✅ Show a minimal widget with brand info</li>
+                <li>✅ Expand to show detailed reviews when clicked</li>
+                <li>✅ Display item-specific reviews</li>
+                <li>✅ Show source-grouped reviews with tabs</li>
+                <li>✅ Include confidence indicators and source metadata</li>
+            </ul>
+            
+            <div class="brand-info">
+                <div class="brand-name">GANNI</div>
+                <div class="brand-description">
+                    Danish fashion brand known for contemporary, feminine designs with a playful edge. 
+                    Popular for their dresses, blouses, and accessories.
+                </div>
+            </div>
+            
+            <div style="text-align: center;">
+                <button class="test-button" onclick="testWidget()">Test Widget</button>
+                <button class="test-button secondary" onclick="toggleWidget()">Toggle Widget</button>
+                <button class="test-button secondary" onclick="expandWidget()">Expand Widget</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Expected Widget Features:</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4>📱 Minimal Mode</h4>
+                    <ul>
+                        <li>Brand name display</li>
+                        <li>Fit summary</li>
+                        <li>Click to expand hint</li>
+                        <li>Close button</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>🔍 Expanded Mode</h4>
+                    <ul>
+                        <li>Detailed fit summary</li>
+                        <li>Fit tips section</li>
+                        <li>Reviews count & confidence</li>
+                        <li>Item-specific reviews</li>
+                        <li>Source-grouped reviews</li>
+                        <li>Source tabs (Primary, Community, Blogs, Videos)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test Scenarios:</h3>
+            <ol>
+                <li><strong>Auto-detection:</strong> Widget should appear automatically when page loads</li>
+                <li><strong>Minimal view:</strong> Should show condensed brand info</li>
+                <li><strong>Expansion:</strong> Click to see full review details</li>
+                <li><strong>Source tabs:</strong> Switch between different review sources</li>
+                <li><strong>Responsiveness:</strong> Widget should adapt to different screen sizes</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Simulate the widget being loaded
+        let widgetLoaded = false;
+        
+        function testWidget() {
+            if (!widgetLoaded) {
+                // Simulate loading the widget
+                console.log('🎯 Loading enhanced fashion widget...');
+                
+                // Create a simple test widget to show the concept
+                createTestWidget();
+                widgetLoaded = true;
+            } else {
+                console.log('🎯 Widget already loaded');
+            }
+        }
+        
+        function createTestWidget() {
+            // This is a simplified test widget - the real extension will inject the full widget
+            const testWidget = document.createElement('div');
+            testWidget.innerHTML = `
+                <div style="position: fixed; top: 20px; right: 20px; background: white; border: 2px solid #059669; border-radius: 12px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); z-index: 10000; max-width: 300px;">
+                    <h3 style="margin: 0 0 10px 0; color: #059669;">🧪 Test Widget</h3>
+                    <p style="margin: 0 0 15px 0; font-size: 14px;">This is a test widget. The real extension will show:</p>
+                    <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #666;">
+                        <li>Brand detection (GANNI)</li>
+                        <li>Fit information</li>
+                        <li>Detailed reviews</li>
+                        <li>Source grouping</li>
+                    </ul>
+                    <button onclick="this.parentElement.remove()" style="margin-top: 15px; background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Close</button>
+                </div>
+            `;
+            document.body.appendChild(testWidget);
+        }
+        
+        function toggleWidget() {
+            console.log('🎯 Toggle widget functionality');
+            // In the real extension, this would show/hide the widget
+        }
+        
+        function expandWidget() {
+            console.log('🎯 Expand widget functionality');
+            // In the real extension, this would expand the widget to show detailed reviews
+        }
+        
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            console.log('🎯 Page loaded - ready to test enhanced fashion widget');
+            console.log('🎯 Expected brand detection: GANNI');
+            console.log('🎯 Expected item detection: From page title/URL');
+        });
+    </script>
+</body>
+</html>

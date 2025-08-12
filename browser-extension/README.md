@@ -1,232 +1,276 @@
-# 🚀 Pointfour Fashion Assistant - Proactive Browser Extension
+# ⚡ Pointfour Fashion Assistant
 
 A proactive browser extension that automatically displays brand fit information when users visit fashion websites, with an expandable interface for detailed item reviews.
 
-## ✨ Features
+## 🎯 Features
 
-### 🎯 Core Functionality
-- **Auto-Detection**: Automatically detects when users visit fashion websites
-- **Ambient Display**: Shows subtle notification widget with brand fit summary
+### Core Functionality
+- **Auto-Detection**: Automatically detect when user visits a fashion website
+- **Ambient Display**: Show subtle notification/widget with brand fit summary
 - **Progressive Disclosure**: Expandable interface for detailed information
 - **Smart Positioning**: Non-intrusive placement that doesn't block content
-- **Memory**: Remembers user preferences and collapsed/expanded state per site
+- **Memory**: Remember user preferences and collapsed/expanded state per site
 
-### 🎨 User Experience Flow
-1. **User visits Zara.com** → Extension detects brand automatically
-2. **Slides in minimal widget** → "Zara typically runs small • Click for details"
-3. **User can**:
-   - Ignore (auto-minimize after 5 seconds)
-   - Click to expand for full analysis
-   - Dismiss permanently for this session
-   - Configure preferences
+### Enhanced User Experience
+- **Glassmorphism Design**: Modern, elegant widget with backdrop blur effects
+- **Smooth Animations**: Fluid transitions and micro-interactions
+- **Responsive Layout**: Adapts to different screen sizes and orientations
+- **Keyboard Navigation**: Full keyboard support with escape key to close
+- **Touch Optimized**: Optimized for mobile and touch devices
+
+### Smart Positioning System
+- **6 Position Options**: Top-right, top-left, top-center, bottom-right, bottom-left, bottom-center
+- **Intersection Observer**: Automatically repositions if blocking content
+- **Responsive Behavior**: Adapts positioning based on viewport size
+- **Non-Intrusive**: Ensures widget never interferes with page content
 
 ## 🏗️ Architecture
 
-### 1. Content Script (`content-script.js`)
-- **Always Active**: Injects on all fashion domains
-- **URL Monitoring**: Monitors URL changes (for SPAs)
-- **Widget Management**: Creates and manages the floating widget
-- **Animations**: Handles expand/collapse animations
-- **User Interactions**: Manages clicks, hovers, and dismissals
+### 1. Content Script (Always Active)
+- Injects on all fashion domains
+- Monitors URL changes (for SPAs)
+- Creates and manages the floating widget
+- Handles expand/collapse animations
+- Manages widget positioning and state
 
-### 2. Background Service Worker (`background.js`)
-- **Brand Detection**: Maintains brand detection logic
-- **Data Caching**: Caches brand data for performance
-- **API Management**: Handles API calls to Pointfour backend
-- **Cross-tab State**: Manages state across multiple tabs
-- **Tab Lifecycle**: Handles tab updates and activations
+### 2. Background Service Worker
+- Maintains brand detection logic
+- Caches brand data for performance
+- Manages API calls to Pointfour
+- Handles cross-tab state management
+- Periodic cache cleanup
 
 ### 3. Floating Widget Component
 - **Minimal Mode**: Single line summary with brand name and fit info
-- **Expanded Mode**: Full analysis with detailed recommendations
-- **Smooth Animations**: CSS transitions and keyframe animations
-- **Responsive Design**: Adapts to different screen sizes
-- **Theme Support**: Light/dark mode and auto theme detection
+- **Expanded Mode**: Full analysis with detailed information
+- **Smooth Animations**: RequestAnimationFrame-based transitions
+- **Responsive Design**: Adapts to content and screen size
 
-### 4. Settings Management (`settings.html` + `settings.js`)
-- **User Preferences**: Enable/disable, auto-expand, notifications
-- **Appearance**: Widget position, theme selection
-- **Data & Privacy**: Cache duration, clear cache
-- **Integration**: API endpoint configuration, connection testing
+## 🎨 User Experience Flow
 
-## 🛠️ Installation & Setup
+```
+User visits Zara.com
+    ↓
+Extension detects brand automatically
+    ↓
+Slides in minimal widget: "Zara typically runs small • Click for details"
+    ↓
+User can:
+- Ignore (auto-minimize after configurable delay)
+- Click to expand for full analysis
+- Dismiss permanently for this session
+- Configure preferences
+```
 
-### Prerequisites
-- Chrome/Edge browser (Manifest V3 compatible)
-- Pointfour backend running (default: `http://localhost:3000`)
+## 🔧 Configuration Options
 
-### Installation Steps
-1. **Clone/Download** the extension files
-2. **Open Chrome** and navigate to `chrome://extensions/`
-3. **Enable Developer Mode** (toggle in top right)
-4. **Load Unpacked** and select the extension folder
-5. **Pin the extension** to your toolbar for easy access
+### General Settings
+- **Enable Extension**: Toggle extension on/off
+- **Auto-expand Widget**: Automatically expand widget when brand detected
+- **Show Notifications**: Enable/disable notification system
 
-### Configuration
-1. **Click the extension icon** to open settings
-2. **Configure API endpoint** (local development vs production)
-3. **Customize widget position** and theme preferences
-4. **Test connection** to ensure backend is accessible
+### Appearance
+- **Widget Position**: Choose from 6 positioning options
+- **Theme**: Light, dark, or auto (follows system preference)
+- **Widget Opacity**: Adjust transparency from 50% to 100%
 
-## 🎯 Supported Fashion Websites
+### Behavior
+- **Auto-hide Delay**: Configure when widget auto-hides (3s to 30s)
+- **Brand Detection Sensitivity**: Low, medium, or high sensitivity
 
-The extension automatically detects and provides fit information for:
+### Data & Privacy
+- **Cache Duration**: 15 minutes to 2 hours
+- **Clear Cache**: Manual cache clearing option
 
-### High Street & Fast Fashion
-- **Zara** (`zara.com`)
-- **H&M** (`hm.com`)
-- **ASOS** (`asos.com`)
-- **Uniqlo** (`uniqlo.com`)
-- **COS** (`cos.com`)
-- **Mango** (`mango.com`)
+### Integration
+- **API Endpoint**: Production or development API
+- **Test Connection**: Verify API connectivity
 
-### Premium & Designer
-- **Reformation** (`reformation.com`)
-- **Everlane** (`everlane.com`)
-- **Farfetch** (`farfetch.com`)
-- **Net-a-Porter** (`net-a-porter.com`)
-- **SSENSE** (`ssense.com`)
-- **Matches Fashion** (`matchesfashion.com`)
+## 🌐 Supported Fashion Websites
 
-### UK Retailers
-- **Selfridges** (`selfridges.com`)
-- **Harrods** (`harrods.com`)
-- **Liberty London** (`libertylondon.com`)
-- **John Lewis** (`johnlewis.com`)
-- **Next** (`next.co.uk`)
-- **River Island** (`riverisland.com`)
+### Fast Fashion
+- Zara, H&M, ASOS, Uniqlo, Mango, Topshop
+- River Island, New Look, Boohoo, PrettyLittleThing
+- Missguided, Nasty Gal
 
-## 🔧 Technical Details
+### Contemporary & Premium
+- Reformation, Everlane, COS, Whistles
+- Reiss, Ted Baker, Karen Millen
 
-### Message Passing
-- **Background ↔ Content Script**: Brand detection and data updates
-- **Content Script ↔ Widget**: User interactions and state changes
-- **Settings ↔ Background**: Preference updates and cache management
+### Luxury & Designer
+- Farfetch, Net-a-Porter, SSENSE, Matches Fashion
+- Selfridges, Harrods, Liberty London
 
-### Data Flow
-1. **URL Detection** → Background script identifies fashion website
-2. **Brand Recognition** → Maps domain to brand name
-3. **API Call** → Fetches fit data from Pointfour backend
-4. **Data Processing** → Formats and caches results
-5. **Widget Update** → Content script displays information
-6. **User Interaction** → Expand, dismiss, or configure
+### Department Stores
+- John Lewis, Debenhams, House of Fraser
+- Marks & Spencer, Next
 
-### Caching Strategy
-- **Brand Data**: 30-minute cache duration (configurable)
-- **User Preferences**: Synced across devices via Chrome storage
-- **Tab State**: Per-tab widget visibility and expansion state
+### Specialty & Accessories
+- Warehouse, Oasis, Coast, Monsoon
+- Accessorize, Dorothy Perkins, Evans, Wallis, Burton, Topman
 
-### Performance Optimizations
-- **Lazy Loading**: Widget only loads when needed
-- **Debounced Updates**: Prevents excessive API calls
-- **Memory Management**: Automatic cleanup of expired cache entries
-- **Efficient DOM**: Minimal DOM manipulation and reflows
+## 🚀 Installation
 
-## 🎨 Customization
+### Chrome Web Store (Recommended)
+1. Visit the Chrome Web Store
+2. Search for "Pointfour Fashion Assistant"
+3. Click "Add to Chrome"
+4. Confirm installation
 
-### Widget Positioning
-- **Top Right** (default): Non-intrusive, follows reading pattern
-- **Top Left**: Alternative for left-to-right languages
-- **Bottom Right/Left**: Less prominent placement
+### Manual Installation (Development)
+1. Clone this repository
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer mode"
+4. Click "Load unpacked" and select the `browser-extension` folder
+5. The extension will be installed and ready to use
 
-### Theme Options
-- **Light**: Clean, modern appearance
-- **Dark**: Reduced eye strain in low-light
-- **Auto**: Follows system preference
+## 📱 Usage
 
-### Behavior Settings
-- **Auto-expand**: Widget opens automatically
-- **Notifications**: Show/hide browser notifications
-- **Cache Duration**: Balance between freshness and performance
+### Basic Usage
+1. Install the extension
+2. Visit any supported fashion website
+3. Widget automatically appears with brand fit information
+4. Click widget to expand for detailed analysis
+5. Use settings to customize behavior
 
-## 🚀 Development
+### Advanced Features
+- **Position Customization**: Choose from 6 widget positions
+- **Theme Switching**: Light, dark, or auto themes
+- **Opacity Control**: Adjust widget transparency
+- **Auto-hide Timing**: Configure when widget disappears
+- **Brand Detection**: Adjust sensitivity for better recognition
 
-### File Structure
+### Keyboard Shortcuts
+- **Escape**: Close expanded widget
+- **Tab**: Navigate through widget elements
+- **Enter/Space**: Activate buttons and links
+
+## 🛠️ Development
+
+### Project Structure
 ```
 browser-extension/
-├── manifest.json          # Extension configuration
+├── manifest.json          # Extension manifest
 ├── background.js          # Service worker
 ├── content-script.js      # Content script
 ├── content-styles.css     # Widget styles
-├── settings.html          # Settings page
-├── settings.js            # Settings logic
-├── popup.html            # Main popup (legacy)
-├── popup.js              # Popup logic (legacy)
-└── README.md             # This file
+├── popup.html/js          # Extension popup
+├── settings.html/js       # Settings page
+└── demo.html             # Demo page
 ```
 
-### Adding New Fashion Websites
-1. **Update `BRAND_PATTERNS`** in `background.js`
-2. **Add domain patterns** to `host_permissions` in `manifest.json`
-3. **Test detection** on the target website
-4. **Verify API integration** works correctly
+### Key Technologies
+- **Manifest V3**: Latest Chrome extension manifest
+- **Service Workers**: Background processing and caching
+- **Intersection Observer**: Smart positioning detection
+- **Chrome Storage API**: Persistent preferences and state
+- **Modern CSS**: Grid, flexbox, custom properties, animations
 
-### Debugging
-- **Console Logs**: Check background script and content script logs
-- **Network Tab**: Monitor API calls to Pointfour backend
-- **Extension Storage**: Inspect cached data and preferences
-- **Content Script**: Use browser dev tools on fashion websites
+### Building & Testing
+1. Make changes to source files
+2. Reload extension in `chrome://extensions/`
+3. Test on supported fashion websites
+4. Use demo.html for isolated testing
+
+### API Integration
+The extension integrates with the Pointfour API for:
+- Brand fit recommendations
+- External search results
+- Fit tips and sizing advice
+- Size guides and measurements
+
+## 🔍 Troubleshooting
+
+### Common Issues
+- **Widget not appearing**: Check if extension is enabled and has permissions
+- **Brand not detected**: Verify website is in supported list
+- **API errors**: Test connection in settings
+- **Performance issues**: Clear cache and adjust sensitivity
+
+### Debug Mode
+1. Open browser console
+2. Look for Pointfour extension logs
+3. Check for error messages
+4. Verify API responses
+
+### Support
+- Check settings page for configuration issues
+- Review console logs for error details
+- Test on different fashion websites
+- Verify extension permissions
+
+## 📊 Performance Features
+
+### Caching System
+- **Brand Data Cache**: 30-minute cache duration
+- **API Response Cache**: Reduces redundant requests
+- **Automatic Cleanup**: Periodic cache maintenance
+- **Memory Management**: Efficient storage usage
+
+### Optimization
+- **RequestAnimationFrame**: Smooth animations
+- **Intersection Observer**: Efficient positioning detection
+- **Debounced Events**: Prevents excessive API calls
+- **Lazy Loading**: Load data only when needed
 
 ## 🔒 Privacy & Security
 
 ### Data Handling
-- **Local Storage**: User preferences stored locally
-- **API Calls**: Only brand names sent to backend (no personal data)
-- **Cache**: Temporary storage, automatically cleared
-- **No Tracking**: Extension doesn't track user behavior
+- **Local Storage**: Preferences stored locally
+- **Minimal Data**: Only essential information cached
+- **No Tracking**: No user behavior tracking
+- **Secure API**: HTTPS-only API communication
 
 ### Permissions
-- **Active Tab**: Required for brand detection
-- **Storage**: Saves user preferences
-- **Host Permissions**: Only for fashion websites
-- **Scripting**: Injects widget into pages
+- **Active Tab**: Access to current tab content
+- **Storage**: Save user preferences
+- **Scripting**: Inject content scripts
+- **Host Permissions**: Access to fashion websites
 
 ## 🎯 Future Enhancements
 
 ### Planned Features
-- **Item-Specific Detection**: Recognize individual products
-- **Size Recommendation Engine**: AI-powered fit suggestions
-- **Social Integration**: Share fit experiences
-- **Mobile Support**: Responsive design for mobile browsers
+- **Machine Learning**: Improved brand detection accuracy
+- **Social Features**: Share fit recommendations
+- **Mobile App**: Companion mobile application
+- **Analytics Dashboard**: Usage insights and trends
+- **API Extensions**: More fashion data sources
 
-### Integration Opportunities
-- **E-commerce Platforms**: Shopify, WooCommerce
-- **Fashion Apps**: Instagram, TikTok shopping
-- **Size Guides**: Direct links to brand size charts
-- **Review Aggregation**: Combine multiple review sources
+### Roadmap
+- **Q1**: Enhanced brand detection algorithms
+- **Q2**: Mobile app development
+- **Q3**: Social features and sharing
+- **Q4**: Advanced analytics and insights
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🤝 Contributing
 
+We welcome contributions! Please see our contributing guidelines for more information.
+
 ### Development Setup
-1. **Fork the repository**
-2. **Create feature branch**: `git checkout -b feature/proactive-widget`
-3. **Make changes** and test thoroughly
-4. **Submit pull request** with detailed description
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-### Testing Checklist
-- [ ] Widget appears on fashion websites
-- [ ] Brand detection works correctly
-- [ ] Expand/collapse animations smooth
-- [ ] Settings save and apply properly
-- [ ] API integration functional
-- [ ] Cross-tab state management works
+### Code Standards
+- Follow existing code style
+- Add appropriate comments
+- Include error handling
+- Test on multiple websites
+- Update documentation
 
-## 📞 Support
+## 📞 Support & Contact
 
-### Issues & Questions
-- **GitHub Issues**: Report bugs and feature requests
-- **Documentation**: Check this README and inline code comments
-- **Community**: Join Pointfour Discord/community channels
-
-### Troubleshooting
-1. **Check console logs** for error messages
-2. **Verify backend** is running and accessible
-3. **Clear extension cache** in settings
-4. **Reinstall extension** if persistent issues
-5. **Check permissions** are granted correctly
+- **Website**: [pointfour.app](https://pointfour.app)
+- **Documentation**: [docs.pointfour.app](https://docs.pointfour.app)
+- **Issues**: GitHub Issues page
+- **Email**: support@pointfour.app
 
 ---
 
-**Built with ❤️ by the Pointfour team**
-
-*Empowering fashion shoppers with intelligent fit recommendations*
+**Made with ❤️ by the Pointfour team**

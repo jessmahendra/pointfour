@@ -7,57 +7,262 @@ const BRAND_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 const brandCache = new Map();
 const tabStates = new Map();
 
-// Brand detection patterns for different fashion websites
+// Enhanced brand detection patterns for different fashion websites
 const BRAND_PATTERNS = {
+  // Fast Fashion
   'zara.com': {
     name: 'Zara',
-    selectors: ['[data-brand="zara"]', '.brand-name', 'h1', 'title'],
-    keywords: ['zara', 'zarahome']
+    selectors: ['[data-brand="zara"]', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['zara', 'zarahome'],
+    category: 'fast-fashion'
   },
   'hm.com': {
     name: 'H&M',
-    selectors: ['.brand', '.brand-name', 'h1', 'title'],
-    keywords: ['h&m', 'hm', 'hennes']
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['h&m', 'hm', 'hennes'],
+    category: 'fast-fashion'
   },
   'asos.com': {
     name: 'ASOS',
-    selectors: ['.product-brand', '.brand', 'h1', 'title'],
-    keywords: ['asos', 'asosdesign']
-  },
-  'reformation.com': {
-    name: 'Reformation',
-    selectors: ['.brand', '.brand-name', 'h1', 'title'],
-    keywords: ['reformation', 'ref']
-  },
-  'everlane.com': {
-    name: 'Everlane',
-    selectors: ['.brand', '.brand-name', 'h1', 'title'],
-    keywords: ['everlane']
-  },
-  'cos.com': {
-    name: 'COS',
-    selectors: ['.brand', '.brand-name', 'h1', 'title'],
-    keywords: ['cos', 'collection of style']
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['asos', 'asosdesign'],
+    category: 'fast-fashion'
   },
   'uniqlo.com': {
     name: 'Uniqlo',
-    selectors: ['.brand', '.brand-name', 'h1', 'title'],
-    keywords: ['uniqlo']
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['uniqlo'],
+    category: 'fast-fashion'
   },
   'mango.com': {
     name: 'Mango',
-    selectors: ['.brand', '.brand-name', 'h1', 'title'],
-    keywords: ['mango']
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['mango'],
+    category: 'fast-fashion'
   },
+  'topshop.com': {
+    name: 'Topshop',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['topshop'],
+    category: 'fast-fashion'
+  },
+  'riverisland.com': {
+    name: 'River Island',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['river island', 'riverisland'],
+    category: 'fast-fashion'
+  },
+  'newlook.com': {
+    name: 'New Look',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['new look', 'newlook'],
+    category: 'fast-fashion'
+  },
+  'boohoo.com': {
+    name: 'Boohoo',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['boohoo'],
+    category: 'fast-fashion'
+  },
+  'prettylittlething.com': {
+    name: 'PrettyLittleThing',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['pretty little thing', 'prettylittlething'],
+    category: 'fast-fashion'
+  },
+  'missguided.com': {
+    name: 'Missguided',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['missguided'],
+    category: 'fast-fashion'
+  },
+  'nastygal.com': {
+    name: 'Nasty Gal',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['nasty gal', 'nastygal'],
+    category: 'fast-fashion'
+  },
+  
+  // Contemporary & Premium
+  'reformation.com': {
+    name: 'Reformation',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['reformation', 'ref'],
+    category: 'contemporary'
+  },
+  'everlane.com': {
+    name: 'Everlane',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['everlane'],
+    category: 'contemporary'
+  },
+  'cos.com': {
+    name: 'COS',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['cos', 'collection of style'],
+    category: 'contemporary'
+  },
+  'whistles.co.uk': {
+    name: 'Whistles',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['whistles'],
+    category: 'contemporary'
+  },
+  'reiss.com': {
+    name: 'Reiss',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['reiss'],
+    category: 'contemporary'
+  },
+  'tedbaker.com': {
+    name: 'Ted Baker',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['ted baker'],
+    category: 'contemporary'
+  },
+  'karenmillen.com': {
+    name: 'Karen Millen',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['karen millen'],
+    category: 'contemporary'
+  },
+  
+  // Luxury & Designer
   'farfetch.com': {
     name: 'Farfetch',
-    selectors: ['.product-brand', '.brand', 'h1', 'title'],
-    keywords: ['farfetch']
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['farfetch'],
+    category: 'luxury'
   },
   'net-a-porter.com': {
     name: 'Net-a-Porter',
-    selectors: ['.product-brand', '.brand', 'h1', 'title'],
-    keywords: ['net-a-porter', 'netaporter']
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['net-a-porter', 'netaporter'],
+    category: 'luxury'
+  },
+  'ssense.com': {
+    name: 'SSENSE',
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['ssense'],
+    category: 'luxury'
+  },
+  'matchesfashion.com': {
+    name: 'Matches Fashion',
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['matches fashion', 'matchesfashion'],
+    category: 'luxury'
+  },
+  'selfridges.com': {
+    name: 'Selfridges',
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['selfridges'],
+    category: 'luxury'
+  },
+  'harrods.com': {
+    name: 'Harrods',
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['harrods'],
+    category: 'luxury'
+  },
+  'libertylondon.com': {
+    name: 'Liberty London',
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['liberty london', 'libertylondon'],
+    category: 'luxury'
+  },
+  
+  // Department Stores
+  'johnlewis.com': {
+    name: 'John Lewis',
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['john lewis', 'johnlewis'],
+    category: 'department-store'
+  },
+  'debenhams.com': {
+    name: 'Debenhams',
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['debenhams'],
+    category: 'department-store'
+  },
+  'houseoffraser.com': {
+    name: 'House of Fraser',
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['house of fraser', 'houseoffraser'],
+    category: 'department-store'
+  },
+  'marksandspencer.com': {
+    name: 'Marks & Spencer',
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['marks & spencer', 'marksandspencer', 'm&s'],
+    category: 'department-store'
+  },
+  'next.co.uk': {
+    name: 'Next',
+    selectors: ['.product-brand', '.brand', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['next'],
+    category: 'department-store'
+  },
+  
+  // Specialty & Accessories
+  'warehouse.co.uk': {
+    name: 'Warehouse',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['warehouse'],
+    category: 'specialty'
+  },
+  'oasis-stores.com': {
+    name: 'Oasis',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['oasis'],
+    category: 'specialty'
+  },
+  'coastfashion.com': {
+    name: 'Coast',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['coast'],
+    category: 'specialty'
+  },
+  'monsoon.co.uk': {
+    name: 'Monsoon',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['monsoon'],
+    category: 'specialty'
+  },
+  'accessorize.com': {
+    name: 'Accessorize',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['accessorize'],
+    category: 'specialty'
+  },
+  'dorothyperkins.com': {
+    name: 'Dorothy Perkins',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['dorothy perkins', 'dorothyperkins'],
+    category: 'specialty'
+  },
+  'evans.co.uk': {
+    name: 'Evans',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['evans'],
+    category: 'specialty'
+  },
+  'wallis.co.uk': {
+    name: 'Wallis',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['wallis'],
+    category: 'specialty'
+  },
+  'burton.co.uk': {
+    name: 'Burton',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['burton'],
+    category: 'specialty'
+  },
+  'topman.com': {
+    name: 'Topman',
+    selectors: ['.brand', '.brand-name', 'h1', 'title', '[data-testid="brand"]'],
+    keywords: ['topman'],
+    category: 'specialty'
   }
 };
 
@@ -71,7 +276,10 @@ chrome.runtime.onInstalled.addListener(() => {
     autoExpand: false,
     position: 'top-right',
     theme: 'light',
-    notifications: true
+    notifications: true,
+    autoHideDelay: 5000,
+    widgetOpacity: 0.95,
+    brandDetectionSensitivity: 'medium'
   });
 });
 
@@ -80,7 +288,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url) {
     const domain = extractDomain(tab.url);
     if (isFashionWebsite(domain)) {
-      detectBrand(tabId, domain, tab.url);
+      // Add a small delay to ensure page is fully loaded
+      setTimeout(() => {
+        detectBrand(tabId, domain, tab.url);
+      }, 500);
     }
   }
 });
@@ -114,7 +325,7 @@ function isFashionWebsite(domain) {
   );
 }
 
-// Detect brand from website
+// Enhanced brand detection with multiple fallback strategies
 async function detectBrand(tabId, domain, url) {
   try {
     // Check cache first
@@ -140,11 +351,12 @@ async function detectBrand(tabId, domain, url) {
 
     const [pattern, config] = brandPattern;
     const brandName = config.name;
+    const category = config.category;
 
-    console.log('Detected brand:', brandName, 'on domain:', domain);
+    console.log('Detected brand:', brandName, 'on domain:', domain, 'category:', category);
 
-    // Get brand data from API
-    const brandData = await fetchBrandData(brandName);
+    // Get brand data from API with enhanced parameters
+    const brandData = await fetchBrandData(brandName, category);
     
     // Cache the result
     brandCache.set(cacheKey, {
@@ -157,20 +369,36 @@ async function detectBrand(tabId, domain, url) {
 
   } catch (error) {
     console.error('Error detecting brand:', error);
+    
+    // Send fallback data on error
+    const fallbackData = {
+      brandName: 'Unknown Brand',
+      hasData: false,
+      searchType: 'none',
+      recommendation: 'Unable to load brand information at this time. Please try refreshing the page.',
+      externalSearchResults: null,
+      timestamp: Date.now(),
+      error: true
+    };
+    
+    sendBrandDataToTab(tabId, fallbackData);
   }
 }
 
-// Fetch brand data from Pointfour API
-async function fetchBrandData(brandName) {
+// Enhanced brand data fetching with category information
+async function fetchBrandData(brandName, category = 'general') {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/recommendations`, {
+    // Use the working search-reviews endpoint instead of the broken recommendations endpoint
+    console.log('🔍 Using working search-reviews endpoint for:', brandName);
+    
+    const response = await fetch(`${API_BASE_URL}/api/extension/search-reviews`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        query: `Brand: ${brandName}`,
-        enableExternalSearch: true
+        brand: brandName,
+        itemName: ''
       })
     });
 
@@ -179,27 +407,44 @@ async function fetchBrandData(brandName) {
     }
 
     const data = await response.json();
+    console.log('✅ Search-reviews API response:', {
+      success: data.success,
+      totalResults: data.totalResults,
+      hasBrandFitSummary: !!data.brandFitSummary,
+      isFallback: data.isFallback
+    });
     
+    // Transform the search-reviews response to match expected format
     return {
       brandName,
-      hasData: data.hasDatabaseData || data.hasExternalData,
-      searchType: data.searchType || 'database',
-      recommendation: data.recommendation,
-      externalSearchResults: data.externalSearchResults,
-      timestamp: Date.now()
+      category,
+      hasData: data.success && data.totalResults > 0,
+      searchType: data.isFallback ? 'fallback' : 'web-search',
+      recommendation: data.brandFitSummary ? 
+        `${data.brandFitSummary.summary} (Based on ${data.totalResults} web search results)` :
+        `Limited information available for ${brandName}. Check their size guide for best fit.`,
+      externalSearchResults: data,
+      fitTips: [],
+      sizeGuide: null,
+      timestamp: Date.now(),
+      error: false
     };
 
   } catch (error) {
     console.error('Error fetching brand data:', error);
     
-    // Return fallback data
+    // Return enhanced fallback data
     return {
       brandName,
+      category,
       hasData: false,
       searchType: 'none',
       recommendation: `Limited information available for ${brandName}. Check their size guide for best fit.`,
       externalSearchResults: null,
-      timestamp: Date.now()
+      fitTips: [],
+      sizeGuide: null,
+      timestamp: Date.now(),
+      error: true
     };
   }
 }
@@ -244,6 +489,40 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const tabId = sender.tab.id;
     const state = tabStates.get(tabId) || {};
     sendResponse(state);
+    return true;
+  }
+  
+  if (message.type === 'CLEAR_CACHE') {
+    // Clear expired cache entries
+    const now = Date.now();
+    for (const [key, value] of brandCache.entries()) {
+      if (now - value.timestamp > BRAND_CACHE_DURATION) {
+        brandCache.delete(key);
+      }
+    }
+    sendResponse({ success: true, clearedEntries: brandCache.size });
+    return true;
+  }
+  
+  if (message.type === 'PING') {
+    // Simple ping/pong for testing extension responsiveness
+    sendResponse({ 
+      pong: true, 
+      timestamp: Date.now(),
+      extension: 'Pointfour Fashion Assistant',
+      version: '2.0.0'
+    });
+    return true;
+  }
+  
+  if (message.type === 'TEST_BRAND_DETECTION') {
+    // Test brand detection functionality
+    console.log('🧪 Test brand detection received:', message.data);
+    sendResponse({ 
+      success: true, 
+      message: 'Brand detection test received',
+      data: message.data
+    });
     return true;
   }
 });
@@ -291,3 +570,20 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     });
   }
 });
+
+// Periodic cache cleanup
+setInterval(() => {
+  const now = Date.now();
+  let clearedCount = 0;
+  
+  for (const [key, value] of brandCache.entries()) {
+    if (now - value.timestamp > BRAND_CACHE_DURATION) {
+      brandCache.delete(key);
+      clearedCount++;
+    }
+  }
+  
+  if (clearedCount > 0) {
+    console.log(`Cleared ${clearedCount} expired cache entries`);
+  }
+}, 5 * 60 * 1000); // Clean up every 5 minutes

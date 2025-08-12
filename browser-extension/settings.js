@@ -26,6 +26,9 @@ class SettingsManager {
         position: 'top-right',
         theme: 'light',
         notifications: true,
+        autoHideDelay: 5000,
+        widgetOpacity: 0.95,
+        brandDetectionSensitivity: 'medium',
         cacheDuration: 30,
         apiEndpoint: 'https://www.pointfour.in'
       });
@@ -39,6 +42,9 @@ class SettingsManager {
         position: 'top-right',
         theme: 'light',
         notifications: true,
+        autoHideDelay: 5000,
+        widgetOpacity: 0.95,
+        brandDetectionSensitivity: 'medium',
         cacheDuration: 30,
         apiEndpoint: 'https://www.pointfour.in'
       };
@@ -87,6 +93,28 @@ class SettingsManager {
       this.saveSettings();
     });
 
+    // Widget opacity range slider
+    const opacitySlider = document.getElementById('widgetOpacity');
+    const opacityValue = document.getElementById('opacityValue');
+    
+    opacitySlider.addEventListener('input', (e) => {
+      const value = parseFloat(e.target.value);
+      this.settings.widgetOpacity = value;
+      opacityValue.textContent = `${Math.round(value * 100)}%`;
+      this.saveSettings();
+    });
+
+    // Behavior settings
+    document.getElementById('autoHideDelay').addEventListener('change', (e) => {
+      this.settings.autoHideDelay = parseInt(e.target.value);
+      this.saveSettings();
+    });
+
+    document.getElementById('brandDetectionSensitivity').addEventListener('change', (e) => {
+      this.settings.brandDetectionSensitivity = e.target.value;
+      this.saveSettings();
+    });
+
     // Data & Privacy settings
     document.getElementById('cacheDuration').addEventListener('change', (e) => {
       this.settings.cacheDuration = parseInt(e.target.value);
@@ -117,8 +145,16 @@ class SettingsManager {
     // Apply select settings
     document.getElementById('position').value = this.settings.position;
     document.getElementById('theme').value = this.settings.theme;
+    document.getElementById('autoHideDelay').value = this.settings.autoHideDelay;
+    document.getElementById('brandDetectionSensitivity').value = this.settings.brandDetectionSensitivity;
     document.getElementById('cacheDuration').value = this.settings.cacheDuration;
     document.getElementById('apiEndpoint').value = this.settings.apiEndpoint;
+
+    // Apply range slider settings
+    const opacitySlider = document.getElementById('widgetOpacity');
+    const opacityValue = document.getElementById('opacityValue');
+    opacitySlider.value = this.settings.widgetOpacity;
+    opacityValue.textContent = `${Math.round(this.settings.widgetOpacity * 100)}%`;
   }
 
   async clearCache() {

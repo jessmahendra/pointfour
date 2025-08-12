@@ -128,12 +128,29 @@ export async function POST(request: NextRequest) {
     
     console.log('=== DEBUG: Data sufficiency check ===');
     console.log('Has sufficient database data:', hasSufficientData);
+    console.log('Matching brand exists:', !!matchingBrand);
+    console.log('Matching brand has fitSummary:', !!matchingBrand?.fitSummary);
+    console.log('Matching brand has reviews:', !!(matchingBrand?.reviews && matchingBrand.reviews.length > 0));
+    console.log('Matching brand has userQuotes:', !!(matchingBrand?.userQuotes && matchingBrand.userQuotes.length > 0));
     
-    // If external search is enabled and database data is insufficient, try external search
+    // If external search is enabled, always try it to enhance our data
     let externalSearchResults = null;
-    if (enableExternalSearch && brandName && (!hasSufficientData || !matchingBrand?.fitSummary)) {
+    let externalSearchAttempted = false;
+    let externalSearchError = null;
+    
+    console.log('=== DEBUG: External search conditions ===');
+    console.log('enableExternalSearch:', enableExternalSearch);
+    console.log('brandName exists:', !!brandName);
+    console.log('hasSufficientData:', hasSufficientData);
+    console.log('matchingBrand exists:', !!matchingBrand);
+    console.log('matchingBrand has fitSummary:', !!matchingBrand?.fitSummary);
+    console.log('Will attempt external search:', enableExternalSearch && brandName);
+    
+    if (enableExternalSearch && brandName) {
       try {
         console.log('=== DEBUG: Attempting external search ===');
+        externalSearchAttempted = true;
+        
         const externalResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/external-search`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -152,12 +169,27 @@ export async function POST(request: NextRequest) {
         } else {
           console.log('=== DEBUG: External search failed ===');
           console.log('Status:', externalResponse.status);
+          const errorText = await externalResponse.text();
+          console.log('Error response:', errorText);
+          externalSearchError = `HTTP ${externalResponse.status}: ${errorText}`;
         }
       } catch (error) {
         console.log('=== DEBUG: External search error ===');
         console.error('External search error:', error);
+        externalSearchError = error instanceof Error ? error.message : 'Unknown error';
       }
     }
+    
+    // Log external search status
+    console.log('=== DEBUG: External search summary ===');
+    console.log('Attempted:', externalSearchAttempted);
+    console.log('Successful:', !!externalSearchResults);
+    console.log('Error:', externalSearchError);
+    console.log('Results:', externalSearchResults ? {
+      totalResults: externalSearchResults.totalResults,
+      hasBrandFitSummary: !!externalSearchResults.brandFitSummary,
+      hasReviews: !!(externalSearchResults.reviews && externalSearchResults.reviews.length > 0)
+    } : 'None');
     
     // Create enhanced context for AI
     let enhancedContext = '';
@@ -192,6 +224,22 @@ export async function POST(request: NextRequest) {
           enhancedContext += `${index + 1}. ${review.title} (${review.source}): ${review.snippet}\n`;
         });
       }
+      
+      // Note that we're combining database and web data
+      enhancedContext += `\nNote: This recommendation combines our database information with fresh web search results for the most up-to-date advice.\n`;
+    } else if (externalSearchAttempted && externalSearchError) {
+      // External search was attempted but failed
+      enhancedContext += `\nExternal Search Status: Attempted but failed\n`;
+      enhancedContext += `Error: ${externalSearchError}\n`;
+      enhancedContext += `Note: We tried to search the web for additional information but encountered an issue. The recommendation below is based on our database only.\n`;
+    } else if (externalSearchAttempted && !externalSearchResults) {
+      // External search was attempted but returned no results
+      enhancedContext += `\nExternal Search Status: Attempted but no results found\n`;
+      enhancedContext += `Note: We searched the web for additional information but found no relevant reviews or fit data for this brand.\n`;
+    } else if (!externalSearchAttempted) {
+      // External search was not attempted (shouldn't happen with current logic)
+      enhancedContext += `\nExternal Search Status: Not attempted\n`;
+      enhancedContext += `Note: Web search was not performed for this request.\n`;
     }
     
     console.log('=== DEBUG: Enhanced context created ===');
@@ -214,9 +262,16 @@ Please provide a comprehensive analysis including:
 **Price**: Price range information if available
 **Customer Reviews**: Include relevant user feedback and quotes
 
-If you have external search results, incorporate them to provide more comprehensive advice. If the brand isn't in our database but we have external results, focus on those insights.
+**IMPORTANT INSTRUCTIONS:**
+- If you have external search results, incorporate them to provide comprehensive advice that combines database and web data
+- If external search was attempted but failed, acknowledge this and explain that the recommendation is based on database data only
+- If external search was attempted but found no results, mention that we searched the web but found no additional information
+- If the brand isn't in our database but we have external results, focus on those insights
+- Always be encouraging but honest about data limitations
+- If we have limited data, suggest checking the brand's official size guide
+- When combining database and web data, prioritize the most recent and relevant information
 
-Make your response helpful, specific, and actionable. Use bullet points where appropriate and be encouraging but honest about any limitations in the data.`;
+Make your response helpful, specific, and actionable. Use bullet points where appropriate.`;
     
     console.log('=== DEBUG: AI prompt created ===');
     console.log('Prompt length:', aiPrompt.length);
@@ -250,7 +305,10 @@ Make your response helpful, specific, and actionable. Use bullet points where ap
       hasDatabaseData: !!matchingBrand,
       hasExternalData: !!externalSearchResults,
       searchType: externalSearchResults ? 'hybrid' : 'database',
-      externalSearchResults: externalSearchResults || null
+      externalSearchResults: externalSearchResults || null,
+      enableExternalSearch: enableExternalSearch,
+      externalSearchAttempted: externalSearchAttempted,
+      externalSearchError: externalSearchError
     };
     
     console.log('=== DEBUG: Final result created ===');
