@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zara - Fashion Demo</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f8fafc;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .header h1 {
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+    
+    .header p {
+      color: #6b7280;
+      font-size: 18px;
+    }
+    
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .product-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e5e7eb;
+    }
+    
+    .product-image {
+      width: 100%;
+      height: 300px;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      font-size: 14px;
+    }
+    
+    .product-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+    
+    .product-price {
+      font-size: 20px;
+      font-weight: 600;
+      color: #dc2626;
+      margin-bottom: 16px;
+    }
+    
+    .product-description {
+      color: #6b7280;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    
+    .size-guide {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .size-guide h4 {
+      margin: 0 0 8px 0;
+      color: #92400e;
+      font-size: 14px;
+    }
+    
+    .size-guide p {
+      margin: 0;
+      color: #92400e;
+      font-size: 13px;
+    }
+    
+    .cta-button {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+    
+    .cta-button:hover {
+      background: #b91c1c;
+    }
+    
+    .demo-notice {
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    
+    .demo-notice h3 {
+      margin: 0 0 8px 0;
+      color: #1e40af;
+      font-size: 16px;
+    }
+    
+    .demo-notice p {
+      margin: 0;
+      color: #1e40af;
+      font-size: 14px;
+    }
+    
+    .extension-info {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .extension-info h3 {
+      margin: 0 0 8px 0;
+      color: #166534;
+      font-size: 16px;
+    }
+    
+    .extension-info ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #166534;
+      font-size: 14px;
+    }
+    
+    .extension-info li {
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-notice">
+    <h3>🧪 Demo Mode</h3>
+    <p>This is a demo page to test the Pointfour Fashion Assistant extension. The extension should automatically detect this as a Zara website and show brand fit information.</p>
+  </div>
+  
+  <div class="extension-info">
+    <h3>🔧 Extension Testing</h3>
+    <ul>
+      <li>Make sure the extension is loaded in Chrome</li>
+      <li>Check that the extension has permission for this page</li>
+      <li>Look for the floating widget in the top-right corner</li>
+      <li>Try clicking the widget to expand it</li>
+      <li>Check the browser console for any error messages</li>
+    </ul>
+  </div>
+
+  <div class="header">
+    <h1>Zara Fashion</h1>
+    <p>Discover the latest trends in women's and men's fashion</p>
+  </div>
+
+  <div class="product-grid">
+    <div class="product-card">
+      <div class="product-image">Product Image Placeholder</div>
+      <h3 class="product-title">High Waist Straight Leg Jeans</h3>
+      <div class="product-price">£49.99</div>
+      <p class="product-description">Classic high waist jeans with a straight leg fit. Made from premium denim with a comfortable stretch.</p>
+      <div class="size-guide">
+        <h4>📏 Size Guide</h4>
+        <p>This style typically runs small. We recommend sizing up one size for the best fit.</p>
+      </div>
+      <button class="cta-button">Add to Cart</button>
+    </div>
+
+    <div class="product-card">
+      <div class="product-image">Product Image Placeholder</div>
+      <h3 class="product-title">Oversized Blazer</h3>
+      <div class="product-price">£89.99</div>
+      <p class="product-description">Contemporary oversized blazer with a relaxed fit. Perfect for both casual and formal occasions.</p>
+      <div class="size-guide">
+        <h4>📏 Size Guide</h4>
+        <p>True to size with an intentionally oversized fit. Choose your usual size for the intended look.</p>
+      </div>
+      <button class="cta-button">Add to Cart</button>
+    </div>
+
+    <div class="product-card">
+      <div class="product-image">Product Image Placeholder</div>
+      <h3 class="product-title">Ribbed Knit Dress</h3>
+      <div class="product-price">£39.99</div>
+      <p class="product-description">Elegant ribbed knit dress with a flattering silhouette. Perfect for everyday wear and special occasions.</p>
+      <div class="size-guide">
+        <h4>📏 Size Guide</h4>
+        <p>Fitted through the body with some stretch. Choose your usual size for a close fit.</p>
+      </div>
+      <button class="cta-button">Add to Cart</button>
+    </div>
+
+    <div class="product-card">
+      <div class="product-image">Product Image Placeholder</div>
+      <h3 class="product-title">Wide Leg Trousers</h3>
+      <div class="product-price">£59.99</div>
+      <p class="product-description">Sophisticated wide leg trousers with a high waist. Made from flowing fabric for elegant movement.</p>
+      <div class="size-guide">
+        <h4>📏 Size Guide</h4>
+        <p>High waist with a relaxed fit through the leg. Choose your usual size for the best fit.</p>
+      </div>
+      <button class="cta-button">Add to Cart</button>
+    </div>
+
+    <div class="product-card">
+      <div class="product-image">Product Image Placeholder</div>
+      <h3 class="product-title">Crop Top</h3>
+      <div class="product-price">£29.99</div>
+      <p class="product-description">Trendy crop top with a fitted silhouette. Perfect for pairing with high waist bottoms.</p>
+      <div class="size-guide">
+        <h4>📏 Size Guide</h4>
+        <p>Fitted through the body with minimal stretch. Choose your usual size for a close fit.</p>
+      </div>
+      <button class="cta-button">Add to Cart</button>
+    </div>
+
+    <div class="product-card">
+      <div class="product-image">Product Image Placeholder</div>
+      <h3 class="product-title">Midi Skirt</h3>
+      <div class="product-price">£44.99</div>
+      <p class="product-description">Elegant midi skirt with a flared silhouette. Made from premium fabric for a luxurious feel.</p>
+      <div class="size-guide">
+        <h4>📏 Size Guide</h4>
+        <p>Fitted at the waist with a flared skirt. Choose your usual size for the best fit.</p>
+      </div>
+      <button class="cta-button">Add to Cart</button>
+    </div>
+  </div>
+
+  <script>
+    // Simulate a fashion website environment
+    console.log('🧪 Zara demo page loaded');
+    console.log('🔍 Pointfour extension should detect this as a fashion website');
+    
+    // Add some interactive elements
+    document.querySelectorAll('.cta-button').forEach(button => {
+      button.addEventListener('click', () => {
+        alert('This is a demo page. The extension should have shown brand fit information!');
+      });
+    });
+    
+    // Simulate page interactions
+    let clickCount = 0;
+    document.addEventListener('click', () => {
+      clickCount++;
+      if (clickCount === 5) {
+        console.log('🎯 Extension should be monitoring page interactions');
+      }
+    });
+  </script>
+</body>
+</html>
