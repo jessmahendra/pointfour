@@ -573,7 +573,7 @@ async function searchForReviews(brandName, itemName = '') {
       if (data.isFallback) {
         console.log('⚠️ Using fallback data - Serper API may not be working');
       } else {
-        console.log('🎯 Real search results from Serper API');
+        console.log('🎯 Live search results from Serper API');
       }
       
       return data; // Return full data object instead of just reviews
@@ -845,7 +845,7 @@ async function updatePopupWithReviewData(reviewData) {
         } else {
           // No dynamic reviews found
           reviewStatusElement.innerHTML = '<span class="status-unavailable">❌ No reviews found</span>';
-          reviewCountElement.textContent = 'No reviews found in database or web search';
+          reviewCountElement.textContent = 'No reviews found in database or live web search';
           reviewsSection.style.display = 'none';
         }
       } catch (error) {
@@ -878,7 +878,7 @@ function displayDynamicReviews(searchResults) {
   const isFallback = searchResults.isFallback || false;
   notification.className = isFallback ? 'dynamic-notification fallback' : 'dynamic-notification';
   notification.innerHTML = isFallback 
-    ? '⚠️ <strong>Fallback Results</strong> - Showing sample data while we resolve API access. Real search results coming soon!'
+    ? '⚠️ <strong>Limited Results</strong> - Some search results may be unavailable due to API constraints.'
     : '🔍 <strong>Live Search Results</strong> - These reviews were found through web search, not from our database';
   reviewsContent.appendChild(notification);
   

@@ -315,55 +315,18 @@ async function searchWithSerper(query: string, num = 10, gl = DEFAULT_GL, hl = D
     
     // Check if it's an authorization error
     if (axios.isAxiosError(error) && error.response?.status === 403) {
-      console.log('Serper API authorization failed, falling back to mock data');
-      return generateMockSearchResults(query);
+      console.log('Serper API authorization failed - no fallback data provided');
+      return [];
     }
     
     throw error;
   }
 }
 
-// Generate mock search results as fallback
-function generateMockSearchResults(query: string): SearchResult[] {
-  const brand = query.includes('"') ? query.match(/"([^"]+)"/)?.[1] || 'Brand' : 'Brand';
-  
-  return [
-    {
-      title: `${brand} Sizing Review - Reddit Discussion`,
-      snippet: `Found this brand runs small, I usually wear size M but had to size up to L. The fit is great once you get the right size. Quality is excellent too.`,
-      link: 'https://reddit.com/r/malefashionadvice/comments/example',
-      source: 'Reddit',
-      isFallback: true
-    },
-    {
-      title: `${brand} Fit Review - Style Forum`,
-      snippet: `This brand is true to size for most people. I'm 5'10" and the regular length fits perfectly. Great construction and materials.`,
-      link: 'https://styleforum.net/threads/example',
-      source: 'Style Forum',
-      isFallback: true
-    },
-    {
-      title: `${brand} Quality Review - Fashion Blog`,
-      snippet: `Runs large compared to other brands. I sized down and it fits perfectly. Great quality fabric that holds up well after washing.`,
-      link: 'https://fashionblog.com/review',
-      source: 'Fashion Blog',
-      isFallback: true
-    },
-    {
-      title: `${brand} Customer Experience - YouTube`,
-      snippet: `After several washes, the fabric has held up well. No pilling or shrinking. The stitching is solid and the fit remains consistent.`,
-      link: 'https://youtube.com/watch?v=example',
-      source: 'YouTube',
-      isFallback: true
-    },
-    {
-      title: `${brand} Sizing Guide - Substack`,
-      snippet: `Based on customer feedback, this brand tends to run small. Most people recommend sizing up one size for the best fit.`,
-      link: 'https://substack.com/fashion-review',
-      source: 'Substack',
-      isFallback: true
-    }
-  ];
+// No mock data fallback - return empty results when API fails
+function handleSearchFailure(query: string, error: unknown): SearchResult[] {
+  console.error('Search failed for query:', query, 'Error:', error);
+  return [];
 }
 
 /* -------------------------

@@ -58,6 +58,75 @@
   border-bottom: none !important;
 }
 
+/* Dragging styles */
+.fashion-fit-widget.dragging {
+  transition: none !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(59, 130, 246, 0.5) !important; /* blue-500 with transparency */
+  transform: scale(1.02) !important;
+  cursor: grabbing !important;
+  will-change: transform !important;
+  backface-visibility: hidden !important;
+  perspective: 1000px !important;
+}
+
+.fashion-fit-widget .widget-header,
+.fashion-fit-widget .minimal-mode {
+  cursor: grab !important;
+  user-select: none !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.fashion-fit-widget .widget-header:hover,
+.fashion-fit-widget .minimal-mode:hover {
+  cursor: grab !important;
+  background-color: rgba(59, 130, 246, 0.05) !important;
+}
+
+.fashion-fit-widget.dragging .widget-header,
+.fashion-fit-widget.dragging .minimal-mode {
+  cursor: grabbing !important;
+}
+
+/* Context menu styles */
+.widget-context-menu {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(168, 162, 158, 0.2) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+  backdrop-filter: blur(10px) !important;
+  min-width: 180px !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 14px !important;
+  overflow: hidden !important;
+}
+
+.context-menu-header {
+  padding: 12px 16px 8px 16px !important;
+  font-weight: 600 !important;
+  color: #292524 !important;
+  border-bottom: 1px solid rgba(168, 162, 158, 0.1) !important;
+  background: rgba(168, 162, 158, 0.05) !important;
+}
+
+.context-menu-item {
+  padding: 10px 16px !important;
+  cursor: pointer !important;
+  color: #44403c !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.context-menu-item:hover {
+  background: rgba(59, 130, 246, 0.1) !important;
+  color: #1d4ed8 !important;
+}
+
+.context-menu-separator {
+  height: 1px !important;
+  background: rgba(168, 162, 158, 0.2) !important;
+  margin: 4px 0 !important;
+}
+
 .minimal-content {
   display: flex !important;
   flex-direction: column !important;
@@ -741,6 +810,31 @@
   border: 1px dashed rgba(168, 162, 158, 0.2);
 }
 
+.category-info {
+  text-align: center;
+  color: #57534e;
+  padding: 20px;
+  background: rgba(168, 162, 158, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(168, 162, 158, 0.1);
+  margin: 10px 0;
+}
+
+.category-info p {
+  margin: 8px 0;
+  line-height: 1.4;
+}
+
+.category-info p:first-child {
+  font-weight: 600;
+  color: #44403c;
+}
+
+.category-info p:last-child {
+  font-size: 13px;
+  color: #78716c;
+}
+
 /* Enhanced widget sizing for expanded content */
 .fashion-fit-widget.expanded {
   max-width: 500px !important;
@@ -1058,16 +1152,17 @@
   }
 }
 
-/* Review sections */
+/* Review sections - ensure they're visible by default */
 .reviews-section,
 .item-reviews-section,
 .source-reviews-section,
 .external-reviews-section {
   margin-top: 20px !important;
   padding: 16px !important;
-  background: rgba(250, 250, 249, 0.5) !important; /* stone-50 with transparency */
+  background: rgba(250, 250, 249, 0.8) !important; /* stone-50 with more opacity */
   border-radius: 8px !important;
-  border: 1px solid rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
+  border: 1px solid rgba(168, 162, 158, 0.2) !important; /* stone-300 with transparency */
+  display: block !important; /* Show by default */
 }
 
 .reviews-title,
@@ -1094,14 +1189,16 @@
 
 .reviews-count {
   font-weight: 500 !important;
+  color: #44403c !important; /* stone-700 */
 }
 
 .reviews-status {
   padding: 2px 8px !important;
-  background: rgba(34, 197, 94, 0.1) !important; /* green-500 with transparency */
-  color: #16a34a !important; /* green-600 */
+  background: rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
+  color: #57534e !important; /* stone-600 */
   border-radius: 4px !important;
   font-size: 11px !important;
+  font-weight: 500 !important;
 }
 
 /* Review items */

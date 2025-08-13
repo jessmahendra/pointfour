@@ -11,12 +11,25 @@ try {
       this.isExpanded = false;
       this.isDismissed = false;
       this.lastShowTime = 0;
+      
+      // Drag state variables
+      this.isDragging = false;
+      this.dragStartX = 0;
+      this.dragStartY = 0;
+      this.dragStartLeft = 0;
+      this.dragStartTop = 0;
+      this.currentLeft = 0;
+      this.currentTop = 0;
+      
       this.preferences = {
         theme: 'light',
         position: 'top-right',
         autoHide: true,
         enabled: true  // Ensure enabled is true by default
       };
+      
+      // Setup global drag event listeners
+      this.setupGlobalDragEvents();
       
       // Initialize immediately
       this.init();
@@ -55,20 +68,33 @@ try {
         console.log('🎯 FashionWidget: Page title:', document.title);
         console.log('🎯 FashionWidget: Hostname:', window.location.hostname);
         
+        // Load custom position if available
+        this.loadCustomPosition();
+        
         // Clean up any existing widgets first
         this.cleanupExistingWidgets();
+        
+        // Check if we should even create a widget on this site
+        if (this.isNonFashionSite()) {
+          console.log('🎯 FashionWidget: Non-fashion site detected during init, not creating widget');
+          return;
+        }
         
         // Wait for DOM to be ready
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', () => {
-            console.log('🎯 FashionWidget: DOM loaded, creating widget...');
-            this.createWidget();
-            this.startDetection();
+            console.log('🎯 FashionWidget: DOM loaded, checking if fashion site...');
+            if (!this.isNonFashionSite()) {
+              this.createWidget();
+              this.startDetection();
+            }
           });
         } else {
-          console.log('🎯 FashionWidget: DOM already ready, creating widget...');
-          this.createWidget();
-          this.startDetection();
+          console.log('🎯 FashionWidget: DOM already ready, checking if fashion site...');
+          if (!this.isNonFashionSite()) {
+            this.createWidget();
+            this.startDetection();
+          }
         }
         
         // Also listen for page changes (SPA navigation)
@@ -78,15 +104,14 @@ try {
         
       } catch (error) {
         console.error('🎯 FashionWidget: Error during initialization:', error);
-        // Try to recover by creating widget anyway
-        setTimeout(() => {
-          try {
-            this.createWidget();
-            this.startDetection();
-          } catch (recoveryError) {
-            console.error('🎯 FashionWidget: Recovery failed:', recoveryError);
-          }
-        }, 1000);
+      }
+    }
+
+    // Check and remove widget if on wrong site
+    checkAndRemoveIfWrongSite() {
+      if (this.isNonFashionSite() && this.widget) {
+        console.log('🎯 FashionWidget: Wrong site detected, removing widget immediately');
+        this.forceRemove();
       }
     }
 
@@ -95,85 +120,23 @@ try {
       try {
         console.log('🎯 FashionWidget: Starting detection process...');
         
-        // Check if we're on a search engine or clearly non-fashion site first
-        if (this.isSearchEngine() || this.isNonFashionSite()) {
-          console.log('🎯 FashionWidget: Search engine or non-fashion site detected, skipping...');
+        // First: Check if we're on a clearly non-fashion site
+        if (this.isNonFashionSite()) {
+          console.log('🎯 FashionWidget: Non-fashion site detected, skipping completely');
           return;
         }
         
-        // Run universal detection on potentially fashion sites
-        console.log('🎯 FashionWidget: Running universal detection...');
-        const detectionResults = this.detectFashionWebsite();
-        
-        console.log('🎯 FashionWidget: Detection results:', detectionResults);
-        
-        // Show widget if we have any fashion indicators (lower threshold)
-        if (detectionResults.isFashionWebsite && detectionResults.confidence >= 30) {
-          console.log('🎯 FashionWidget: Fashion website detected with confidence:', detectionResults.confidence);
-          
-          // Create brand data from detection results
-          const brandData = {
-            brandName: detectionResults.detectedBrand || 'Fashion Brand',
-            category: detectionResults.fashionType || 'general',
-            hasData: false,
-            searchType: 'universal-detection',
-            recommendation: `Fashion website detected! ${detectionResults.reasons.join(' ')}`,
-            externalSearchResults: null,
-            fitTips: [],
-            sizeGuide: null,
-            timestamp: Date.now(),
-            error: false,
-            detectionDetails: detectionResults
-          };
-          
-          this.handleBrandDetected(brandData);
-          
-          // Try to fetch data for the detected brand
-          if (detectionResults.detectedBrand) {
-            this.fetchBrandDataForDetectedBrand(detectionResults.detectedBrand);
-          }
-          
-        } else if (detectionResults.confidence >= 20) {
-          // Show widget even with low confidence, but allow manual input
-          console.log('🎯 FashionWidget: Low confidence fashion indicators, showing widget with manual input option...');
-          
-          const brandData = {
-            brandName: 'Fashion Website',
-            category: 'general',
-            hasData: false,
-            searchType: 'low-confidence-detection',
-            recommendation: 'Fashion website detected with low confidence. You can manually enter a brand name.',
-            externalSearchResults: null,
-            fitTips: [],
-            sizeGuide: null,
-            timestamp: Date.now(),
-            error: false,
-            detectionDetails: detectionResults
-          };
-          
-          this.handleBrandDetected(brandData);
-          
+        // Second: Check if this is a confirmed fashion website
+        if (this.isConfirmedFashionWebsite()) {
+          console.log('🎯 FashionWidget: Confirmed fashion website detected, showing widget');
+          this.showWidgetForFashionSite();
         } else {
-          console.log('🎯 FashionWidget: Not a fashion website (confidence:', detectionResults.confidence, ')');
-          // Don't show widget on clearly non-fashion sites
+          console.log('🎯 FashionWidget: Not a confirmed fashion website, skipping');
         }
         
       } catch (error) {
         console.error('🎯 FashionWidget: Error in detection process:', error);
-        // Show widget as fallback if detection fails
-        this.showFallbackWidget();
       }
-    }
-
-    // Check if we're on a search engine
-    isSearchEngine() {
-      const hostname = window.location.hostname.toLowerCase();
-      const searchEngines = [
-        'google.com', 'google.co.uk', 'google.de', 'google.fr', 'google.it', 'google.es', 'google.ca', 'google.com.au',
-        'bing.com', 'yahoo.com', 'duckduckgo.com', 'yandex.com', 'baidu.com', 'search.yahoo.com'
-      ];
-      
-      return searchEngines.some(engine => hostname.includes(engine));
     }
 
     // Check if we're on a clearly non-fashion site
@@ -181,27 +144,174 @@ try {
       const hostname = window.location.hostname.toLowerCase();
       const url = window.location.href.toLowerCase();
       
-      // Only block clearly non-fashion domains (very restrictive list)
-      const clearlyNonFashionDomains = [
-        'github.com', 'stackoverflow.com', 'news.ycombinator.com', 'dev.to', 'hashnode.dev'
+      // Comprehensive list of non-fashion domains
+      const nonFashionDomains = [
+        // Search engines and maps
+        'google.com', 'maps.google.com', 'google.co.uk', 'google.de', 'google.fr', 'google.it', 'google.es', 'google.ca', 'google.com.au', 'google.co.jp', 'google.co.in',
+        'bing.com', 'yahoo.com', 'duckduckgo.com', 'yandex.com', 'baidu.com', 'search.yahoo.com',
+        
+        // Social media and entertainment
+        'youtube.com', 'netflix.com', 'spotify.com', 'facebook.com', 'twitter.com', 'instagram.com', 'tiktok.com',
+        'linkedin.com', 'reddit.com', 'pinterest.com', 'snapchat.com', 'discord.com', 'twitch.tv',
+        
+        // General services and platforms
+        'wikipedia.org', 'amazon.com', 'ebay.com', 'github.com', 'stackoverflow.com', 'medium.com',
+        'news.ycombinator.com', 'dev.to', 'hashnode.dev', 'notion.so', 'figma.com', 'slack.com',
+        
+        // News and information
+        'bbc.com', 'cnn.com', 'reuters.com', 'nytimes.com', 'wsj.com', 'theguardian.com',
+        
+        // Business and productivity
+        'microsoft.com', 'office.com', 'zoom.us', 'teams.microsoft.com', 'dropbox.com', 'box.com',
+        
+        // Banking and finance
+        'paypal.com', 'stripe.com', 'chase.com', 'wellsfargo.com', 'bankofamerica.com',
+        
+        // Government and education
+        'gov.uk', 'usa.gov', 'edu', 'harvard.edu', 'mit.edu', 'stanford.edu'
       ];
       
-      // Check if current domain is in clearly non-fashion list
-      if (clearlyNonFashionDomains.some(domain => hostname.includes(domain))) {
+      // Check if current domain is in non-fashion list
+      if (nonFashionDomains.some(domain => hostname.includes(domain))) {
+        console.log('🎯 FashionWidget: Non-fashion domain detected:', hostname);
         return true;
       }
       
-      // Only block very specific non-fashion URL patterns
-      const clearlyNonFashionPatterns = [
-        '/api/', '/docs/', '/help/', '/support/', '/admin', '/dashboard', '/settings'
+      // Block specific URL patterns
+      const nonFashionPatterns = [
+        '/maps', '/search', '/news', '/weather', '/finance', '/sports', '/games',
+        '/api/', '/docs/', '/help/', '/support/', '/admin', '/dashboard', '/settings',
+        '/login', '/signup', '/register', '/account', '/profile'
       ];
       
-      if (clearlyNonFashionPatterns.some(pattern => url.includes(pattern))) {
+      if (nonFashionPatterns.some(pattern => url.includes(pattern))) {
+        console.log('🎯 FashionWidget: Non-fashion URL pattern detected:', url);
         return true;
       }
       
-      // Don't block social media, news, or other sites that might have fashion content
       return false;
+    }
+
+    // Check if this is a confirmed fashion website
+    isConfirmedFashionWebsite() {
+      const hostname = window.location.hostname.toLowerCase();
+      const url = window.location.href.toLowerCase();
+      
+      // Whitelist of confirmed fashion websites
+      const confirmedFashionDomains = [
+        // Major fashion retailers
+        'zara.com', 'hm.com', 'reformation.com', 'everlane.com', 'cos.com', 'uniqlo.com',
+        'mango.com', 'topshop.com', 'riverisland.com', 'newlook.com', 'boohoo.com',
+        'prettylittlething.com', 'missguided.com', 'nastygal.com',
+        
+        // Luxury and designer
+        'farfetch.com', 'net-a-porter.com', 'ssense.com', 'matchesfashion.com',
+        'selfridges.com', 'harrods.com', 'libertylondon.com', 'johnlewis.com',
+        'debenhams.com', 'houseoffraser.com', 'marksandspencer.com', 'next.co.uk',
+        
+        // UK fashion brands
+        'warehouse.co.uk', 'oasis-stores.com', 'whistles.com', 'reiss.com',
+        'tedbaker.com', 'karenmillen.com', 'coastfashion.com', 'monsoon.co.uk',
+        'accessorize.com', 'dorothyperkins.com', 'evans.co.uk', 'wallis.co.uk',
+        'burton.co.uk', 'topman.com', 'waxlondon.com', 'lisayang.com',
+        
+        // US fashion brands
+        'anthropologie.com', 'urbanoutfitters.com', 'freepeople.com', 'madewell.com',
+        'jcrew.com', 'bananarepublic.com', 'gap.com', 'oldnavy.com',
+        'nordstrom.com', 'bloomingdales.com', 'macys.com', 'saksfifthavenue.com',
+        'neimanmarcus.com', 'bergdorfgoodman.com',
+        
+        // Footwear brands
+        'nike.com', 'adidas.com', 'converse.com', 'vans.com', 'puma.com',
+        'reebok.com', 'underarmour.com', 'newbalance.com', 'asics.com',
+        'clarks.com', 'dr.martens.com', 'timberland.com', 'ugg.com',
+        
+        // Activewear and sports
+        'lululemon.com', 'athleta.com', 'fabletics.com', 'gymshark.com',
+        'aloyoga.com', 'beyondyoga.com', 'outdoorvoices.com'
+      ];
+      
+      // Check if current domain is in confirmed fashion list
+      if (confirmedFashionDomains.some(domain => hostname.includes(domain))) {
+        console.log('🎯 FashionWidget: Confirmed fashion domain detected:', hostname);
+        return true;
+      }
+      
+      // Check for fashion-related content patterns
+      if (this.hasFashionContent()) {
+        console.log('🎯 FashionWidget: Fashion content detected on page');
+        return true;
+      }
+      
+      return false;
+    }
+
+    // Check if page has fashion-related content
+    hasFashionContent() {
+      try {
+        const text = document.body.textContent.toLowerCase();
+        const url = window.location.href.toLowerCase();
+        
+        // Fashion product categories
+        const fashionKeywords = [
+          'jeans', 'trousers', 'pants', 'tops', 't-shirts', 'shirts', 'blouses', 'dresses',
+          'skirts', 'jumpers', 'sweaters', 'cardigans', 'jackets', 'coats', 'blazers',
+          'shoes', 'boots', 'sneakers', 'trainers', 'sandals', 'heels', 'flats',
+          'accessories', 'handbags', 'bags', 'jewelry', 'watches', 'belts', 'scarves',
+          'clothing', 'apparel', 'fashion', 'style', 'outfit', 'wardrobe'
+        ];
+        
+        // Check if page contains fashion keywords
+        const hasFashionKeywords = fashionKeywords.some(keyword => text.includes(keyword));
+        
+        // Check for e-commerce patterns
+        const hasEcommercePatterns = this.detectEcommercePatterns();
+        
+        // Check URL for fashion indicators
+        const hasFashionUrl = url.includes('/clothing') || url.includes('/shoes') || 
+                              url.includes('/accessories') || url.includes('/fashion') ||
+                              url.includes('/style') || url.includes('/outfit');
+        
+        console.log('🎯 FashionWidget: Content analysis results:', {
+          hasFashionKeywords,
+          hasEcommercePatterns: hasEcommercePatterns.score > 50,
+          hasFashionUrl,
+          ecommerceScore: hasEcommercePatterns.score
+        });
+        
+        // Only return true if we have strong fashion indicators
+        return hasFashionKeywords && (hasEcommercePatterns.score > 50 || hasFashionUrl);
+        
+      } catch (error) {
+        console.error('🎯 FashionWidget: Error in content analysis:', error);
+        return false;
+      }
+    }
+
+    // Show widget for confirmed fashion websites
+    showWidgetForFashionSite() {
+      console.log('🎯 FashionWidget: Showing widget for fashion website');
+      
+      // Create brand data for fashion site
+      const brandData = {
+        brandName: this.extractBrandFromContext() || 'Fashion Brand',
+        category: 'fashion',
+        hasData: false,
+        searchType: 'fashion-website-detection',
+        recommendation: 'Fashion website detected! Click to expand for fit information and reviews.',
+        externalSearchResults: null,
+        fitTips: [],
+        sizeGuide: null,
+        timestamp: Date.now(),
+        error: false
+      };
+      
+      this.handleBrandDetected(brandData);
+      
+      // Try to fetch data for the detected brand
+      if (brandData.brandName && brandData.brandName !== 'Fashion Brand') {
+        this.fetchBrandDataForDetectedBrand(brandData.brandName);
+      }
     }
 
     async loadPreferences() {
@@ -268,6 +378,9 @@ try {
         // Setup event listeners
         this.setupEventListeners();
         
+        // Setup drag events
+        this.setupDragEvents();
+        
         // Load Inter font
         this.loadInterFont();
         
@@ -300,40 +413,46 @@ try {
 
       let positionStyles = '';
       
-      // Ensure we're using top-right as default
-      if (!this.position || this.position === 'default') {
-        this.position = 'top-right';
-      }
-      
-      console.log('🎯 FashionWidget: Positioning widget at:', this.position);
-      
-      // Get viewport dimensions for bounds checking
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const widgetWidth = 350; // Fixed width
-      
-      switch (this.position) {
-        case 'top-left':
-          positionStyles = 'top: 20px !important; left: 20px !important;';
-          break;
-        case 'top-center':
-          positionStyles = 'top: 20px !important; left: 50% !important; transform: translateX(-50%) !important;';
-          break;
-        case 'bottom-right':
-          positionStyles = 'bottom: 20px !important; right: 20px !important;';
-          break;
-        case 'bottom-left':
-          positionStyles = 'bottom: 20px !important; left: 20px !important;';
-          break;
-        case 'bottom-center':
-          positionStyles = 'bottom: 20px !important; left: 50% !important; transform: translateX(-50%) !important;';
-          break;
-        case 'top-right':
-        default:
-          // Ensure widget doesn't go beyond right edge
-          const rightMargin = Math.max(20, viewportWidth - widgetWidth - 20);
-          positionStyles = `top: 20px !important; right: ${rightMargin}px !important;`;
-          break;
+      // Check for custom position first
+      if (this.position === 'custom' && this.currentLeft !== undefined && this.currentTop !== undefined) {
+        positionStyles = `top: ${this.currentTop}px !important; left: ${this.currentLeft}px !important;`;
+        console.log('🎯 FashionWidget: Using custom position:', { left: this.currentLeft, top: this.currentTop });
+      } else {
+        // Ensure we're using top-right as default
+        if (!this.position || this.position === 'default') {
+          this.position = 'top-right';
+        }
+        
+        console.log('🎯 FashionWidget: Positioning widget at:', this.position);
+        
+        // Get viewport dimensions for bounds checking
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const widgetWidth = 350; // Fixed width
+        
+        switch (this.position) {
+          case 'top-left':
+            positionStyles = 'top: 20px !important; left: 20px !important;';
+            break;
+          case 'top-center':
+            positionStyles = 'top: 20px !important; left: 50% !important; transform: translateX(-50%) !important;';
+            break;
+          case 'bottom-right':
+            positionStyles = 'bottom: 20px !important; right: 20px !important;';
+            break;
+          case 'bottom-left':
+            positionStyles = 'bottom: 20px !important; left: 20px !important;';
+            break;
+          case 'bottom-center':
+            positionStyles = 'bottom: 20px !important; left: 50% !important; transform: translateX(-50%) !important;';
+            break;
+          case 'top-right':
+          default:
+            // Ensure widget doesn't go beyond right edge
+            const rightMargin = Math.max(20, viewportWidth - widgetWidth - 20);
+            positionStyles = `top: 20px !important; right: ${rightMargin}px !important;`;
+            break;
+        }
       }
       
       const finalStyles = baseStyles + positionStyles;
@@ -350,7 +469,7 @@ try {
       this.widget.style.setProperty('overflow', 'visible', 'important');
       
       console.log('🎯 FashionWidget: Applied styles:', finalStyles);
-      console.log('🎯 FashionWidget: Viewport dimensions:', { width: viewportWidth, height: viewportHeight });
+      console.log('🎯 FashionWidget: Viewport dimensions:', { width: window.innerWidth, height: window.innerHeight });
       console.log('🎯 FashionWidget: Widget position computed:', this.widget.getBoundingClientRect());
     }
 
@@ -384,12 +503,16 @@ try {
         }
       });
       
-      // Close button
+      // Close button - ensure it works
       const closeBtn = this.minimalMode.querySelector('.widget-close');
-      closeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.dismiss();
-      });
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('🎯 FashionWidget: Close button clicked in minimal mode');
+          this.dismiss();
+        });
+      }
     }
 
     createExpandedMode() {
@@ -460,23 +583,35 @@ try {
       const backBtn = this.expandedMode.querySelector('#back-btn');
       const getAnalysisBtn = this.expandedMode.querySelector('#get-analysis-btn');
 
-      // Close button
-      closeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.dismiss();
-      });
+      // Close button - ensure it works immediately
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('🎯 FashionWidget: Close button clicked in expanded mode');
+          this.dismiss();
+        });
+      }
 
       // Back button
-      backBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.collapse();
-      });
+      if (backBtn) {
+        backBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('🎯 FashionWidget: Back button clicked');
+          this.collapse();
+        });
+      }
 
       // Get analysis button
-      getAnalysisBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.openFullAnalysis();
-      });
+      if (getAnalysisBtn) {
+        getAnalysisBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('🎯 FashionWidget: Get analysis button clicked');
+          this.openFullAnalysis();
+        });
+      }
       
       // Source tab event listeners
       const sourceTabs = this.expandedMode.querySelectorAll('.source-tab');
@@ -500,6 +635,403 @@ try {
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && this.isExpanded) {
           this.collapse();
+        }
+      });
+
+      // Right-click context menu for position reset
+      document.addEventListener('contextmenu', (e) => {
+        if (this.widget && this.widget.contains(e.target)) {
+          e.preventDefault();
+          this.showPositionContextMenu(e);
+        }
+      });
+
+      // Setup drag functionality when widget is created
+      if (this.widget) {
+        this.setupDragEvents();
+      }
+    }
+
+    setupDragEvents() {
+      if (!this.widget) return;
+
+      // Add drag handles to both minimal and expanded modes
+      const minimalHandle = this.widget.querySelector('.minimal-mode .widget-header');
+      const expandedHandle = this.widget.querySelector('.expanded .widget-header');
+      
+      // Setup drag events for minimal mode
+      if (minimalHandle) {
+        this.setupDragHandle(minimalHandle);
+      }
+      
+      // Setup drag events for expanded mode
+      if (expandedHandle) {
+        this.setupDragHandle(expandedHandle);
+      }
+      
+      console.log('🎯 FashionWidget: Drag events setup for both modes');
+    }
+
+    setupDragHandle(dragHandle) {
+      dragHandle.style.cursor = 'grab';
+      dragHandle.setAttribute('title', 'Drag to move widget');
+      
+      // Mouse events for dragging
+      dragHandle.addEventListener('mousedown', (e) => this.startDrag(e));
+      
+      // Touch events for mobile
+      dragHandle.addEventListener('touchstart', (e) => this.startDragTouch(e));
+    }
+
+    setupGlobalDragEvents() {
+      // Global mouse events for dragging
+      document.addEventListener('mousemove', (e) => this.drag(e));
+      document.addEventListener('mouseup', (e) => this.endDrag(e));
+      
+      // Global touch events for dragging
+      document.addEventListener('touchmove', (e) => this.dragTouch(e));
+      document.addEventListener('touchend', (e) => this.endDragTouch(e));
+      
+      // Handle window resize to keep widget in bounds
+      window.addEventListener('resize', () => this.handleWindowResize());
+      
+      console.log('🎯 FashionWidget: Global drag events setup');
+    }
+
+    handleWindowResize() {
+      if (this.widget && this.position === 'custom') {
+        // Ensure widget stays within new viewport bounds
+        this.constrainToViewport();
+        
+        // Update widget position if needed
+        this.widget.style.left = `${this.currentLeft}px`;
+        this.widget.style.top = `${this.currentTop}px`;
+        
+        console.log('🎯 FashionWidget: Adjusted position after window resize');
+      }
+    }
+
+    startDrag(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      this.isDragging = true;
+      this.dragStartX = e.clientX;
+      this.dragStartY = e.clientY;
+      
+      // Get current widget position
+      const rect = this.widget.getBoundingClientRect();
+      this.dragStartLeft = rect.left;
+      this.dragStartTop = rect.top;
+      this.currentLeft = rect.left;
+      this.currentTop = rect.top;
+      
+      // Change cursor to grabbing for all drag handles
+      const dragHandles = this.widget.querySelectorAll('.widget-header');
+      dragHandles.forEach(handle => {
+        handle.style.cursor = 'grabbing';
+      });
+      
+      // Add dragging class and disable transitions for smooth dragging
+      this.widget.classList.add('dragging');
+      this.widget.style.transition = 'none';
+      
+      console.log('🎯 FashionWidget: Started dragging from position:', { x: this.dragStartLeft, y: this.dragStartTop });
+    }
+
+    drag(e) {
+      if (!this.isDragging) return;
+      
+      e.preventDefault();
+      
+      // Use requestAnimationFrame for smooth dragging
+      if (this.dragAnimationFrame) {
+        cancelAnimationFrame(this.dragAnimationFrame);
+      }
+      
+      this.dragAnimationFrame = requestAnimationFrame(() => {
+        // Calculate new position
+        const deltaX = e.clientX - this.dragStartX;
+        const deltaY = e.clientY - this.dragStartY;
+        
+        this.currentLeft = this.dragStartLeft + deltaX;
+        this.currentTop = this.dragStartTop + deltaY;
+        
+        // Apply new position with transform for better performance
+        this.widget.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+        
+        // Ensure widget stays within viewport bounds
+        this.constrainToViewport();
+      });
+    }
+
+    endDrag(e) {
+      if (!this.isDragging) return;
+      
+      this.isDragging = false;
+      
+      // Cancel any pending animation frame
+      if (this.dragAnimationFrame) {
+        cancelAnimationFrame(this.dragAnimationFrame);
+        this.dragAnimationFrame = null;
+      }
+      
+      // Change cursor back to grab for all drag handles
+      const dragHandles = this.widget.querySelectorAll('.widget-header');
+      dragHandles.forEach(handle => {
+        handle.style.cursor = 'grab';
+      });
+      
+      // Remove dragging class and restore transitions
+      this.widget.classList.remove('dragging');
+      this.widget.style.transition = '';
+      
+      // Finalize position by setting absolute coordinates
+      this.widget.style.left = `${this.currentLeft}px`;
+      this.widget.style.top = `${this.currentTop}px`;
+      this.widget.style.right = 'auto';
+      this.widget.style.bottom = 'auto';
+      this.widget.style.transform = 'none';
+      
+      // Save the new position
+      this.saveCustomPosition();
+      
+      console.log('🎯 FashionWidget: Ended dragging at position:', { x: this.currentLeft, y: this.currentTop });
+    }
+
+    startDragTouch(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const touch = e.touches[0];
+      this.isDragging = true;
+      this.dragStartX = touch.clientX;
+      this.dragStartY = touch.clientY;
+      
+      // Get current widget position
+      const rect = this.widget.getBoundingClientRect();
+      this.dragStartLeft = rect.left;
+      this.dragStartTop = rect.top;
+      this.currentLeft = rect.left;
+      this.currentTop = rect.top;
+      
+      // Add dragging class and disable transitions for smooth dragging
+      this.widget.classList.add('dragging');
+      this.widget.style.transition = 'none';
+      
+      console.log('🎯 FashionWidget: Started touch dragging from position:', { x: this.dragStartLeft, y: this.dragStartTop });
+    }
+
+    dragTouch(e) {
+      if (!this.isDragging) return;
+      
+      e.preventDefault();
+      
+      // Use requestAnimationFrame for smooth dragging
+      if (this.dragAnimationFrame) {
+        cancelAnimationFrame(this.dragAnimationFrame);
+      }
+      
+      this.dragAnimationFrame = requestAnimationFrame(() => {
+        const touch = e.touches[0];
+        
+        // Calculate new position
+        const deltaX = touch.clientX - this.dragStartX;
+        const deltaY = touch.clientY - this.dragStartY;
+        
+        this.currentLeft = this.dragStartLeft + deltaX;
+        this.currentTop = this.dragStartTop + deltaY;
+        
+        // Apply new position with transform for better performance
+        this.widget.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+        
+        // Ensure widget stays within viewport bounds
+        this.constrainToViewport();
+      });
+    }
+
+    endDragTouch(e) {
+      if (!this.isDragging) return;
+      
+      this.isDragging = false;
+      
+      // Cancel any pending animation frame
+      if (this.dragAnimationFrame) {
+        cancelAnimationFrame(this.dragAnimationFrame);
+        this.dragAnimationFrame = null;
+      }
+      
+      // Remove dragging class and restore transitions
+      this.widget.classList.remove('dragging');
+      this.widget.style.transition = '';
+      
+      // Finalize position by setting absolute coordinates
+      this.widget.style.left = `${this.currentLeft}px`;
+      this.widget.style.top = `${this.currentTop}px`;
+      this.widget.style.right = 'auto';
+      this.widget.style.bottom = 'auto';
+      this.widget.style.transform = 'none';
+      
+      // Save the new position
+      this.saveCustomPosition();
+      
+      console.log('🎯 FashionWidget: Ended touch dragging at position:', { x: this.currentLeft, y: this.currentTop });
+    }
+
+    constrainToViewport() {
+      const rect = this.widget.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // Constrain to viewport bounds
+      if (this.currentLeft < 0) {
+        this.currentLeft = 0;
+        this.dragStartLeft = this.dragStartLeft - (this.dragStartLeft - this.currentLeft);
+      }
+      if (this.currentTop < 0) {
+        this.currentTop = 0;
+        this.dragStartTop = this.dragStartTop - (this.dragStartTop - this.currentTop);
+      }
+      if (this.currentLeft + rect.width > viewportWidth) {
+        this.currentLeft = viewportWidth - rect.width;
+        this.dragStartLeft = this.dragStartLeft - (this.dragStartLeft - this.currentLeft);
+      }
+      if (this.currentTop + rect.height > viewportHeight) {
+        this.currentTop = viewportHeight - rect.height;
+        this.dragStartTop = this.dragStartTop - (this.dragStartTop - this.currentTop);
+      }
+    }
+
+    saveCustomPosition() {
+      // Save custom position to storage
+      const customPosition = {
+        left: this.currentLeft,
+        top: this.currentTop,
+        isCustom: true,
+        timestamp: Date.now()
+      };
+      
+      chrome.storage.sync.set({ customPosition }, () => {
+        console.log('🎯 FashionWidget: Saved custom position:', customPosition);
+      });
+      
+      // Update position type to indicate it's custom
+      this.position = 'custom';
+    }
+
+    resetToPresetPosition(presetPosition = 'top-right') {
+      // Clear custom position
+      chrome.storage.sync.remove(['customPosition'], () => {
+        console.log('🎯 FashionWidget: Cleared custom position');
+      });
+      
+      // Reset to preset position
+      this.position = presetPosition;
+      this.currentLeft = undefined;
+      this.currentTop = undefined;
+      
+      // Update widget position
+      if (this.widget) {
+        this.updateWidgetPosition();
+      }
+      
+      console.log('🎯 FashionWidget: Reset to preset position:', presetPosition);
+    }
+
+    showPositionContextMenu(e) {
+      // Remove existing context menu
+      const existingMenu = document.getElementById('widget-context-menu');
+      if (existingMenu) {
+        existingMenu.remove();
+      }
+
+      // Create context menu
+      const contextMenu = document.createElement('div');
+      contextMenu.id = 'widget-context-menu';
+      contextMenu.className = 'widget-context-menu';
+      
+      const positions = [
+        { key: 'top-right', label: 'Top Right' },
+        { key: 'top-left', label: 'Top Left' },
+        { key: 'top-center', label: 'Top Center' },
+        { key: 'bottom-right', label: 'Bottom Right' },
+        { key: 'bottom-left', label: 'Bottom Left' },
+        { key: 'bottom-center', label: 'Bottom Center' }
+      ];
+
+      contextMenu.innerHTML = `
+        <div class="context-menu-header">Widget Position</div>
+        ${positions.map(pos => `
+          <div class="context-menu-item" data-position="${pos.key}">
+            ${pos.label}
+          </div>
+        `).join('')}
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" data-action="reset-custom">
+          Reset to Default Position
+        </div>
+      `;
+
+      // Position the context menu
+      contextMenu.style.position = 'fixed';
+      contextMenu.style.left = `${e.clientX}px`;
+      contextMenu.style.top = `${e.clientY}px`;
+      contextMenu.style.zIndex = '1000000';
+
+      // Add event listeners
+      contextMenu.addEventListener('click', (e) => {
+        const item = e.target.closest('.context-menu-item');
+        if (item) {
+          const position = item.dataset.position;
+          const action = item.dataset.action;
+          
+          if (action === 'reset-custom') {
+            this.resetToPresetPosition('top-right');
+          } else if (position) {
+            this.resetToPresetPosition(position);
+          }
+          
+          contextMenu.remove();
+        }
+      });
+
+      // Add to page
+      document.body.appendChild(contextMenu);
+
+      // Remove context menu when clicking outside
+      const removeMenu = (e) => {
+        if (!contextMenu.contains(e.target)) {
+          contextMenu.remove();
+          document.removeEventListener('click', removeMenu);
+        }
+      };
+      
+      setTimeout(() => {
+        document.addEventListener('click', removeMenu);
+      }, 100);
+    }
+
+    loadCustomPosition() {
+      chrome.storage.sync.get(['customPosition'], (result) => {
+        if (result.customPosition && result.customPosition.isCustom) {
+          // Check if the saved position is still valid (within reasonable time)
+          const age = Date.now() - result.customPosition.timestamp;
+          const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+          
+          if (age < maxAge) {
+            this.currentLeft = result.customPosition.left;
+            this.currentTop = result.customPosition.top;
+            this.position = 'custom';
+            console.log('🎯 FashionWidget: Loaded custom position:', { left: this.currentLeft, top: this.currentTop });
+            
+            // Update position if widget exists
+            if (this.widget) {
+              this.updateWidgetPosition();
+            }
+          } else {
+            console.log('🎯 FashionWidget: Custom position expired, using default');
+            chrome.storage.sync.remove(['customPosition']);
+          }
         }
       });
     }
@@ -849,7 +1381,7 @@ try {
         category: 'general',
         hasData: false,
         searchType: 'fallback',
-        recommendation: 'Unable to detect fashion website automatically. You can manually enter a brand name.',
+        recommendation: 'Unable to detect fashion website automatically. Click the search icon to manually enter a brand name and search for live reviews from across the web.',
         externalSearchResults: null,
         fitTips: [],
         sizeGuide: null,
@@ -859,6 +1391,22 @@ try {
       };
       
       this.handleBrandDetected(brandData);
+    }
+
+    // Handle different search types gracefully
+    getSearchTypeMessage(searchType, brandName = '') {
+      switch (searchType) {
+        case 'error':
+          return `Unable to load information for ${brandName || 'this brand'} at this time. Please try again later or manually search for reviews.`;
+        case 'fallback':
+          return 'Unable to detect fashion website automatically. Click the search icon to manually enter a brand name and search for live reviews from across the web.';
+        case 'web-search':
+          return `Live search results for ${brandName || 'this brand'} from across the web.`;
+        case 'manual-detection':
+          return `Brand detected: ${brandName || 'Unknown'}. Searching for live reviews...`;
+        default:
+          return `Information for ${brandName || 'this brand'}.`;
+      }
     }
 
     switchSourceTab(source) {
@@ -919,21 +1467,21 @@ try {
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            // Update the widget with real data
-            const enhancedBrandData = {
-              brandName,
-              category: 'general',
-              hasData: data.totalResults > 0,
-              searchType: 'web-search',
-              recommendation: data.brandFitSummary ? 
-                `${data.brandFitSummary.summary} (Based on ${data.totalResults} web search results)` :
-                `Limited information available for ${brandName}. Check their size guide for best fit.`,
-              externalSearchResults: data,
-              fitTips: [],
-              sizeGuide: null,
-              timestamp: Date.now(),
-              error: false
-            };
+                    // Update the widget with real data
+        const enhancedBrandData = {
+          brandName,
+          category: 'general',
+          hasData: data.totalResults > 0,
+          searchType: 'web-search',
+          recommendation: data.brandFitSummary ? 
+            `${data.brandFitSummary.summary} (Based on ${data.totalResults} live web search results)` :
+            `Limited information available for ${brandName}. We searched across multiple sources but found no specific fit reviews.`,
+          externalSearchResults: data,
+          fitTips: [],
+          sizeGuide: null,
+          timestamp: Date.now(),
+          error: false
+        };
             
             this.handleBrandDetected(enhancedBrandData);
             console.log('🎯 FashionWidget: Successfully fetched data for manually detected brand');
@@ -945,7 +1493,7 @@ try {
               category: 'general',
               hasData: false,
               searchType: 'manual-detection',
-              recommendation: `Brand detected: ${brandName}. Limited information available.`,
+              recommendation: `Brand detected: ${brandName}. We attempted to search for live reviews but couldn't find any at the moment.`,
               externalSearchResults: null,
               fitTips: [],
               sizeGuide: null,
@@ -961,7 +1509,7 @@ try {
             category: 'general',
             hasData: false,
             searchType: 'manual-detection',
-            recommendation: `Brand detected: ${brandName}. Limited information available.`,
+            recommendation: `Brand detected: ${brandName}. We attempted to search for live reviews but couldn't find any at the moment.`,
             externalSearchResults: null,
             fitTips: [],
             sizeGuide: null,
@@ -977,7 +1525,7 @@ try {
           category: 'general',
           hasData: false,
           searchType: 'manual-detection',
-          recommendation: `Brand detected: ${brandName}. Limited information available.`,
+          recommendation: `Brand detected: ${brandName}. We attempted to search for live reviews but couldn't find any at the moment.`,
           externalSearchResults: null,
           fitTips: [],
           sizeGuide: null,
@@ -1223,6 +1771,8 @@ try {
     expand() {
       if (this.isExpanded) return;
       
+      console.log('🎯 FashionWidget: Expanding widget...');
+      
       this.isExpanded = true;
       
       // Smooth transition
@@ -1237,6 +1787,17 @@ try {
         requestAnimationFrame(() => {
           this.expandedMode.style.opacity = '1';
           this.expandedMode.style.transform = 'scale(1)';
+          
+          // Re-setup drag events for expanded mode
+          this.setupDragEvents();
+          
+          // Immediately show all review sections
+          this.showAllReviewSections();
+          
+          // Update content if we have brand data
+          if (this.brandData) {
+            this.updateContent(this.brandData);
+          }
         });
       }, 150);
       
@@ -1245,6 +1806,14 @@ try {
       
       // Update tab state
       this.updateTabState();
+    }
+
+    // Show all review sections with real data or appropriate fallback
+    showAllReviewSections() {
+      console.log('🎯 FashionWidget: Showing all review sections...');
+      
+      // Use the proper method that handles real data
+      this.showReviewsSection(this.brandData);
     }
 
     collapse() {
@@ -1264,6 +1833,9 @@ try {
         requestAnimationFrame(() => {
           this.minimalMode.style.opacity = '1';
           this.minimalMode.style.transform = 'scale(1)';
+          
+          // Re-setup drag events for minimal mode
+          this.setupDragEvents();
         });
       }, 150);
       
@@ -1309,13 +1881,8 @@ try {
           `;
         }
         
-        // Show reviews section if we have review data
-        if (brandData.externalSearchResults && brandData.externalSearchResults.length > 0) {
-          this.showReviewsSection(brandData.externalSearchResults);
-        } else if (brandData.externalSearchResults && brandData.externalSearchResults.reviews) {
-          // Handle structured review data
-          this.showStructuredReviews(brandData.externalSearchResults);
-        }
+        // Show reviews section with real data
+        this.showReviewsSection(brandData);
         
         // Show fit tips if available
         if (brandData.fitTips && brandData.fitTips.length > 0) {
@@ -1331,6 +1898,98 @@ try {
         console.error('🎯 FashionWidget: Error updating content:', error);
       }
     }
+
+    // Show reviews section with data or appropriate message
+    showReviewsSection(brandData) {
+      console.log('🎯 FashionWidget: Showing reviews section with data:', brandData);
+      
+      const reviewsSection = this.expandedMode.querySelector('.reviews-section');
+      const reviewsCount = this.expandedMode.querySelector('.reviews-count');
+      const reviewsContent = this.expandedMode.querySelector('.reviews-content');
+      
+      if (reviewsSection && reviewsCount && reviewsContent) {
+        reviewsSection.style.display = 'block';
+        
+        // Check if this brand doesn't need fit advice
+        if (brandData.noFitAdvice) {
+          reviewsCount.textContent = 'Category-specific information';
+          reviewsContent.innerHTML = `
+            <div class="category-info">
+              <p><strong>${brandData.brandName}</strong> is a ${brandData.category.replace('-', ' ')} brand.</p>
+              <p>Fit advice and sizing information are not applicable for this category.</p>
+              <p>Check their product descriptions for size guides and measurements.</p>
+            </div>
+          `;
+          
+          console.log('🎯 FashionWidget: Displayed category-specific message');
+          return;
+        }
+        
+        // Check if we have real review data
+        if (brandData.externalSearchResults && brandData.externalSearchResults.reviews && brandData.externalSearchResults.reviews.length > 0) {
+          // Use real API data
+          const reviews = brandData.externalSearchResults.reviews;
+          reviewsCount.textContent = `${reviews.length} reviews found`;
+          
+          reviewsContent.innerHTML = reviews.map(review => `
+            <div class="review-item">
+              <div class="review-source">${review.source || 'Web Review'}</div>
+              <div class="review-text">${review.snippet || review.content || review.title || 'No content available'}</div>
+              <div class="review-meta">
+                <span class="review-date">${review.date || 'Unknown date'}</span>
+                <span class="review-rating">${review.rating || 'No rating'}</span>
+              </div>
+            </div>
+          `).join('');
+          
+          console.log('🎯 FashionWidget: Displayed real reviews:', reviews.length);
+          
+        } else if (brandData.externalSearchResults && brandData.externalSearchResults.length > 0) {
+          // Handle array format
+          const reviews = brandData.externalSearchResults;
+          reviewsCount.textContent = `${reviews.length} reviews found`;
+          
+          reviewsContent.innerHTML = reviews.map(review => `
+            <div class="review-item">
+              <div class="review-source">${review.source || 'Web Review'}</div>
+              <div class="review-text">${review.snippet || review.content || 'No content available'}</div>
+              <div class="review-meta">
+                <span class="review-date">${review.date || 'Unknown date'}</span>
+                <span class="review-rating">${review.rating || 'No rating'}</span>
+              </div>
+            </div>
+          `).join('');
+          
+          console.log('🎯 FashionWidget: Displayed array format reviews:', reviews.length);
+          
+        } else {
+          // No reviews available - show appropriate message
+          reviewsCount.textContent = 'No reviews found';
+          reviewsContent.innerHTML = `
+            <div class="no-reviews">
+              <p>No reviews available for ${brandData.brandName || 'this brand'} at the moment.</p>
+              <p>This could be because:</p>
+              <ul>
+                <li>No reviews exist yet for this brand/item combination</li>
+                <li>The search API is temporarily unavailable</li>
+                <li>Try searching for specific items or check back later</li>
+              </ul>
+              <p><em>We're using live search to find the most up-to-date reviews from across the web.</em></p>
+            </div>
+          `;
+          
+          console.log('🎯 FashionWidget: No reviews available');
+        }
+      }
+      
+      // Show item-specific reviews section
+      this.showItemReviewsSection(brandData);
+      
+      // Show source-grouped reviews section
+      this.showSourceReviewsSection(brandData);
+    }
+
+    // Generate sample reviews for demonstration - REMOVED: No longer needed
 
     // Show structured reviews from API response
     showStructuredReviews(data) {
@@ -1418,29 +2077,7 @@ try {
       }
     }
 
-    // Show reviews section with data
-    showReviewsSection(reviews) {
-      const reviewsSection = this.expandedMode.querySelector('.reviews-section');
-      const reviewsCount = this.expandedMode.querySelector('.reviews-count');
-      const reviewsContent = this.expandedMode.querySelector('.reviews-content');
-      
-      if (reviewsSection && reviewsCount && reviewsContent) {
-        reviewsSection.style.display = 'block';
-        reviewsCount.textContent = `${reviews.length} reviews found`;
-        
-        // Display reviews
-        reviewsContent.innerHTML = reviews.map(review => `
-          <div class="review-item">
-            <div class="review-source">${review.source || 'Web'}</div>
-            <div class="review-text">${review.snippet || review.content || 'No content available'}</div>
-            <div class="review-meta">
-              <span class="review-date">${review.date || 'Unknown date'}</span>
-              <span class="review-rating">${review.rating || 'No rating'}</span>
-            </div>
-          </div>
-        `).join('');
-      }
-    }
+    // Show reviews section with data - REMOVED: Duplicate method
 
     // Show fit tips section
     showFitTipsSection(fitTips) {
@@ -1505,16 +2142,49 @@ try {
     }
 
     dismiss() {
-      // Prevent dismissing too quickly after showing
-      if (this.isVisible && Date.now() - this.lastShowTime < 5000) {
-        console.log('🎯 FashionWidget: Widget shown too recently, preventing dismiss');
-        return;
-      }
+      console.log('🎯 FashionWidget: Dismiss called - closing widget immediately');
       
       this.isDismissed = true;
-      this.hide();
+      this.isVisible = false;
+      this.isExpanded = false;
+      
+      // Force hide the widget immediately
+      if (this.widget) {
+        this.widget.style.setProperty('visibility', 'hidden', 'important');
+        this.widget.style.setProperty('display', 'none', 'important');
+        this.widget.style.setProperty('opacity', '0', 'important');
+        this.widget.style.setProperty('transform', 'scale(0.9)', 'important');
+        
+        // Force remove from DOM after a brief delay
+        setTimeout(() => {
+          if (this.widget && this.widget.parentNode) {
+            console.log('🎯 FashionWidget: Removing widget from DOM');
+            this.widget.remove();
+            this.widget = null;
+          }
+        }, 100);
+      }
+      
       // Mark as dismissed for this session
       this.updateTabState({ dismissed: true });
+      
+      console.log('🎯 FashionWidget: Widget dismissed and removed successfully');
+    }
+
+    // Force remove widget completely
+    forceRemove() {
+      console.log('🎯 FashionWidget: Force removing widget...');
+      
+      if (this.widget && this.widget.parentNode) {
+        this.widget.remove();
+        this.widget = null;
+      }
+      
+      this.isVisible = false;
+      this.isExpanded = false;
+      this.isDismissed = true;
+      
+      console.log('🎯 FashionWidget: Widget force removed');
     }
 
     openFullAnalysis() {
@@ -1610,6 +2280,8 @@ try {
         analyzeUrl: () => this.analyzeUrlPatterns(),
         analyzeVisual: () => this.analyzeVisualElements(),
         extractBrand: () => this.extractBrandFromContext(),
+        resetPosition: (pos) => this.resetToPresetPosition(pos),
+        getPosition: () => ({ position: this.position, left: this.currentLeft, top: this.currentTop }),
         widget: this.widget
       };
       console.log('🎯 FashionWidget: Testing methods exposed to window.testFashionWidget');
@@ -2561,6 +3233,18 @@ try {
         this.forceFixWidget();
       };
       
+      // Add force close function
+      window.forceCloseWidget = () => {
+        console.log('🎯 FashionWidget: Force close called from console');
+        this.dismiss();
+      };
+      
+      // Add force remove function
+      window.forceRemoveWidget = () => {
+        console.log('🎯 FashionWidget: Force remove called from console');
+        this.forceRemove();
+      };
+      
       // Add debug function
       window.debugWidget = () => {
         console.log('🎯 FashionWidget: Debug information:');
@@ -2596,7 +3280,160 @@ try {
       
       console.log('🎯 FashionWidget: Manual trigger added to window.forceShowWidget()');
       console.log('🎯 FashionWidget: Force fix added to window.forceFixWidget()');
+      console.log('🎯 FashionWidget: Force close added to window.forceCloseWidget()');
+      console.log('🎯 FashionWidget: Force remove added to window.forceRemoveWidget()');
       console.log('🎯 FashionWidget: Debug function added to window.debugWidget()');
+    }
+
+    // Show item-specific reviews
+    showItemReviewsSection(brandData) {
+      const itemReviewsSection = this.expandedMode.querySelector('.item-reviews-section');
+      const itemReviewsContent = itemReviewsSection.querySelector('.item-reviews-content');
+      
+      if (itemReviewsSection && itemReviewsContent) {
+        itemReviewsSection.style.display = 'block';
+        
+        // Check if this brand doesn't need fit advice
+        if (brandData.noFitAdvice) {
+          itemReviewsContent.innerHTML = `
+            <div class="category-info">
+              <p>Item-specific reviews are not applicable for ${brandData.category.replace('-', ' ')} brands.</p>
+              <p>Check product descriptions for specifications and customer feedback.</p>
+            </div>
+          `;
+          return;
+        }
+        
+        // Check if we have real item review data
+        if (brandData.externalSearchResults && brandData.externalSearchResults.itemReviews && brandData.externalSearchResults.itemReviews.length > 0) {
+          itemReviewsContent.innerHTML = brandData.externalSearchResults.itemReviews.map(review => `
+            <div class="review-item">
+              <div class="review-source">${review.source || 'Item Review'}</div>
+              <div class="review-text">${review.snippet || review.content || 'No content available'}</div>
+              <div class="review-meta">
+                <span class="review-date">${review.date || 'Unknown date'}</span>
+                <span class="review-rating">${review.rating || 'No rating'}</span>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          // No item-specific reviews available
+          itemReviewsContent.innerHTML = `
+                    <div class="no-reviews">
+          <p>No item-specific reviews available for ${brandData.brandName || 'this brand'}.</p>
+          <p><em>We searched across multiple sources but couldn't find specific reviews for this item.</em></p>
+        </div>
+          `;
+        }
+      }
+    }
+
+    // Show source-grouped reviews
+    showSourceReviewsSection(brandData) {
+      const sourceReviewsSection = this.expandedMode.querySelector('.source-reviews-section');
+      if (sourceReviewsSection) {
+        sourceReviewsSection.style.display = 'block';
+        
+        const sourceReviewsContent = sourceReviewsSection.querySelector('.source-reviews-content');
+        if (sourceReviewsContent) {
+          // Check if this brand doesn't need fit advice
+          if (brandData.noFitAdvice) {
+            sourceReviewsContent.innerHTML = `
+              <div class="category-info">
+                <p>Source-grouped reviews are not applicable for ${brandData.category.replace('-', ' ')} brands.</p>
+                <p>Check product descriptions and customer feedback directly on the brand's website.</p>
+              </div>
+            `;
+            return;
+          }
+          
+          // Check if we have real grouped review data
+          if (brandData.externalSearchResults && brandData.externalSearchResults.groupedReviews) {
+            const groupedReviews = brandData.externalSearchResults.groupedReviews;
+            const primaryReviews = groupedReviews.primary || [];
+            
+            if (primaryReviews.length > 0) {
+              sourceReviewsContent.innerHTML = primaryReviews.map(review => `
+                <div class="review-item">
+                  <div class="review-source">${review.source || 'Primary'}</div>
+                  <div class="review-text">${review.snippet || review.content || 'No content available'}</div>
+                  <div class="review-meta">
+                    <span class="review-date">${review.date || 'Unknown date'}</span>
+                    <span class="review-rating">${review.rating || 'No rating'}</span>
+                  </div>
+                </div>
+              `).join('');
+            } else {
+              // No primary reviews available
+              sourceReviewsContent.innerHTML = `
+                        <div class="no-reviews">
+          <p>No primary source reviews available for ${brandData.brandName || 'this brand'}.</p>
+          <p><em>We searched Reddit and Substack but couldn't find relevant reviews.</em></p>
+        </div>
+              `;
+            }
+          } else {
+            // No grouped reviews available
+            sourceReviewsContent.innerHTML = `
+                      <div class="no-reviews">
+          <p>No grouped reviews available for ${brandData.brandName || 'this brand'}.</p>
+          <p><em>We searched across multiple source types but couldn't find relevant reviews.</em></p>
+        </div>
+            `;
+          }
+        }
+      }
+    }
+
+    // Observe page changes (SPA navigation)
+    observePageChanges() {
+      // Listen for URL changes
+      let currentUrl = window.location.href;
+      
+      const checkUrlChange = () => {
+        if (window.location.href !== currentUrl) {
+          console.log('🎯 FashionWidget: URL changed, checking if still on fashion site...');
+          currentUrl = window.location.href;
+          
+          // Check if we're still on a fashion site
+          setTimeout(() => {
+            this.checkAndRemoveIfWrongSite();
+          }, 100);
+        }
+      };
+      
+      // Check for URL changes every second
+      setInterval(checkUrlChange, 1000);
+      
+      // Also listen for popstate events (browser back/forward)
+      window.addEventListener('popstate', () => {
+        console.log('🎯 FashionWidget: Popstate event, checking site...');
+        setTimeout(() => {
+          this.checkAndRemoveIfWrongSite();
+        }, 100);
+      });
+      
+      // Listen for pushstate/replacestate (SPA navigation)
+      const originalPushState = history.pushState;
+      const originalReplaceState = history.replaceState;
+      
+      history.pushState = function(...args) {
+        originalPushState.apply(history, args);
+        console.log('🎯 FashionWidget: PushState event, checking site...');
+        setTimeout(() => {
+          this.checkAndRemoveIfWrongSite();
+        }, 100);
+      }.bind(this);
+      
+      history.replaceState = function(...args) {
+        originalReplaceState.apply(history, args);
+        console.log('🎯 FashionWidget: ReplaceState event, checking site...');
+        setTimeout(() => {
+          this.checkAndRemoveIfWrongSite();
+        }, 100);
+      }.bind(this);
+      
+      console.log('🎯 FashionWidget: Page change observer set up');
     }
   }
 
