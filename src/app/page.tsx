@@ -30,18 +30,20 @@ export default function HomePage() {
           {/* Review a Brand Card */}
           <Link href="/analyze" className="flex-shrink-0">
             <div
-              className="p-4 cursor-pointer group text-center"
-              style={{ width: "232px" }}
+              className="p-6 cursor-pointer group transition-all duration-200 hover:shadow-sm"
+              style={{
+                width: "280px",
+                backgroundColor: "#F8F7F4",
+                border: "1px solid #E9DED5",
+                borderRadius: "12px",
+              }}
             >
               <div>
-                {/* Icon with Fill Background */}
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto transition-colors"
-                  style={{ backgroundColor: "#EBE6E2" }}
-                >
+                {/* Icon without frame */}
+                <div className="mb-4">
                   <svg
-                    width="28"
-                    height="28"
+                    width="32"
+                    height="32"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -60,7 +62,7 @@ export default function HomePage() {
 
                 <div>
                   <h3
-                    className="font-semibold mb-2 leading-tight flex items-center justify-center gap-2"
+                    className="font-semibold mb-3 leading-tight flex items-center gap-2"
                     style={{
                       fontFamily: "Inter, sans-serif",
                       fontSize: "16px",
@@ -104,18 +106,20 @@ export default function HomePage() {
           {/* Get Recommendations Card */}
           <Link href="/recommendations" className="flex-shrink-0">
             <div
-              className="p-4 cursor-pointer group text-center"
-              style={{ width: "232px" }}
+              className="p-6 cursor-pointer group transition-all duration-200 hover:shadow-sm"
+              style={{
+                width: "280px",
+                backgroundColor: "#F8F7F4",
+                border: "1px solid #E9DED5",
+                borderRadius: "12px",
+              }}
             >
               <div>
-                {/* Icon with Fill Background */}
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto transition-colors"
-                  style={{ backgroundColor: "#EBE6E2" }}
-                >
+                {/* Icon without frame */}
+                <div className="mb-4">
                   <svg
-                    width="28"
-                    height="28"
+                    width="32"
+                    height="32"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -132,7 +136,7 @@ export default function HomePage() {
 
                 <div>
                   <h3
-                    className="font-semibold mb-2 leading-tight flex items-center justify-center gap-2"
+                    className="font-semibold mb-3 leading-tight flex items-center gap-2"
                     style={{
                       fontFamily: "Inter, sans-serif",
                       fontSize: "16px",
@@ -178,7 +182,11 @@ export default function HomePage() {
         <div className="text-center">
           <Link
             href="/directory"
-            className="inline-flex items-center gap-2 bg-stone-200 text-stone-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-300 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              border: "1px solid #E9DED5",
+              color: "#6C6A68",
+            }}
           >
             <span className="text-xs">🌐</span>
             Browse directory
