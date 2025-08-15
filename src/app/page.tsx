@@ -30,18 +30,13 @@ export default function HomePage() {
           {/* Review a Brand Card */}
           <Link href="/analyze" className="flex-shrink-0">
             <div
-              className="p-6 cursor-pointer group text-center transition-all duration-200 hover:scale-105 hover:shadow-lg"
-              style={{
-                width: "232px",
-                backgroundColor: "#EBE6E2",
-                border: "1px solid #E5E5E5",
-                borderRadius: "20px",
-              }}
+              className="p-4 cursor-pointer group text-center"
+              style={{ width: "232px" }}
             >
               <div>
                 {/* Icon with Fill Background */}
                 <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-0 mx-auto transition-colors"
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto transition-colors"
                   style={{ backgroundColor: "#EBE6E2" }}
                 >
                   <svg
@@ -65,7 +60,7 @@ export default function HomePage() {
 
                 <div>
                   <h3
-                    className="font-semibold mb-2 leading-tight"
+                    className="font-semibold mb-2 leading-tight flex items-center justify-center gap-2"
                     style={{
                       fontFamily: "Inter, sans-serif",
                       fontSize: "16px",
@@ -74,6 +69,20 @@ export default function HomePage() {
                     }}
                   >
                     Review a brand or item
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-stone-600"
+                    >
+                      <path d="M5 12h14" />
+                      <path d="m12 5 7 7-7 7" />
+                    </svg>
                   </h3>
                   <p
                     className="leading-relaxed"
@@ -84,7 +93,8 @@ export default function HomePage() {
                       color: "rgba(78, 75, 75, 0.7)",
                     }}
                   >
-                    Discover fit and quality based on similar body types
+                    Type any brand to discover their fit based on similar body
+                    types
                   </p>
                 </div>
               </div>
@@ -94,18 +104,13 @@ export default function HomePage() {
           {/* Get Recommendations Card */}
           <Link href="/recommendations" className="flex-shrink-0">
             <div
-              className="p-6 cursor-pointer group text-center transition-all duration-200 hover:scale-105 hover:shadow-lg"
-              style={{
-                width: "232px",
-                backgroundColor: "#EBE6E2",
-                border: "1px solid #E5E5E5",
-                borderRadius: "20px",
-              }}
+              className="p-4 cursor-pointer group text-center"
+              style={{ width: "232px" }}
             >
               <div>
                 {/* Icon with Fill Background */}
                 <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-0 mx-auto transition-colors"
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto transition-colors"
                   style={{ backgroundColor: "#EBE6E2" }}
                 >
                   <svg
@@ -127,7 +132,7 @@ export default function HomePage() {
 
                 <div>
                   <h3
-                    className="font-semibold mb-2 leading-tight"
+                    className="font-semibold mb-2 leading-tight flex items-center justify-center gap-2"
                     style={{
                       fontFamily: "Inter, sans-serif",
                       fontSize: "16px",
@@ -136,6 +141,20 @@ export default function HomePage() {
                     }}
                   >
                     Get recommendations
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-stone-600"
+                    >
+                      <path d="M5 12h14" />
+                      <path d="m12 5 7 7-7 7" />
+                    </svg>
                   </h3>
                   <p
                     className="leading-relaxed"
@@ -146,7 +165,8 @@ export default function HomePage() {
                       color: "rgba(78, 75, 75, 0.7)",
                     }}
                   >
-                    Find brands that fit your body and style
+                    Tell us what you&apos;re looking for to get brand
+                    recommendations
                   </p>
                 </div>
               </div>
@@ -158,11 +178,7 @@ export default function HomePage() {
         <div className="text-center">
           <Link
             href="/directory"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            style={{
-              border: "1px solid #D8D6D5",
-              color: "rgba(78, 75, 75, 0.7)",
-            }}
+            className="inline-flex items-center gap-2 bg-stone-200 text-stone-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-300 transition-colors"
           >
             <span className="text-xs">🌐</span>
             Browse directory
