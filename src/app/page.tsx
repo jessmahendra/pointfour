@@ -30,13 +30,18 @@ export default function HomePage() {
           {/* Review a Brand Card */}
           <Link href="/analyze" className="flex-shrink-0">
             <div
-              className="p-4 cursor-pointer group text-center"
-              style={{ width: "232px" }}
+              className="p-6 cursor-pointer group text-center transition-all duration-200 hover:scale-105 hover:shadow-lg"
+              style={{
+                width: "232px",
+                backgroundColor: "#EBE6E2",
+                border: "1px solid #E5E5E5",
+                borderRadius: "20px",
+              }}
             >
               <div>
                 {/* Icon with Fill Background */}
                 <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto transition-colors"
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-0 mx-auto transition-colors"
                   style={{ backgroundColor: "#EBE6E2" }}
                 >
                   <svg
@@ -65,7 +70,7 @@ export default function HomePage() {
                       fontFamily: "Inter, sans-serif",
                       fontSize: "16px",
                       fontWeight: "600",
-                      color: "#000",
+                      color: "#4E4B4B",
                     }}
                   >
                     Review a brand or item
@@ -89,13 +94,18 @@ export default function HomePage() {
           {/* Get Recommendations Card */}
           <Link href="/recommendations" className="flex-shrink-0">
             <div
-              className="p-4 cursor-pointer group text-center"
-              style={{ width: "232px" }}
+              className="p-6 cursor-pointer group text-center transition-all duration-200 hover:scale-105 hover:shadow-lg"
+              style={{
+                width: "232px",
+                backgroundColor: "#EBE6E2",
+                border: "1px solid #E5E5E5",
+                borderRadius: "20px",
+              }}
             >
               <div>
                 {/* Icon with Fill Background */}
                 <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto transition-colors"
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-0 mx-auto transition-colors"
                   style={{ backgroundColor: "#EBE6E2" }}
                 >
                   <svg
@@ -122,7 +132,7 @@ export default function HomePage() {
                       fontFamily: "Inter, sans-serif",
                       fontSize: "16px",
                       fontWeight: "600",
-                      color: "#000",
+                      color: "#4E4B4B",
                     }}
                   >
                     Get recommendations
@@ -148,7 +158,11 @@ export default function HomePage() {
         <div className="text-center">
           <Link
             href="/directory"
-            className="inline-flex items-center gap-2 bg-stone-200 text-stone-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-300 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              border: "1px solid #D8D6D5",
+              color: "rgba(78, 75, 75, 0.7)",
+            }}
           >
             <span className="text-xs">🌐</span>
             Browse directory
