@@ -154,7 +154,6 @@ export default function BrandAnalysisPage() {
   );
   const [loading, setLoading] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
-  const [enableExternalSearch, setEnableExternalSearch] = useState(true);
 
   const handleFormSubmit = async () => {
     const isFootwear = userProfile.category === "footwear";
@@ -197,7 +196,6 @@ Please provide a detailed analysis including sizing advice, fit recommendations,
         },
         body: JSON.stringify({
           query: detailedQuery,
-          enableExternalSearch: enableExternalSearch,
         }),
       });
 
@@ -1337,94 +1335,6 @@ Please provide a specific answer to this follow-up question.`;
               )}
             </>
           )}
-
-          {/* External Search Toggle */}
-          <div style={{ marginBottom: "24px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "16px",
-                backgroundColor: "#F8F7F4",
-                borderRadius: "8px",
-                border: "1px solid #E9DED5",
-              }}
-            >
-              <div>
-                <label
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    color: "#333",
-                    marginBottom: "4px",
-                    display: "block",
-                  }}
-                >
-                  🌐 Include Web Reviews
-                </label>
-                <p
-                  style={{
-                    fontSize: "12px",
-                    color: "#666",
-                    margin: "0",
-                  }}
-                >
-                  Search Reddit, Substack, and fashion blogs for additional
-                  insights
-                </p>
-              </div>
-              <label
-                style={{
-                  position: "relative",
-                  display: "inline-block",
-                  width: "44px",
-                  height: "24px",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={enableExternalSearch}
-                  onChange={(e) => setEnableExternalSearch(e.target.checked)}
-                  style={{
-                    opacity: 0,
-                    width: 0,
-                    height: 0,
-                  }}
-                />
-                <span
-                  style={{
-                    position: "absolute",
-                    cursor: "pointer",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: enableExternalSearch ? "#DC2626" : "#ccc",
-                    transition: ".4s",
-                    borderRadius: "24px",
-                  }}
-                >
-                  <span
-                    style={{
-                      position: "absolute",
-                      content: "",
-                      height: "18px",
-                      width: "18px",
-                      left: "3px",
-                      bottom: "3px",
-                      backgroundColor: "white",
-                      transition: ".4s",
-                      borderRadius: "50%",
-                      transform: enableExternalSearch
-                        ? "translateX(20px)"
-                        : "translateX(0)",
-                    }}
-                  />
-                </span>
-              </label>
-            </div>
-          </div>
 
           <button
             onClick={handleFormSubmit}

@@ -15,7 +15,7 @@ const DEFAULT_HL = process.env.SERPER_HL || 'en';
 
 const SEARCH_CONFIG = {
   enabled: true,
-  maxResults: 15,
+  maxResults: 25, // Increased from 15 for better coverage
   cacheTimeout: 60 * 60 * 1000,          // 1 hour (full result cache)
   brandFitCacheTimeout: 7 * 24 * 60 * 60 * 1000,  // 1 week
   itemReviewCacheTimeout: 30 * 24 * 60 * 60 * 1000, // 1 month

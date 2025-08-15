@@ -7,25 +7,15 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   let query = '';
-  let enableExternalSearch = true; // Default to enabled
   
   try {
     const body = await request.json();
     query = body.query;
-    enableExternalSearch = body.enableExternalSearch !== false; // Allow disabling
+    // Remove enableExternalSearch parameter - we'll decide automatically
     
     console.log('=== DEBUG: Starting recommendation request ===');
     console.log('Query received:', query);
-    console.log('External search enabled:', enableExternalSearch);
     console.log('OpenAI API Key exists:', !!process.env.OPENAI_API_KEY);
-    console.log('OpenAI API Key preview:', process.env.OPENAI_API_KEY?.substring(0, 10) + '...');
-    
-    // DEBUG: Log all environment variables
-    console.log('=== DEBUG: Environment Variables ===');
-    console.log('NEXT_PUBLIC_AIRTABLE_BASE_ID:', process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID);
-    console.log('NEXT_PUBLIC_AIRTABLE_API_KEY exists:', !!process.env.NEXT_PUBLIC_AIRTABLE_API_KEY);
-    console.log('NEXT_PUBLIC_AIRTABLE_API_KEY preview:', process.env.NEXT_PUBLIC_AIRTABLE_API_KEY?.substring(0, 10) + '...');
-    console.log('All env vars with AIRTABLE:', Object.keys(process.env).filter(key => key.includes('AIRTABLE')));
     
     const AIRTABLE_BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
     const AIRTABLE_API_KEY = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY || process.env.AIRTABLE_API_KEY;
@@ -122,33 +112,25 @@ export async function POST(request: NextRequest) {
       console.log('Has reviews:', !!matchingBrand.reviews);
     }
     
-    // Check if we have sufficient database data
+    // AUTOMATIC DECISION: Check if we have sufficient database data
     const hasSufficientData = matchingBrand && 
-      (matchingBrand.fitSummary || matchingBrand.reviews || matchingBrand.userQuotes);
+      matchingBrand.fitSummary && 
+      matchingBrand.fitSummary.length > 20 && // Has meaningful fit summary
+      (matchingBrand.reviews || matchingBrand.userQuotes); // Has some review data
     
     console.log('=== DEBUG: Data sufficiency check ===');
     console.log('Has sufficient database data:', hasSufficientData);
-    console.log('Matching brand exists:', !!matchingBrand);
-    console.log('Matching brand has fitSummary:', !!matchingBrand?.fitSummary);
-    console.log('Matching brand has reviews:', !!(matchingBrand?.reviews && matchingBrand.reviews.length > 0));
-    console.log('Matching brand has userQuotes:', !!(matchingBrand?.userQuotes && matchingBrand.userQuotes.length > 0));
+    console.log('Will use external search:', !hasSufficientData && !!brandName);
     
-    // If external search is enabled, always try it to enhance our data
+    // AUTOMATICALLY use external search when database data is insufficient
     let externalSearchResults = null;
     let externalSearchAttempted = false;
     let externalSearchError = null;
     
-    console.log('=== DEBUG: External search conditions ===');
-    console.log('enableExternalSearch:', enableExternalSearch);
-    console.log('brandName exists:', !!brandName);
-    console.log('hasSufficientData:', hasSufficientData);
-    console.log('matchingBrand exists:', !!matchingBrand);
-    console.log('matchingBrand has fitSummary:', !!matchingBrand?.fitSummary);
-    console.log('Will attempt external search:', enableExternalSearch && brandName);
-    
-    if (enableExternalSearch && brandName) {
+    // Only search externally if we don't have good database data
+    if (!hasSufficientData && brandName) {
       try {
-        console.log('=== DEBUG: Attempting external search ===');
+        console.log('=== DEBUG: AUTOMATICALLY attempting external search (insufficient database data) ===');
         externalSearchAttempted = true;
         
         const externalResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/external-search`, {
@@ -178,6 +160,8 @@ export async function POST(request: NextRequest) {
         console.error('External search error:', error);
         externalSearchError = error instanceof Error ? error.message : 'Unknown error';
       }
+    } else if (hasSufficientData) {
+      console.log('=== DEBUG: Skipping external search - sufficient database data available ===');
     }
     
     // Log external search status
@@ -225,21 +209,14 @@ export async function POST(request: NextRequest) {
         });
       }
       
-      // Note that we're combining database and web data
-      enhancedContext += `\nNote: This recommendation combines our database information with fresh web search results for the most up-to-date advice.\n`;
-    } else if (externalSearchAttempted && externalSearchError) {
-      // External search was attempted but failed
-      enhancedContext += `\nExternal Search Status: Attempted but failed\n`;
-      enhancedContext += `Error: ${externalSearchError}\n`;
-      enhancedContext += `Note: We tried to search the web for additional information but encountered an issue. The recommendation below is based on our database only.\n`;
-    } else if (externalSearchAttempted && !externalSearchResults) {
-      // External search was attempted but returned no results
-      enhancedContext += `\nExternal Search Status: Attempted but no results found\n`;
-      enhancedContext += `Note: We searched the web for additional information but found no relevant reviews or fit data for this brand.\n`;
-    } else if (!externalSearchAttempted) {
-      // External search was not attempted (shouldn't happen with current logic)
-      enhancedContext += `\nExternal Search Status: Not attempted\n`;
-      enhancedContext += `Note: Web search was not performed for this request.\n`;
+      // Note that we're using web data because database was insufficient
+      enhancedContext += `\nNote: Limited database information available, so we searched the web for additional reviews and fit data.\n`;
+    } else if (!matchingBrand && !externalSearchResults) {
+      // No data at all
+      enhancedContext += `\nNote: This brand is not in our database and we couldn't find web reviews. The recommendation below is based on general fashion industry standards.\n`;
+    } else if (matchingBrand && !externalSearchAttempted) {
+      // Only database data (sufficient)
+      enhancedContext += `\nNote: This recommendation is based on our comprehensive database information for this brand.\n`;
     }
     
     console.log('=== DEBUG: Enhanced context created ===');
@@ -263,13 +240,11 @@ Please provide a comprehensive analysis including:
 **Customer Reviews**: Include relevant user feedback and quotes
 
 **IMPORTANT INSTRUCTIONS:**
-- If you have external search results, incorporate them to provide comprehensive advice that combines database and web data
-- If external search was attempted but failed, acknowledge this and explain that the recommendation is based on database data only
-- If external search was attempted but found no results, mention that we searched the web but found no additional information
-- If the brand isn't in our database but we have external results, focus on those insights
-- Always be encouraging but honest about data limitations
-- If we have limited data, suggest checking the brand's official size guide
-- When combining database and web data, prioritize the most recent and relevant information
+- If we have good database data, use that as the primary source
+- If database data is limited but we have web search results, focus on the web data
+- If we have no data at all, be honest about this and suggest checking the brand's official size guide
+- Always be encouraging but transparent about data availability
+- When data is limited, provide general sizing advice based on the category
 
 Make your response helpful, specific, and actionable. Use bullet points where appropriate.`;
     
@@ -302,17 +277,18 @@ Make your response helpful, specific, and actionable. Use bullet points where ap
       recommendation: aiResponse,
       query: query,
       totalBrands: brands.length,
-      hasDatabaseData: !!matchingBrand,
+      hasDatabaseData: !!matchingBrand && hasSufficientData,
       hasExternalData: !!externalSearchResults,
-      searchType: externalSearchResults ? 'hybrid' : 'database',
+      searchType: hasSufficientData ? 'database' : (externalSearchResults ? 'external' : 'fallback'),
       externalSearchResults: externalSearchResults || null,
-      enableExternalSearch: enableExternalSearch,
       externalSearchAttempted: externalSearchAttempted,
-      externalSearchError: externalSearchError
+      externalSearchError: externalSearchError,
+      dataSource: hasSufficientData ? 'database' : (externalSearchResults ? 'web_search' : 'no_data')
     };
     
     console.log('=== DEBUG: Final result created ===');
     console.log('Result type:', enhancedResult.searchType);
+    console.log('Data source:', enhancedResult.dataSource);
     console.log('Has external data:', enhancedResult.hasExternalData);
     
     return NextResponse.json(enhancedResult);

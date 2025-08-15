@@ -16,7 +16,7 @@ const DEFAULT_HL = process.env.SERPER_HL || 'en';
 
 const SEARCH_CONFIG = {
   enabled: true,
-  maxResults: 15, // Increased from 10 for better coverage
+  maxResults: 25, // Increased from 15 for better coverage
   cacheTimeout: 60 * 60 * 1000,          // 1 hour (full result cache)
   brandFitCacheTimeout: 7 * 24 * 60 * 60 * 1000,  // 1 week
   itemReviewCacheTimeout: 30 * 24 * 60 * 60 * 1000, // 1 month
@@ -54,30 +54,30 @@ const SEARCH_CONFIG = {
   queries: {
     // Primary focus: Reddit and Substack for detailed written reviews
     brandFitSummary:
-      '"{brand}" ("runs small" OR "fits large" OR "true to size" OR "size up" OR "size down" OR "sizing" OR "fit review" OR "measurements") (site:reddit.com OR site:substack.com)',
+      '"{brand}" ("runs small" OR "fits large" OR "true to size" OR "size up" OR "size down" OR "sizing" OR "fit review" OR "measurements" OR "how does it fit") (site:reddit.com OR site:substack.com) -"click here" -"read more" -"advertisement"',
     
     itemSpecificReviews:
-      '"{brand} {itemName}" (review OR "fit review" OR sizing OR "how does it fit" OR "fit check" OR "size up" OR "size down" OR "runs small" OR "runs large" OR measurements OR "body type" OR "height" OR "weight") (site:reddit.com OR site:substack.com OR site:medium.com OR site:styleforum.net)',
+      '"{brand} {itemName}" (review OR "fit review" OR sizing OR "how does it fit" OR "fit check" OR "size up" OR "size down" OR "runs small" OR "runs large" OR measurements OR "body type" OR "height" OR "weight") (site:reddit.com OR site:substack.com OR site:medium.com OR site:styleforum.net) -"click here" -"read more" -"advertisement"',
     
     itemQualityReviews:
-      '"{brand} {itemName}" (quality OR "after wash" OR shrunk OR pilled OR faded OR durability OR "fabric feel" OR material OR "how it holds up" OR "wear and tear" OR "care instructions" OR "washing") (site:reddit.com OR site:substack.com OR site:medium.com OR site:styleforum.net)',
+      '"{brand} {itemName}" (quality OR "after wash" OR shrunk OR pilled OR faded OR durability OR "fabric feel" OR material OR "how it holds up" OR "wear and tear" OR "care instructions" OR "washing") (site:reddit.com OR site:substack.com OR site:medium.com OR site:styleforum.net) -"click here" -"read more" -"advertisement"',
     
     itemStyleReviews:
-      '"{brand} {itemName}" (styling OR "how to wear" OR "outfit ideas" OR "lookbook" OR "street style" OR "fashion inspiration" OR "versatile" OR "dress up" OR "dress down") (site:reddit.com OR site:substack.com OR site:medium.com OR site:pinterest.com)',
+      '"{brand} {itemName}" (styling OR "how to wear" OR "outfit ideas" OR "lookbook" OR "street style" OR "fashion inspiration" OR "versatile" OR "dress up" OR "dress down") (site:reddit.com OR site:substack.com OR site:pinterest.com) -"click here" -"read more" -"advertisement"',
     
     qualityPostCare:
-      '("{brand}" OR "{itemName}") ("after wash" OR shrunk OR pilled OR faded OR "care instructions" OR "washing tips" OR "maintenance" OR "longevity") (site:reddit.com OR site:substack.com OR site:medium.com)',
+      '("{brand}" OR "{itemName}") ("after wash" OR shrunk OR pilled OR faded OR "care instructions" OR "washing tips" OR "maintenance" OR "longevity") (site:reddit.com OR site:substack.com OR site:medium.com) -"click here" -"read more" -"advertisement"',
     
     brandGeneralReviews:
-      '"{brand}" (review OR "brand review" OR "overall quality" OR "worth it" OR "recommend" OR "experience" OR "sizing guide" OR "fit guide") (site:reddit.com OR site:substack.com OR site:styleforum.net OR site:medium.com)',
+      '"{brand}" (review OR "brand review" OR "overall quality" OR "worth it" OR "recommend" OR "experience" OR "sizing guide" OR "fit guide") (site:reddit.com OR site:substack.com OR site:styleforum.net OR site:medium.com) -"click here" -"read more" -"advertisement"',
     
     // Enhanced Reddit-specific searches for better community content
     redditSpecific:
-      '"{brand} {itemName}" (review OR "fit review" OR sizing OR "how does it fit") site:reddit.com/r/femalefashionadvice OR site:reddit.com/r/malefashionadvice OR site:reddit.com/r/fashion OR site:reddit.com/r/outfits',
+      '"{brand} {itemName}" (review OR "fit review" OR sizing OR "how does it fit") site:reddit.com/r/femalefashionadvice OR site:reddit.com/r/malefashionadvice OR site:reddit.com/r/fashion OR site:reddit.com/r/outfits -"click here" -"read more" -"advertisement"',
     
     // Enhanced Substack searches for fashion newsletters
     substackSpecific:
-      '"{brand} {itemName}" (review OR "fit review" OR sizing OR "fashion review" OR "style review") site:substack.com'
+      '"{brand} {itemName}" (review OR "fit review" OR sizing OR "fashion review" OR "style review") site:substack.com -"click here" -"read more" -"advertisement"'
   },
   
   fitKeywords: [
@@ -270,18 +270,58 @@ function classifyContent(text: string, keywords: string[]):
   const lower = normalize(text);
   const tags: string[] = [];
 
-  // high: exact phrase match
-  const exact = keywords.filter(k => lower.includes(k.toLowerCase()));
+  // Skip classification if text is too short or generic
+  if (lower.length < 20) {
+    return { tags: [], confidence: 'low' };
+  }
+
+  // Filter out generic/irrelevant content
+  const genericTerms = [
+    'click here', 'read more', 'continue reading', 'share this', 'follow us',
+    'subscribe', 'newsletter', 'advertisement', 'sponsored', 'promoted',
+    'buy now', 'shop now', 'add to cart', 'checkout', 'payment'
+  ];
+  
+  if (genericTerms.some(term => lower.includes(term))) {
+    return { tags: [], confidence: 'low' };
+  }
+
+  // high: exact phrase match with context
+  const exact = keywords.filter(k => {
+    const keyword = k.toLowerCase();
+    if (lower.includes(keyword)) {
+      // Check if the keyword appears in meaningful context
+      const index = lower.indexOf(keyword);
+      const before = lower.substring(Math.max(0, index - 30), index);
+      const after = lower.substring(index + keyword.length, index + 50);
+      
+      // Look for fashion-related context around the keyword
+      const fashionContext = /(brand|fit|size|style|quality|fabric|material|clothing|dress|shirt|pants|shoes)/i;
+      return fashionContext.test(before + after);
+    }
+    return false;
+  });
+  
   if (exact.length) return { tags: exact, confidence: 'high' };
 
-  // medium: any keyword token
-  const medium = keywords.filter(k => k.split(' ').some(w => lower.includes(w.toLowerCase())));
+  // medium: any keyword token with fashion context
+  const medium = keywords.filter(k => {
+    const words = k.split(' ');
+    const hasKeyword = words.some(w => lower.includes(w.toLowerCase()));
+    
+    if (hasKeyword) {
+      // Check for fashion context
+      const fashionContext = /(brand|fit|size|style|quality|fabric|material|clothing|dress|shirt|pants|shoes)/i;
+      return fashionContext.test(lower);
+    }
+    return false;
+  });
+  
   if (medium.length) return { tags: medium, confidence: 'medium' };
 
-  // low: generic context words
-  const context = ['fit', 'size', 'quality', 'review', 'experience', 'fashion', 'style', 'clothing', 'outfit'];
-  const hasContext = context.some(w => lower.includes(w));
-  return { tags, confidence: hasContext ? 'low' : 'low' };
+  // low: any keyword without context validation
+  const low = keywords.filter(k => lower.includes(k.toLowerCase()));
+  return { tags: low, confidence: 'low' };
 }
 
 /** Map varied fit tags to canonical buckets for summaries */
@@ -374,7 +414,11 @@ async function processSearchResults(
     const fit = classifyContent(r.snippet || '', SEARCH_CONFIG.fitKeywords);
     const qual = classifyContent(r.snippet || '', SEARCH_CONFIG.qualityKeywords);
     const style = classifyContent(r.snippet || '', SEARCH_CONFIG.styleKeywords);
-    const hasSignal = fit.tags.length > 0 || qual.tags.length > 0 || style.tags.length > 0;
+    
+    // Only consider results with meaningful fashion content
+    const hasSignal = (fit.tags.length > 0 || qual.tags.length > 0 || style.tags.length > 0) &&
+                     (fit.confidence === 'high' || qual.confidence === 'high' || style.confidence === 'high');
+    
     return { r, fit, qual, style, hasSignal };
   });
 
@@ -433,45 +477,192 @@ async function processSearchResults(
    Brand fit summary
 -------------------------- */
 function generateBrandFitSummary(results: ProcessedResult[]): BrandFitSummary | null {
+  // Only consider results that have actual fit-related content
   const fitResults = results.filter(r =>
     r.brandLevel &&
-    r.tags.some(tag => canonicalFit(tag) !== null)
+    r.tags.some(tag => canonicalFit(tag) !== null) &&
+    r.fullContent && r.fullContent.length > 50 // Must have substantial content
   );
 
   if (!fitResults.length) {
     return null;
   }
 
-  const counts: Record<'runs small' | 'true to size' | 'runs large', number> = {
-    'runs small': 0, 'true to size': 0, 'runs large': 0
+  // Enhanced fit analysis with more nuanced patterns
+  const fitAnalysis = {
+    'runs small': { count: 0, confidence: 0, examples: [] as string[], contexts: [] as string[] },
+    'true to size': { count: 0, confidence: 0, examples: [] as string[], contexts: [] as string[] },
+    'runs large': { count: 0, confidence: 0, examples: [] as string[], contexts: [] as string[] },
+    'inconsistent': { count: 0, confidence: 0, examples: [] as string[], contexts: [] as string[] },
+    'category specific': { count: 0, confidence: 0, examples: [] as string[], contexts: [] as string[] }
   };
 
-  fitResults.forEach(r => {
-    r.tags.forEach(tag => {
-      const c = canonicalFit(tag);
-      if (c) counts[c] += 1;
-    });
+  // Process each fit-related result with more sophisticated analysis
+  fitResults.forEach(result => {
+    const content = result.fullContent.toLowerCase();
+    const title = result.title.toLowerCase();
+    
+    // Look for specific fit indicators with context
+    if (content.includes('runs small') || content.includes('size up') || content.includes('fits small') || 
+        content.includes('too small') || content.includes('tight fit') || content.includes('smaller than expected')) {
+      fitAnalysis['runs small'].count++;
+      fitAnalysis['runs small'].examples.push(result.title);
+      // Extract context around the fit mention
+      const context = extractFitContext(content, ['runs small', 'size up', 'fits small', 'too small', 'tight fit']);
+      if (context) fitAnalysis['runs small'].contexts.push(context);
+    }
+    
+    if (content.includes('true to size') || content.includes('fits true') || content.includes('tts') ||
+        content.includes('standard sizing') || content.includes('normal fit') || content.includes('fits as expected') ||
+        content.includes('fits perfectly') || content.includes('exact fit')) {
+      fitAnalysis['true to size'].count++;
+      fitAnalysis['true to size'].examples.push(result.title);
+      const context = extractFitContext(content, ['true to size', 'fits true', 'tts', 'standard sizing', 'normal fit']);
+      if (context) fitAnalysis['true to size'].contexts.push(context);
+    }
+    
+    if (content.includes('runs large') || content.includes('size down') || content.includes('fits large') ||
+        content.includes('too big') || content.includes('loose fit') || content.includes('oversized') ||
+        content.includes('larger than expected')) {
+      fitAnalysis['runs large'].count++;
+      fitAnalysis['runs large'].examples.push(result.title);
+      const context = extractFitContext(content, ['runs large', 'size down', 'fits large', 'too big', 'loose fit']);
+      if (context) fitAnalysis['runs large'].contexts.push(context);
+    }
+
+    // Check for inconsistent sizing patterns
+    if (content.includes('inconsistent') || content.includes('varies') || content.includes('depends on') ||
+        content.includes('sometimes') || content.includes('hit or miss') || content.includes('unpredictable')) {
+      fitAnalysis['inconsistent'].count++;
+      fitAnalysis['inconsistent'].examples.push(result.title);
+      const context = extractFitContext(content, ['inconsistent', 'varies', 'depends on', 'sometimes', 'hit or miss']);
+      if (context) fitAnalysis['inconsistent'].contexts.push(context);
+    }
+
+    // Check for category-specific sizing
+    if (content.includes('dresses') || content.includes('tops') || content.includes('bottoms') ||
+        content.includes('jeans') || content.includes('shirts') || content.includes('pants') ||
+        content.includes('skirts') || content.includes('outerwear')) {
+      fitAnalysis['category specific'].count++;
+      fitAnalysis['category specific'].examples.push(result.title);
+      const context = extractFitContext(content, ['dresses', 'tops', 'bottoms', 'jeans', 'shirts', 'pants', 'skirts', 'outerwear']);
+      if (context) fitAnalysis['category specific'].contexts.push(context);
+    }
   });
 
-  const ordered: Array<keyof typeof counts> = ['runs small', 'true to size', 'runs large'];
-  const top = ordered.slice().sort((a, b) => counts[b] - counts[a])[0];
-  const totalVotes = ordered.reduce((s, k) => s + counts[k], 0);
+  // Calculate confidence based on content analysis and context
+  Object.keys(fitAnalysis).forEach(fitType => {
+    const analysis = fitAnalysis[fitType as keyof typeof fitAnalysis];
+    if (analysis.count > 0) {
+      // Higher confidence for more specific mentions, longer content, and better context
+      const contextBonus = analysis.contexts.length > 0 ? 0.2 : 0;
+      const contentBonus = analysis.examples.some(ex => ex.length > 20) ? 0.1 : 0;
+      analysis.confidence = Math.min(1, analysis.count / 3 + contextBonus + contentBonus);
+    }
+  });
 
-  let summary: string | null = null;
-  if (counts[top] > 0) {
-    if (top === 'runs small') summary = 'Runs small — consider sizing up';
-    else if (top === 'true to size') summary = 'True to size';
-    else summary = 'Runs large — consider sizing down';
+  // Find the most common fit pattern
+  const topFit = Object.entries(fitAnalysis)
+    .filter(([_, data]) => data.count > 0)
+    .sort(([_, a], [__, b]) => b.count - a.count)[0];
+
+  if (!topFit || topFit[1].count === 0) {
+    return null;
   }
 
-  const confidence: BrandFitSummary['confidence'] =
-    totalVotes >= 3 && counts[top] / Math.max(1, totalVotes) >= 0.6 ? 'high'
-      : totalVotes >= 2 ? 'medium'
-      : 'low';
+  const [fitType, data] = topFit;
+  
+  // Generate a more nuanced and specific summary based on actual content
+  let summary: string;
+  const totalFitMentions = Object.values(fitAnalysis).reduce((sum, data) => sum + data.count, 0);
+  
+  if (fitType === 'runs small') {
+    if (data.contexts.length > 0) {
+      // Use actual context from reviews
+      const context = data.contexts[0];
+      summary = `Based on ${data.count} review${data.count > 1 ? 's' : ''}, this brand tends to run small. ${context}`;
+    } else {
+      summary = `Based on ${data.count} review${data.count > 1 ? 's' : ''}, this brand tends to run small. Consider sizing up for a comfortable fit.`;
+    }
+  } else if (fitType === 'true to size') {
+    if (data.contexts.length > 0) {
+      const context = data.contexts[0];
+      summary = `Based on ${data.count} review${data.count > 1 ? 's' : ''}, this brand generally runs true to size. ${context}`;
+    } else {
+      summary = `Based on ${data.count} review${data.count > 1 ? 's' : ''}, this brand generally runs true to size. You can typically order your usual size.`;
+    }
+  } else if (fitType === 'runs large') {
+    if (data.contexts.length > 0) {
+      const context = data.contexts[0];
+      summary = `Based on ${data.count} review${data.count > 1 ? 's' : ''}, this brand tends to run large. ${context}`;
+    } else {
+      summary = `Based on ${data.count} review${data.count > 1 ? 's' : ''}, this brand tends to run large. Consider sizing down for a better fit.`;
+    }
+  } else if (fitType === 'inconsistent') {
+    summary = `Based on ${data.count} review${data.count > 1 ? 's' : ''}, sizing for this brand can be inconsistent. It's recommended to check specific item reviews or size charts.`;
+  } else if (fitType === 'category specific') {
+    summary = `Based on ${data.count} review${data.count > 1 ? 's' : ''}, sizing varies by category for this brand. Check individual item reviews for specific fit advice.`;
+  } else {
+    summary = `Based on ${data.count} review${data.count > 1 ? 's' : ''}, fit information is available but varies. Check individual reviews for specific sizing advice.`;
+  }
 
-  const sources = [...new Set(fitResults.map(r => r.source))].filter(Boolean) as string[];
+  // Add additional context if available
+  if (totalFitMentions > data.count) {
+    const otherMentions = Object.entries(fitAnalysis)
+      .filter(([key, d]) => key !== fitType && d.count > 0)
+      .map(([key, d]) => `${d.count} ${key.replace(' ', ' ')}`)
+      .join(', ');
+    
+    if (otherMentions) {
+      summary += ` Other patterns found: ${otherMentions}.`;
+    }
+  }
 
-  return { summary, confidence, sources, totalResults: fitResults.length };
+  // Calculate overall confidence
+  const confidence: BrandFitSummary['confidence'] = 
+    data.confidence >= 0.8 && data.count >= 3 ? 'high' :
+    data.confidence >= 0.5 && data.count >= 2 ? 'medium' : 'low';
+
+  // Only include relevant sources (filter out generic platforms)
+  const relevantSources = [...new Set(fitResults.map(r => r.source))]
+    .filter(source => {
+      const lowerSource = source.toLowerCase();
+      // Filter out generic platforms that don't provide specific brand insights
+      return !lowerSource.includes('reddit.com') && 
+             !lowerSource.includes('google.com') &&
+             !lowerSource.includes('youtube.com') &&
+             !lowerSource.includes('pinterest.com');
+    })
+    .filter(Boolean) as string[];
+
+  return { 
+    summary, 
+    confidence, 
+    sources: relevantSources.length > 0 ? relevantSources : ['various sources'], 
+    totalResults: fitResults.length 
+  };
+}
+
+// Helper function to extract context around fit mentions
+function extractFitContext(content: string, keywords: string[]): string | null {
+  for (const keyword of keywords) {
+    const index = content.indexOf(keyword);
+    if (index !== -1) {
+      // Extract context around the keyword (50 characters before and after)
+      const start = Math.max(0, index - 50);
+      const end = Math.min(content.length, index + keyword.length + 50);
+      let context = content.substring(start, end);
+      
+      // Clean up the context
+      context = context.replace(/\s+/g, ' ').trim();
+      
+      // Only return if we have meaningful context
+      if (context.length > 20 && !context.includes('click here') && !context.includes('read more')) {
+        return context;
+      }
+    }
+  }
+  return null;
 }
 
 /* -------------------------

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Domain Whitelist</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .result { background: #f0f8ff; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .highlight { background: #fff3cd; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Domain Whitelist</h1>
+    <p>This page tests our domain whitelist to ensure the widget only shows on fashion websites.</p>
+
+    <div class="test-section">
+        <h2>1. Domain Whitelist Test</h2>
+        <p>Testing which domains should and shouldn't trigger the widget:</p>
+        
+        <div class="result">
+            <h3>Test Domains:</h3>
+            <button onclick="testDomain('google.com')">Test google.com</button>
+            <button onclick="testDomain('facebook.com')">Test facebook.com</button>
+            <button onclick="testDomain('toteme.com')">Test toteme.com</button>
+            <button onclick="testDomain('zara.com')">Test zara.com</button>
+            <button onclick="testDomain('amazon.com')">Test amazon.com</button>
+            <button onclick="testDomain('etsy.com')">Test etsy.com</button>
+            
+            <div id="test-results"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Expected Behavior</h2>
+        <p>What should happen on each type of domain:</p>
+        
+        <div class="result">
+            <div class="success">
+                <h4>✅ Fashion Websites (Widget SHOULD show):</h4>
+                <ul>
+                    <li>toteme.com - Direct brand site</li>
+                    <li>zara.com - Major retailer</li>
+                    <li>etsy.com - Fashion marketplace</li>
+                    <li>vogue.com - Fashion magazine</li>
+                </ul>
+            </div>
+            
+            <div class="error">
+                <h4>❌ Non-Fashion Websites (Widget should NOT show):</h4>
+                <ul>
+                    <li>google.com - Search engine</li>
+                    <li>facebook.com - Social media</li>
+                    <li>amazon.com - General marketplace</li>
+                    <li>youtube.com - Video platform</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Problem We're Solving</h2>
+        <p>Before the fix, the widget was showing on google.com when searching for "Toteme":</p>
+        
+        <div class="result">
+            <div class="warning">
+                <h4>🐛 Old Behavior (Broken):</h4>
+                <p>User visits <span class="highlight">google.com</span> and searches for "Toteme"</p>
+                <p>System detects "Toteme" in search query → Shows widget with "3 reviews mention it runs small"</p>
+                <p>❌ This is wrong! Google.com is not a fashion website</p>
+            </div>
+            
+            <div class="success">
+                <h4>✅ New Behavior (Fixed):</h4>
+                <p>User visits <span class="highlight">google.com</span> and searches for "Toteme"</p>
+                <p>System checks domain → google.com not in fashion whitelist → No widget shown</p>
+                <p>✅ This is correct! Widget only shows on fashion websites</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulate our domain whitelist function
+        function isFashionWebsite(domain) {
+            // Whitelist of fashion-related domains
+            const fashionDomains = [
+                // Major fashion retailers
+                'asos.com', 'zara.com', 'hm.com', 'uniqlo.com', 'cos.com', 'arket.com',
+                'ganni.com', 'intimissimi.com', 'mango.com', 'massimodutti.com', 'stories.com',
+                'weekday.com', 'monki.com', 'bershka.com', 'pullandbear.com', 'thereformation.com',
+                'reformation.com', 'sezane.com', 'madewell.com', 'everlane.com', 'quince.com',
+                'dissh.com', 'posse.com', 'abercrombie.com', 'toteme.com', 'khaite.com',
+                'aminamuaddi.com', 'levis.com', 'lemondeberyl.com', 'jamiehaller.com',
+                'motherdenim.com', 'thefrankieshop.com', 'withnothingunderneath.com',
+                'jennikayne.com', 'vollebak.com', 'frankandeileen.com', 'rejinapyo.com',
+                'vibivenezia.com', 'stagni.com', 'lebon-shoppe.com', 'doen.com',
+                'emmeparsons.com', 'ancientgreeksandals.com', 'leset.com', 'aemery.com',
+                'ben-amun.com', 'maje.com', 'paige.com', 'warehouse.com', 'oasis.com',
+                'whistles.com', 'reiss.com', 'tedbaker.com', 'karenmillen.com', 'coast.com',
+                'monsoon.com', 'accessorize.com', 'dorothyperkins.com', 'evans.com',
+                'wallis.com', 'burton.com', 'topman.com', 'topshop.com', 'riverisland.com',
+                'newlook.com', 'boohoo.com', 'prettylittlething.com', 'missguided.com',
+                'nastygal.com', 'netaporter.com', 'matchesfashion.com', 'farfetch.com',
+                'ssense.com', 'selfridges.com', 'harrods.com', 'libertylondon.com',
+                'johnlewis.com', 'debenhams.com', 'houseoffraser.com', 'marksandspencer.com',
+                'next.co.uk', 'coach.com', 'katespade.com', 'michaelkors.com', 'longchamp.com',
+                'nike.com', 'adidas.com', 'converse.com', 'vans.com', 'drmartens.com',
+                'clarks.com', 'timberland.com', 'rolex.com', 'omega.com', 'cartier.com',
+                
+                // Fashion magazines and blogs
+                'vogue.com', 'elle.com', 'harpersbazaar.com', 'cosmopolitan.com',
+                'glamour.com', 'instyle.com', 'whowhatwear.com', 'refinery29.com',
+                'manrepeller.com', 'songofstyle.com', 'theblondesalad.com',
+                
+                // Fashion marketplaces
+                'etsy.com', 'depop.com', 'poshmark.com', 'mercari.com', 'grailed.com',
+                'stockx.com', 'goat.com', 'flightclub.com', 'stadiumgoods.com',
+                'therealreal.com', 'vestiairecollective.com', 'lyst.com'
+            ];
+            
+            // Check if domain is in our fashion whitelist
+            const isFashion = fashionDomains.some(fashionDomain => 
+                domain === fashionDomain || domain.endsWith('.' + fashionDomain.split('.').slice(-2).join('.'))
+            );
+            
+            return isFashion;
+        }
+
+        function testDomain(domain) {
+            const isFashion = isFashionWebsite(domain);
+            const resultDiv = document.getElementById('test-results');
+            
+            const resultClass = isFashion ? 'success' : 'error';
+            const resultIcon = isFashion ? '✅' : '❌';
+            const resultText = isFashion ? 'FASHION WEBSITE - Widget WILL show' : 'NOT a fashion website - Widget will NOT show';
+            
+            const resultHtml = `
+                <div class="${resultClass}" style="margin: 10px 0; padding: 10px;">
+                    <h4>${resultIcon} ${domain}</h4>
+                    <p><strong>Result:</strong> ${resultText}</p>
+                    <p><strong>Domain Check:</strong> ${domain} ${isFashion ? 'is in' : 'is NOT in'} fashion whitelist</p>
+                </div>
+            `;
+            
+            resultDiv.innerHTML = resultHtml + resultDiv.innerHTML;
+        }
+
+        // Auto-test some key domains
+        window.onload = function() {
+            setTimeout(() => {
+                testDomain('google.com');
+                testDomain('toteme.com');
+            }, 500);
+        };
+    </script>
+</body>
+</html>

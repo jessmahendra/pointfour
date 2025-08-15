@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Improved Analysis System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .result { background: #f0f8ff; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .highlight { background: #fff3cd; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Improved Analysis System</h1>
+    <p>This page demonstrates the enhanced analysis system that provides more specific, accurate fit information instead of generic advice.</p>
+
+    <div class="test-section">
+        <h2>1. Fit Analysis Function</h2>
+        <p>Testing the <code>analyzeFitMentions</code> function:</p>
+        
+        <div class="result">
+            <h3>Sample Reviews:</h3>
+            <ul>
+                <li>"Reformation dresses run small, I had to size up from my usual 6 to an 8"</li>
+                <li>"The Reformation dress fits perfectly, true to size for me"</li>
+                <li>"Reformation runs small in dresses but true to size in tops"</li>
+                <li>"I'm usually a size 4 but Reformation fits me in a 6"</li>
+            </ul>
+            
+            <button onclick="testFitAnalysis()">Analyze Fit Mentions</button>
+            <div id="fit-analysis-result"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Specific Recommendation Generation</h2>
+        <p>Testing the <code>generateSpecificRecommendation</code> function:</p>
+        
+        <div class="result">
+            <h3>Test Cases:</h3>
+            <ul>
+                <li><strong>Consistent Small:</strong> 8 out of 10 reviews say "runs small"</li>
+                <li><strong>Mixed Sizing:</strong> 3 "runs small", 2 "true to size", 1 "runs large"</li>
+                <li><strong>True to Size:</strong> 7 out of 10 reviews say "true to size"</li>
+            </ul>
+            
+            <button onclick="testRecommendations()">Generate Recommendations</button>
+            <div id="recommendations-result"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Fit Tips Extraction</h2>
+        <p>Testing the <code>extractSpecificFitAdvice</code> function:</p>
+        
+        <div class="result">
+            <h3>Sample Text:</h3>
+            <p>"This Reformation dress runs small, I had to size up from my usual 6 to an 8. The fabric is beautiful and the fit is perfect now."</p>
+            
+            <button onclick="testFitTips()">Extract Fit Advice</button>
+            <div id="fit-tips-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Simulate the improved analysis functions
+        function analyzeFitMentions(reviews) {
+            const analysis = {
+                runsSmall: 0,
+                runsLarge: 0,
+                trueToSize: 0,
+                inconsistent: 0,
+                categorySpecific: 0,
+                total: 0
+            };
+
+            if (!reviews || !Array.isArray(reviews)) {
+                return analysis;
+            }
+
+            reviews.forEach(review => {
+                if (!review.snippet && !review.content) return;
+
+                const text = (review.snippet || review.content || '').toLowerCase();
+                
+                // Count different types of fit mentions
+                if (text.includes('runs small') || text.includes('size up') || text.includes('fits small') || 
+                    text.includes('too small') || text.includes('tight fit') || text.includes('smaller than expected')) {
+                    analysis.runsSmall++;
+                    analysis.total++;
+                }
+                
+                if (text.includes('runs large') || text.includes('size down') || text.includes('fits large') ||
+                    text.includes('too big') || text.includes('loose fit') || text.includes('oversized') ||
+                    text.includes('larger than expected')) {
+                    analysis.runsLarge++;
+                    analysis.total++;
+                }
+                
+                if (text.includes('true to size') || text.includes('fits true') || text.includes('tts') ||
+                    text.includes('standard sizing') || text.includes('normal fit') || text.includes('fits as expected')) {
+                    analysis.trueToSize++;
+                    analysis.total++;
+                }
+                
+                if (text.includes('inconsistent') || text.includes('varies') || text.includes('depends on') ||
+                    text.includes('sometimes') || text.includes('hit or miss') || text.includes('unpredictable')) {
+                    analysis.inconsistent++;
+                    analysis.total++;
+                }
+                
+                if (text.includes('dresses') || text.includes('tops') || text.includes('bottoms') ||
+                    text.includes('jeans') || text.includes('shirts') || text.includes('pants')) {
+                    analysis.categorySpecific++;
+                    analysis.total++;
+                }
+            });
+
+            return analysis;
+        }
+
+        function generateSpecificRecommendation(brandName, fitMentions) {
+            const { runsSmall, runsLarge, trueToSize, inconsistent, categorySpecific, total } = fitMentions;
+            
+            // Find the most common pattern
+            const patterns = [
+                { type: 'runs small', count: runsSmall },
+                { type: 'runs large', count: runsLarge },
+                { type: 'true to size', count: trueToSize },
+                { type: 'inconsistent', count: inconsistent },
+                { type: 'category specific', count: categorySpecific }
+            ].filter(p => p.count > 0).sort((a, b) => b.count - a.count);
+
+            if (patterns.length === 0) {
+                return `Found fit information for ${brandName}, but no clear sizing pattern emerged. Check individual reviews for specific advice.`;
+            }
+
+            const topPattern = patterns[0];
+            const percentage = Math.round((topPattern.count / total) * 100);
+            
+            let recommendation = '';
+            
+            switch (topPattern.type) {
+                case 'runs small':
+                    if (percentage >= 70) {
+                        recommendation = `Based on ${total} reviews, ${brandName} consistently runs small (${percentage}% of mentions). Consider sizing up for a comfortable fit.`;
+                    } else if (percentage >= 50) {
+                        recommendation = `Based on ${total} reviews, ${brandName} tends to run small (${percentage}% of mentions). Most reviewers recommend sizing up.`;
+                    } else {
+                        recommendation = `Based on ${total} reviews, ${brandName} has mixed sizing with ${percentage}% reporting it runs small. Check individual reviews for specific advice.`;
+                    }
+                    break;
+                    
+                case 'runs large':
+                    if (percentage >= 70) {
+                        recommendation = `Based on ${total} reviews, ${brandName} consistently runs large (${percentage}% of mentions). Consider sizing down for a better fit.`;
+                    } else if (percentage >= 50) {
+                        recommendation = `Based on ${total} reviews, ${brandName} tends to run large (${percentage}% of mentions). Most reviewers recommend sizing down.`;
+                    } else {
+                        recommendation = `Based on ${total} reviews, ${brandName} has mixed sizing with ${percentage}% reporting it runs large. Check individual reviews for specific advice.`;
+                    }
+                    break;
+                    
+                case 'true to size':
+                    if (percentage >= 70) {
+                        recommendation = `Based on ${total} reviews, ${brandName} consistently runs true to size (${percentage}% of mentions). You can typically order your usual size.`;
+                    } else if (percentage >= 50) {
+                        recommendation = `Based on ${total} reviews, ${brandName} generally runs true to size (${percentage}% of mentions). Most reviewers found the sizing accurate.`;
+                    } else {
+                        recommendation = `Based on ${total} reviews, ${brandName} has mixed sizing with ${percentage}% reporting it runs true to size. Check individual reviews for specific advice.`;
+                    }
+                    break;
+                    
+                case 'inconsistent':
+                    recommendation = `Based on ${total} reviews, sizing for ${brandName} can be inconsistent (${percentage}% of mentions). It's recommended to check specific item reviews or size charts.`;
+                    break;
+                    
+                case 'category specific':
+                    recommendation = `Based on ${total} reviews, sizing for ${brandName} varies by category (${percentage}% of mentions). Check individual item reviews for specific fit advice.`;
+                    break;
+                    
+                default:
+                    recommendation = `Found ${total} reviews with fit information for ${brandName}. Check individual reviews for specific sizing advice.`;
+            }
+
+            // Add context about other patterns if they exist
+            const otherPatterns = patterns.slice(1).filter(p => p.count > 0);
+            if (otherPatterns.length > 0) {
+                const otherMentions = otherPatterns.map(p => `${p.count} ${p.type.replace(' ', ' ')}`).join(', ');
+                recommendation += ` Other patterns found: ${otherMentions}.`;
+            }
+
+            return recommendation;
+        }
+
+        function extractSpecificFitAdvice(text) {
+            const lowerText = text.toLowerCase();
+            
+            // Look for specific fit patterns and extract the relevant part
+            const fitPatterns = [
+                /(?:runs small|fits small|too small|tight fit).*?(?:\.|$)/i,
+                /(?:runs large|fits large|too big|loose fit).*?(?:\.|$)/i,
+                /(?:true to size|fits true|tts|standard sizing).*?(?:\.|$)/i,
+                /(?:size up|size down).*?(?:\.|$)/i,
+                /(?:measurements|bust|waist|hips|length).*?(?:\.|$)/i,
+                /(?:body type|height|weight|petite|tall|curvy).*?(?:\.|$)/i
+            ];
+            
+            for (const pattern of fitPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    let advice = match[0].trim();
+                    
+                    // Clean up the advice
+                    advice = advice.replace(/^\s*(?:and|but|however|though|,)\s*/i, '');
+                    advice = advice.replace(/\s+/g, ' ').trim();
+                    
+                    // Only return if it's meaningful
+                    if (advice.length > 15 && advice.length < 200) {
+                        return advice;
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        function testFitAnalysis() {
+            const sampleReviews = [
+                { snippet: "Reformation dresses run small, I had to size up from my usual 6 to an 8" },
+                { snippet: "The Reformation dress fits perfectly, true to size for me" },
+                { snippet: "Reformation runs small in dresses but true to size in tops" },
+                { snippet: "I'm usually a size 4 but Reformation fits me in a 6" }
+            ];
+
+            const analysis = analyzeFitMentions(sampleReviews);
+            
+            document.getElementById('fit-analysis-result').innerHTML = `
+                <h4>Analysis Results:</h4>
+                <ul>
+                    <li><span class="highlight">Runs Small:</span> ${analysis.runsSmall}</li>
+                    <li><span class="highlight">Runs Large:</span> ${analysis.runsLarge}</li>
+                    <li><span class="highlight">True to Size:</span> ${analysis.trueToSize}</li>
+                    <li><span class="highlight">Inconsistent:</span> ${analysis.inconsistent}</li>
+                    <li><span class="highlight">Category Specific:</span> ${analysis.categorySpecific}</li>
+                    <li><span class="highlight">Total Fit Mentions:</span> ${analysis.total}</li>
+                </ul>
+            `;
+        }
+
+        function testRecommendations() {
+            const testCases = [
+                { name: "Consistent Small", analysis: { runsSmall: 8, runsLarge: 1, trueToSize: 1, inconsistent: 0, categorySpecific: 0, total: 10 } },
+                { name: "Mixed Sizing", analysis: { runsSmall: 3, runsLarge: 1, trueToSize: 2, inconsistent: 1, categorySpecific: 0, total: 7 } },
+                { name: "True to Size", analysis: { runsSmall: 1, runsLarge: 1, trueToSize: 7, inconsistent: 1, categorySpecific: 0, total: 10 } }
+            ];
+
+            let results = '<h4>Recommendation Results:</h4>';
+            
+            testCases.forEach(testCase => {
+                const recommendation = generateSpecificRecommendation("Test Brand", testCase.analysis);
+                results += `
+                    <div style="margin: 10px 0; padding: 10px; background: #e8f4fd; border-radius: 5px;">
+                        <strong>${testCase.name}:</strong><br>
+                        ${recommendation}
+                    </div>
+                `;
+            });
+            
+            document.getElementById('recommendations-result').innerHTML = results;
+        }
+
+        function testFitTips() {
+            const sampleText = "This Reformation dress runs small, I had to size up from my usual 6 to an 8. The fabric is beautiful and the fit is perfect now.";
+            
+            const advice = extractSpecificFitAdvice(sampleText);
+            
+            document.getElementById('fit-tips-result').innerHTML = `
+                <h4>Extracted Fit Advice:</h4>
+                <div style="padding: 10px; background: #d4edda; border-radius: 5px;">
+                    <strong>Original:</strong> "${sampleText}"<br><br>
+                    <strong>Extracted:</strong> "${advice || 'No specific advice found'}"
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

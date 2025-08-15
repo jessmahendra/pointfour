@@ -1,1351 +1,362 @@
+/* ========================================
+   POINTFOUR WIDGET STYLES
+   ======================================== */
+
 /* Import Inter font from Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Base widget styles */
-.fashion-fit-widget {
-  position: fixed !important;
-  z-index: 10000 !important;
+/* Universal font rule for all widget elements */
+.pointfour-widget,
+.pointfour-widget * {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
-  font-size: 14px !important;
-  line-height: 1.5 !important;
-  color: #44403c !important; /* stone-700 */
-  background: rgba(245, 245, 244, 0.98) !important; /* stone-100 with transparency */
-  border: 1px solid rgba(168, 162, 158, 0.2) !important; /* stone-300 with transparency */
-  border-radius: 12px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
-  backdrop-filter: blur(10px) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  max-width: 400px !important;
-  min-width: 320px !important;
-  max-height: 80vh !important;
-  overflow-y: auto !important;
 }
 
-.fashion-fit-widget:hover {
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12) !important;
-  border-color: rgba(168, 162, 158, 0.3) !important; /* stone-300 with more opacity */
-}
-
-/* Minimal mode */
-.fashion-fit-widget.minimal {
-  background: rgba(245, 245, 244, 0.95) !important; /* stone-100 with transparency */
-  border: 1px solid rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
-  cursor: pointer !important;
-}
-
-.fashion-fit-widget.minimal:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-  border-color: rgba(168, 162, 158, 0.25) !important; /* stone-300 with more opacity */
-  transform: translateY(-2px) !important;
-}
-
-/* Expanded mode */
-.fashion-fit-widget.expanded {
-  background: rgba(250, 250, 249, 0.98) !important; /* stone-50 with transparency */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
-  border: 1px solid rgba(168, 162, 158, 0.25) !important; /* stone-300 with transparency */
-}
-
-.fashion-fit-widget.expanded:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
-  border-color: rgba(168, 162, 158, 0.35) !important; /* stone-300 with more opacity */
-}
-
-/* Minimal mode specific styles */
-.fashion-fit-widget.minimal .widget-header {
-  padding: 12px 16px !important;
-  border-bottom: none !important;
-}
-
-/* Dragging styles */
-.fashion-fit-widget.dragging {
-  transition: none !important;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
-  border-color: rgba(59, 130, 246, 0.5) !important; /* blue-500 with transparency */
-  transform: scale(1.02) !important;
-  cursor: grabbing !important;
-  will-change: transform !important;
-  backface-visibility: hidden !important;
-  perspective: 1000px !important;
-}
-
-.fashion-fit-widget .widget-header,
-.fashion-fit-widget .minimal-mode {
-  cursor: grab !important;
-  user-select: none !important;
-  transition: background-color 0.2s ease !important;
-}
-
-.fashion-fit-widget .widget-header:hover,
-.fashion-fit-widget .minimal-mode:hover {
-  cursor: grab !important;
-  background-color: rgba(59, 130, 246, 0.05) !important;
-}
-
-.fashion-fit-widget.dragging .widget-header,
-.fashion-fit-widget.dragging .minimal-mode {
-  cursor: grabbing !important;
-}
-
-/* Context menu styles */
-.widget-context-menu {
-  background: rgba(255, 255, 255, 0.98) !important;
-  border: 1px solid rgba(168, 162, 158, 0.2) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
-  backdrop-filter: blur(10px) !important;
-  min-width: 180px !important;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  font-size: 14px !important;
-  overflow: hidden !important;
-}
-
-.context-menu-header {
-  padding: 12px 16px 8px 16px !important;
-  font-weight: 600 !important;
-  color: #292524 !important;
-  border-bottom: 1px solid rgba(168, 162, 158, 0.1) !important;
-  background: rgba(168, 162, 158, 0.05) !important;
-}
-
-.context-menu-item {
-  padding: 10px 16px !important;
-  cursor: pointer !important;
-  color: #44403c !important;
-  transition: background-color 0.2s ease !important;
-}
-
-.context-menu-item:hover {
-  background: rgba(59, 130, 246, 0.1) !important;
-  color: #1d4ed8 !important;
-}
-
-.context-menu-separator {
-  height: 1px !important;
-  background: rgba(168, 162, 158, 0.2) !important;
-  margin: 4px 0 !important;
-}
-
-.minimal-content {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-}
-
-.brand-info {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 4px !important;
-}
-
-.brand-name {
-  font-size: 16px !important;
-  font-weight: 600 !important;
-  color: #292524 !important; /* stone-800 */
-  line-height: 1.2 !important;
-}
-
-.fit-summary {
-  font-size: 13px !important;
-  color: #57534e !important; /* stone-600 */
-  line-height: 1.3 !important;
-}
-
-.click-hint {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  font-size: 11px !important;
-  color: #78716c !important; /* stone-500 */
-  padding: 6px 8px !important;
-  background: rgba(168, 162, 158, 0.08) !important; /* stone-300 with transparency */
-  border-radius: 6px !important;
-  border: 1px solid rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
-}
-
-.hint-icon {
-  font-size: 12px !important;
-}
-
-.hint-text {
-  font-weight: 500 !important;
-  letter-spacing: 0.02em !important;
-}
-
-/* Widget header */
-.widget-header {
-  padding: 16px 20px 12px !important;
-  border-bottom: 1px solid rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
-  position: relative !important;
-}
-
-.widget-title {
-  font-size: 18px !important;
-  font-weight: 600 !important;
-  color: #292524 !important; /* stone-800 */
-  margin: 0 !important;
-  line-height: 1.3 !important;
-  letter-spacing: -0.025em !important;
-}
-
-.brand-meta {
-  margin-top: 8px !important;
-  display: flex !important;
-  gap: 8px !important;
-  align-items: center !important;
-}
-
-.meta-item {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  color: #78716c !important; /* stone-500 */
-  background: rgba(168, 162, 158, 0.08) !important; /* stone-300 with transparency */
-  padding: 4px 8px !important;
-  border-radius: 6px !important;
-  border: 1px solid rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
-  letter-spacing: -0.01em !important;
-}
-
-.meta-icon {
-  font-size: 14px !important;
-}
-
-/* Widget content */
-.widget-content {
-  padding: 20px !important;
-}
-
-.fit-summary-section {
-  margin-bottom: 20px !important;
-}
-
-.fit-summary-title {
-  font-size: 16px !important;
-  font-weight: 600 !important;
-  color: #292524 !important; /* stone-800 */
-  margin: 0 0 12px 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.fit-summary-text {
-  font-size: 14px !important;
-  line-height: 1.5 !important;
-  color: #44403c !important; /* stone-700 */
-  padding: 12px !important;
-  background: rgba(250, 250, 249, 0.5) !important; /* stone-50 with transparency */
-  border-radius: 8px !important;
-  border: 1px solid rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
-}
-
-.fit-tips-section {
-  margin-bottom: 20px;
-}
-
-.fit-tips-title {
+/* Base widget container */
+.pointfour-widget {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 320px;
+  max-width: 90vw;
+  background: #F8F7F4 !important; /* Light beige background for clean readability */
+  background-color: #F8F7F4 !important; /* Ensure background-color is also set */
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(139, 115, 85, 0.15); /* Stone-colored shadow */
+  z-index: 2147483647; /* Maximum z-index to ensure it's on top */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
   font-size: 14px;
-  font-weight: 600;
-  color: #44403c; /* stone-700 */
-  margin-bottom: 12px;
+  line-height: 1.5;
+  color: #000000; /* Solid black text for maximum readability */
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  display: block !important; /* Force display */
+  visibility: hidden;
+  border: 1px solid #e8e0d5; /* Subtle stone border */
+}
+
+/* Visible state */
+.pointfour-widget.pointfour-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+/* Loading state */
+.pointfour-widget.pointfour-loading .pointfour-content {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* High confidence indicator */
+.pointfour-widget.high-confidence {
+  box-shadow: 0 10px 40px rgba(139, 115, 85, 0.25); /* Enhanced stone shadow */
+}
+
+/* Header */
+.pointfour-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1); /* Subtle border */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.02); /* Very subtle background */
+  border-radius: 12px 12px 0 0;
+  color: #000000; /* Solid black text for maximum readability */
+}
+
+.pointfour-logo {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.tips-content {
-  background: rgba(168, 162, 158, 0.03); /* stone-300 with transparency */
-  border: 1px solid rgba(168, 162, 158, 0.1); /* stone-300 with transparency */
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.tip-item {
-  color: #57534e; /* stone-600 */
-  margin-bottom: 8px;
-  padding-left: 8px;
-}
-
-.tip-item:last-child {
-  margin-bottom: 0;
-}
-
-/* External reviews section */
-.external-reviews-section {
-  margin-bottom: 20px;
-}
-
-.external-reviews-title {
-  font-size: 14px;
   font-weight: 600;
-  color: #44403c; /* stone-700 */
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 15px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
 }
 
-.external-summary-content {
-  background: rgba(168, 162, 158, 0.03); /* stone-300 with transparency */
-  border: 1px solid rgba(168, 162, 158, 0.1); /* stone-300 with transparency */
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.external-summary-content p {
-  margin: 0 0 8px 0;
-  color: #57534e; /* stone-600 */
-}
-
-.external-summary-content p:last-child {
-  margin-bottom: 0;
-}
-
-.external-summary-content strong {
-  color: #44403c; /* stone-700 */
-}
-
-/* Footer */
-.widget-footer {
-  padding: 12px 20px 16px;
-  border-top: 1px solid rgba(168, 162, 158, 0.15); /* stone-300 with transparency */
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-}
-
-/* Buttons */
-.widget-btn {
-  padding: 8px 16px !important;
-  border: none !important;
-  border-radius: 8px !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
-  text-decoration: none !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  font-family: inherit !important;
-  letter-spacing: -0.01em !important;
-}
-
-.widget-btn.primary {
-  background: rgba(168, 162, 158, 0.9) !important; /* stone-300 with transparency */
-  color: #44403c !important; /* stone-700 */
-  border-color: rgba(168, 162, 158, 0.9) !important; /* stone-300 with transparency */
-}
-
-.widget-btn.primary:hover {
-  background: rgba(168, 162, 158, 1) !important; /* stone-300 solid */
-  border-color: rgba(168, 162, 158, 1) !important; /* stone-300 solid */
-  transform: translateY(-1px) !important;
-}
-
-.widget-btn.primary:active {
-  box-shadow: 0 2px 8px rgba(120, 113, 108, 0.3) !important; /* stone-500 with transparency */
-}
-
-.widget-btn.secondary {
-  background: rgba(168, 162, 158, 0.08) !important; /* stone-300 with transparency */
-  color: #57534e !important; /* stone-600 */
-  border: 1px solid rgba(168, 162, 158, 0.2) !important; /* stone-300 with transparency */
-}
-
-.widget-btn.secondary:hover {
-  background: rgba(168, 162, 158, 0.12) !important; /* stone-300 with more opacity */
-  color: #44403c !important; /* stone-700 */
-  border-color: rgba(168, 162, 158, 0.3) !important; /* stone-300 with more opacity */
-}
-
-.widget-btn.secondary:active {
-  background: rgba(168, 162, 158, 0.16) !important; /* stone-300 with more opacity */
-  color: #44403c !important; /* stone-700 */
-  border-color: rgba(168, 162, 158, 0.4) !important; /* stone-300 with more opacity */
+.pointfour-logo svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* Close button */
-.widget-close {
-  position: absolute !important;
-  top: 16px !important;
-  right: 20px !important;
-  background: none !important;
-  border: none !important;
-  font-size: 20px !important;
-  color: #78716c !important; /* stone-500 */
-  cursor: pointer !important;
-  padding: 4px !important;
-  border-radius: 4px !important;
-  transition: all 0.2s ease !important;
-  font-family: 'Inter', sans-serif !important;
-  line-height: 1 !important;
-}
-
-.widget-close:hover {
-  background: rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
-  color: #57534e !important; /* stone-600 */
-}
-
-.widget-close:active {
-  background: rgba(168, 162, 158, 0.3); /* stone-300 with more opacity */
-  color: #44403c; /* stone-700 */
-}
-
-/* Dark theme */
-.fashion-fit-widget.dark {
-  background: rgba(41, 37, 36, 0.95); /* stone-800 with transparency */
-  color: #fafaf9; /* stone-50 */
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.fashion-fit-widget.dark .widget-title {
-  color: #fafaf9; /* stone-50 */
-}
-
-.fashion-fit-widget.dark .widget-close {
-  background: rgba(255, 255, 255, 0.1);
-  color: #d6d3d1; /* stone-300 */
-}
-
-.fashion-fit-widget.dark .widget-close:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #e7e5e4; /* stone-200 */
-}
-
-.fashion-fit-widget.dark .widget-close:active {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fafaf9; /* stone-50 */
-}
-
-/* Responsive adjustments */
-@media (max-width: 480px) {
-  .fashion-fit-widget {
-    max-width: calc(100vw - 32px);
-    min-width: 280px;
-    margin: 16px;
-  }
-  
-  .widget-header,
-  .widget-content,
-  .widget-footer {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-}
-
-/* Animation keyframes */
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideOut {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-/* Loading animation */
-@keyframes shimmer {
-  0% {
-    background-position: -200px 0;
-  }
-  100% {
-    background-position: calc(200px + 100%) 0;
-  }
-}
-
-.shimmer {
-  background: linear-gradient(90deg, transparent, rgba(168, 162, 158, 0.1), transparent); /* stone-300 with transparency */
-  background-size: 200px 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-/* Status indicators */
-.status-available {
-  color: #059669; /* emerald-600 */
-}
-
-.status-unavailable {
-  color: #dc2626; /* red-600 */
-}
-
-.status-loading {
-  color: #7c3aed; /* violet-600 */
-}
-
-/* Dynamic notification */
-.dynamic-notification {
-  background: rgba(168, 162, 158, 0.08); /* stone-300 with transparency */
-  border: 1px solid rgba(168, 162, 158, 0.15); /* stone-300 with transparency */
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
-  font-size: 13px;
-  color: #57534e; /* stone-600 */
-}
-
-.dynamic-notification.fallback {
-  background: rgba(254, 243, 199, 0.8); /* amber-100 with transparency */
-  border: 1px solid rgba(253, 230, 138, 0.6); /* amber-200 with transparency */
-  color: #92400e; /* amber-800 */
-}
-
-/* Enhanced Reviews Section */
-.reviews-section {
-  margin-bottom: 20px;
-}
-
-.reviews-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #44403c;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.reviews-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding: 12px;
-  background: rgba(168, 162, 158, 0.05);
-  border-radius: 8px;
-  border: 1px solid rgba(168, 162, 158, 0.1);
-}
-
-.reviews-count {
-  font-size: 14px;
-  font-weight: 500;
-  color: #44403c;
-}
-
-.count-number {
-  font-weight: 600;
-  color: #059669;
-}
-
-.reviews-status {
-  font-size: 12px;
-}
-
-.status-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.confidence-high {
-  background: rgba(34, 197, 94, 0.1);
-  color: #059669;
-  border: 1px solid rgba(34, 197, 94, 0.2);
-}
-
-.confidence-medium {
-  background: rgba(245, 158, 11, 0.1);
-  color: #d97706;
-  border: 1px solid rgba(245, 158, 11, 0.2);
-}
-
-.confidence-low {
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
-.confidence-unknown {
-  background: rgba(156, 163, 175, 0.1);
-  color: #6b7280;
-  border: 1px solid rgba(156, 163, 175, 0.2);
-}
-
-/* Brand Fit Summary */
-.brand-fit-summary {
-  margin-bottom: 20px;
-}
-
-.summary-content {
-  background: rgba(168, 162, 158, 0.03);
-  border: 1px solid rgba(168, 162, 158, 0.1);
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.summary-text {
-  color: #44403c;
-  line-height: 1.6;
-  margin-bottom: 12px;
-  font-size: 14px;
-}
-
-.summary-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.confidence-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.sources {
-  font-size: 12px;
-  color: #78716c;
-  background: rgba(168, 162, 158, 0.08);
-  padding: 4px 8px;
-  border-radius: 6px;
-}
-
-/* Item Reviews Section */
-.item-reviews-section {
-  margin-bottom: 20px;
-}
-
-.item-reviews-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #44403c;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.item-review-item {
-  background: rgba(168, 162, 158, 0.03);
-  border: 1px solid rgba(168, 162, 158, 0.1);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-}
-
-.item-review-item:last-child {
-  margin-bottom: 0;
-}
-
-/* Source Reviews Section */
-.source-reviews-section {
-  margin-bottom: 20px;
-}
-
-.source-reviews-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #44403c;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.source-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 16px;
-  background: rgba(168, 162, 158, 0.05);
-  border-radius: 8px;
-  padding: 4px;
-}
-
-.source-tab {
-  flex: 1;
-  padding: 8px 12px;
+.pointfour-close {
+  background: rgba(0, 0, 0, 0.05); /* Very subtle background */
   border: none;
-  background: transparent;
   border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #78716c;
+  padding: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
 }
 
-.source-tab:hover {
-  background: rgba(168, 162, 158, 0.1);
-  color: #44403c;
+.pointfour-close:hover {
+  background: rgba(0, 0, 0, 0.1); /* Slightly darker on hover */
 }
 
-.source-tab.active {
-  background: #44403c;
-  color: white;
+.pointfour-close svg {
+  width: 14px;
+  height: 14px;
+  stroke: #000000; /* Solid black for maximum readability */
 }
 
-.source-review-item {
-  background: rgba(168, 162, 158, 0.03);
-  border: 1px solid rgba(168, 162, 158, 0.1);
-  border-radius: 8px;
+/* Content area */
+.pointfour-content {
   padding: 16px;
-  margin-bottom: 12px;
+  background: #F8F7F4 !important; /* Light beige background for clean readability */
+  background-color: #F8F7F4 !important; /* Ensure background-color is also set */
+  border-radius: 0 0 12px 12px;
 }
 
-.source-review-item:last-child {
-  margin-bottom: 0;
+/* Loading spinner */
+.pointfour-loading-spinner {
+  text-align: center;
 }
 
-.review-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+.pointfour-spinner {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 12px;
+  border: 3px solid #e8e0d5; /* Stone border */
+  border-top: 3px solid #b8a898; /* Stone accent */
+  border-radius: 50%;
+  animation: pointfour-spin 1s linear infinite;
 }
 
-.review-source {
-  font-size: 12px;
-  font-weight: 500;
-  color: #059669;
-  background: rgba(34, 197, 94, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
+@keyframes pointfour-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-.review-confidence {
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.review-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #292524;
-  margin-bottom: 8px;
-  line-height: 1.3;
-}
-
-.review-snippet {
+.pointfour-loading-spinner p {
+  margin: 0;
+  color: #000000; /* Solid black text for maximum readability */
   font-size: 13px;
-  color: #44403c;
-  line-height: 1.5;
+}
+
+/* Results */
+.pointfour-results h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  color: #9F513A; /* Burnt orange title color */
+}
+
+.pointfour-fit-info {
   margin-bottom: 12px;
 }
 
-.review-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 12px;
-}
-
-.tag {
-  background: rgba(168, 162, 158, 0.1);
-  color: #78716c;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
+.pointfour-fit-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
   font-weight: 500;
+  font-size: 13px;
+  margin-bottom: 8px;
+  background: #e8e0d5; /* Light stone background */
+  color: #5d4e37; /* Stone text */
+  border: 1px solid #d4c4a8; /* Stone border */
 }
 
-.review-link {
-  color: #059669;
-  text-decoration: none;
-  font-size: 12px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: color 0.2s ease;
+.pointfour-fit-badge.runs-small {
+  background: #f4e8d7; /* Warm beige */
+  color: #8b5a2b; /* Warm brown */
+  border: 1px solid #e6d3b3;
 }
 
-.review-link:hover {
-  color: #047857;
-  text-decoration: underline;
+.pointfour-fit-badge.true-to-size {
+  background: #e8f0e8; /* Sage beige */
+  color: #5a7c65; /* Sage green */
+  border: 1px solid #d4e6d4;
 }
 
-.no-reviews {
-  text-align: center;
-  color: #78716c;
-  font-style: italic;
-  padding: 20px;
-  background: rgba(168, 162, 158, 0.03);
-  border-radius: 8px;
-  border: 1px dashed rgba(168, 162, 158, 0.2);
+.pointfour-fit-badge.runs-large {
+  background: #e8e8f0; /* Lavender beige */
+  color: #5a5a7c; /* Lavender */
+  border: 1px solid #d4d4e6;
 }
 
-.category-info {
-  text-align: center;
-  color: #57534e;
-  padding: 20px;
-  background: rgba(168, 162, 158, 0.05);
-  border-radius: 8px;
-  border: 1px solid rgba(168, 162, 158, 0.1);
-  margin: 10px 0;
+.pointfour-fit-badge.neutral {
+  background: #f0f0e8; /* Neutral beige */
+  color: #5d5d4e; /* Neutral stone */
+  border: 1px solid #e0e0d4;
 }
 
-.category-info p {
+.pointfour-description {
   margin: 8px 0;
-  line-height: 1.4;
-}
-
-.category-info p:first-child {
-  font-weight: 600;
-  color: #44403c;
-}
-
-.category-info p:last-child {
+  color: #000000; /* Solid black text for maximum readability */
   font-size: 13px;
-  color: #78716c;
-}
-
-/* Enhanced widget sizing for expanded content */
-.fashion-fit-widget.expanded {
-  max-width: 500px !important;
-  min-width: 400px !important;
-  max-height: 80vh !important;
-  overflow-y: auto !important;
-}
-
-.widget-content {
-  max-height: 60vh;
-  overflow-y: auto;
-  padding-right: 8px;
-}
-
-.widget-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.widget-content::-webkit-scrollbar-track {
-  background: rgba(168, 162, 158, 0.1);
-  border-radius: 3px;
-}
-
-.widget-content::-webkit-scrollbar-thumb {
-  background: rgba(168, 162, 158, 0.3);
-  border-radius: 3px;
-}
-
-.widget-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(168, 162, 158, 0.5);
-}
-
-/* Review items */
-.review-item {
-  background: rgba(168, 162, 158, 0.02); /* stone-300 with transparency */
-  border: 1px solid rgba(168, 162, 158, 0.08); /* stone-300 with transparency */
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.review-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.review-item-name {
-  font-weight: 600;
-  color: #44403c; /* stone-700 */
-  font-size: 13px;
-}
-
-.review-garment-type {
-  font-size: 11px;
-  color: #78716c; /* stone-500 */
-  background: rgba(168, 162, 158, 0.08); /* stone-300 with transparency */
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.review-content {
-  color: #57534e; /* stone-600 */
-  font-size: 12px;
   line-height: 1.5;
-}
-
-.review-meta {
-  margin-top: 8px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.review-tag {
-  background: rgba(168, 162, 158, 0.08); /* stone-300 with transparency */
-  color: #57534e; /* stone-600 */
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  border: 1px solid rgba(168, 162, 158, 0.15); /* stone-300 with transparency */
-}
-
-/* Toggle switch */
-.toggle-switch {
-  position: relative;
-  width: 40px;
-  height: 20px;
-  background: rgba(168, 162, 158, 0.3); /* stone-300 with transparency */
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.toggle-switch.active {
-  background: #78716c; /* stone-500 */
-}
-
-.toggle-switch::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  background: white;
-  border-radius: 50%;
-  transition: transform 0.3s ease;
-}
-
-.toggle-switch.active::after {
-  transform: translateX(20px);
-}
-
-/* Position indicators */
-.position-indicator {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: #78716c; /* stone-500 */
-  border-radius: 50%;
-  opacity: 0.6;
-}
-
-.position-indicator.top-left { top: 8px; left: 8px; }
-.position-indicator.top-right { top: 8px; right: 8px; }
-.position-indicator.bottom-left { bottom: 8px; left: 8px; }
-.position-indicator.bottom-right { bottom: 8px; right: 8px; }
-
-/* Manual Brand Input Overlay */
-#fashion-widget-manual-input {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  z-index: 10001 !important;
-  background: rgba(0, 0, 0, 0.5) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  animation: fadeIn 0.3s ease-out !important;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
 }
 
-.manual-input-overlay {
-  background: white !important;
-  border-radius: 16px !important;
-  padding: 32px !important;
-  max-width: 500px !important;
-  width: 90% !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
-  animation: slideUp 0.3s ease-out !important;
-  font-family: inherit !important;
+.pointfour-confidence {
+  padding-top: 8px;
+  border-top: 1px solid #e8e0d5; /* Stone border */
 }
 
-.manual-input-content h3 {
-  margin: 0 0 16px 0 !important;
-  color: #1f2937 !important;
-  font-size: 24px !important;
-  font-weight: 600 !important;
-  text-align: center !important;
-  line-height: 1.3 !important;
-  letter-spacing: -0.025em !important;
-  font-family: inherit !important;
+.pointfour-confidence small {
+  color: #8b7355; /* Medium stone color */
+  font-size: 11px;
 }
 
-.manual-input-content p {
-  margin: 0 0 16px 0 !important;
-  color: #6b7280 !important;
-  text-align: center !important;
-  line-height: 1.5 !important;
-  font-size: 16px !important;
-  font-weight: 400 !important;
-  letter-spacing: -0.01em !important;
-  font-family: inherit !important;
+/* Error state */
+.pointfour-error {
+  text-align: center;
+  padding: 8px 0;
 }
 
-#manual-brand-input {
-  width: 100% !important;
-  padding: 12px 16px !important;
-  border: 2px solid #e5e7eb !important;
-  border-radius: 8px !important;
-  font-size: 16px !important;
-  font-weight: 400 !important;
-  margin-bottom: 20px !important;
-  transition: border-color 0.2s ease !important;
-  font-family: inherit !important;
-  letter-spacing: -0.01em !important;
+.pointfour-error p {
+  margin: 0 0 4px 0;
+  color: #a0522d; /* Warm error color */
+  font-weight: 500;
 }
 
-#manual-brand-input:focus {
-  outline: none !important;
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+.pointfour-error small {
+  color: #000000; /* Solid black text for maximum readability */
+  font-size: 12px;
 }
 
-.manual-input-buttons {
-  display: flex !important;
-  gap: 12px !important;
-  margin-bottom: 24px !important;
+/* No data state */
+.pointfour-no-data {
+  text-align: center;
+  padding: 8px 0;
 }
 
-.btn-primary {
-  flex: 1 !important;
-  background: #3b82f6 !important;
-  color: white !important;
-  border: none !important;
-  padding: 12px 20px !important;
-  border-radius: 8px !important;
-  font-size: 16px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: background 0.2s ease !important;
-  font-family: inherit !important;
-  letter-spacing: -0.01em !important;
+.pointfour-no-data p {
+  margin: 0 0 4px 0;
+  color: #000000; /* Solid black text for maximum readability */
 }
 
-.btn-primary:hover {
-  background: #2563eb !important;
+.pointfour-no-data small {
+  color: #000000; /* Solid black text for maximum readability */
+  font-size: 12px;
 }
 
-.btn-secondary {
-  flex: 1 !important;
-  background: #f3f4f6 !important;
-  color: #374151 !important;
-  border: 1px solid #d1d5db !important;
-  padding: 12px 20px !important;
-  border-radius: 8px !important;
-  font-size: 16px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
-  font-family: inherit !important;
-  letter-spacing: -0.01em !important;
-}
-
-.btn-secondary:hover {
-  background: #e5e7eb !important;
-  border-color: #9ca3af !important;
-}
-
-.manual-input-suggestions {
-  text-align: center !important;
-}
-
-.manual-input-suggestions p {
-  margin: 0 0 12px 0 !important;
-  font-size: 14px !important;
-  color: #6b7280 !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.01em !important;
-  font-family: inherit !important;
-}
-
-.brand-suggestions {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 8px !important;
-  justify-content: center !important;
-}
-
-.brand-suggestion {
-  background: #f3f4f6 !important;
-  color: #374151 !important;
-  padding: 6px 12px !important;
-  border-radius: 20px !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
-  border: 1px solid #e5e7eb !important;
-  font-family: inherit !important;
-  letter-spacing: -0.01em !important;
-}
-
-.brand-suggestion:hover {
-  background: #3b82f6 !important;
-  color: white !important;
-  border-color: #3b82f6 !important;
-  transform: translateY(-1px) !important;
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { 
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0) scale(1);
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .pointfour-widget {
+      bottom: 10px;
+      right: 10px;
+      left: 10px;
+      width: auto;
   }
 }
 
-/* Responsive design */
-@media (max-width: 600px) {
-  .manual-input-overlay {
-    padding: 24px;
-    margin: 20px;
-  }
-  
-  .manual-input-buttons {
-    flex-direction: column;
-  }
-  
-  .brand-suggestions {
-    justify-content: center;
-  }
+/* Dark mode removed - all modes use light beige background for consistency */
+
+/* Fit tips */
+.pointfour-fit-tips {
+  margin: 16px 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.03); /* Very subtle background for clean look */
+  border-radius: 8px;
+  border-left: 3px solid #9F513A; /* Match the title color */
 }
 
-/* Review sections - ensure they're visible by default */
-.reviews-section,
-.item-reviews-section,
-.source-reviews-section,
-.external-reviews-section {
-  margin-top: 20px !important;
-  padding: 16px !important;
-  background: rgba(250, 250, 249, 0.8) !important; /* stone-50 with more opacity */
-  border-radius: 8px !important;
-  border: 1px solid rgba(168, 162, 158, 0.2) !important; /* stone-300 with transparency */
-  display: block !important; /* Show by default */
+.pointfour-fit-tips h4 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  color: #000000; /* Solid black text for maximum readability */
 }
 
-.reviews-title,
-.item-reviews-title,
-.source-reviews-title,
-.external-reviews-title {
-  font-size: 16px !important;
-  font-weight: 600 !important;
-  color: #292524 !important; /* stone-800 */
-  margin: 0 0 12px 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
+.pointfour-fit-tips ul {
+  margin: 0;
+  padding-left: 16px;
 }
 
-.reviews-header {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  margin-bottom: 12px !important;
-  font-size: 12px !important;
-  color: #78716c !important; /* stone-500 */
+.pointfour-fit-tips li {
+  margin: 4px 0;
+  font-size: 12px;
+  color: #000000; /* Solid black text for maximum readability */
+  line-height: 1.4;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
 }
 
-.reviews-count {
-  font-weight: 500 !important;
-  color: #44403c !important; /* stone-700 */
+/* Search info */
+.pointfour-search-info {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e8e0d5;
+  text-align: center;
 }
 
-.reviews-status {
-  padding: 2px 8px !important;
-  background: rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
-  color: #57534e !important; /* stone-600 */
-  border-radius: 4px !important;
-  font-size: 11px !important;
-  font-weight: 500 !important;
+.pointfour-search-info small {
+  color: #000000; /* Solid black text for maximum readability */
+  font-size: 11px;
 }
 
-/* Review items */
-.review-item {
-  padding: 12px !important;
-  background: rgba(255, 255, 255, 0.7) !important;
-  border-radius: 6px !important;
-  margin-bottom: 8px !important;
-  border: 1px solid rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
+/* Reviews button styling */
+.pointfour-search-info {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e8e0d5;
+  display: flex;
+  justify-content: center;
 }
 
-.review-source {
-  font-size: 12px !important;
-  font-weight: 600 !important;
-  color: #57534e !important; /* stone-600 */
-  margin-bottom: 4px !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
+.pointfour-reviews-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #000000;
+  color: #FFFFFF !important;
+  text-decoration: none !important;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid #000000;
 }
 
-.review-text {
-  font-size: 13px !important;
-  line-height: 1.4 !important;
-  color: #44403c !important; /* stone-700 */
-  margin-bottom: 8px !important;
+.pointfour-reviews-button:hover {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.review-meta {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  font-size: 11px !important;
-  color: #78716c !important; /* stone-500 */
+.pointfour-reviews-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Fit tips section */
-.fit-tips-section {
-  margin-top: 20px !important;
-  padding: 16px !important;
-  background: rgba(250, 250, 249, 0.5) !important; /* stone-50 with transparency */
-  border-radius: 8px !important;
-  border: 1px solid rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
+.pointfour-reviews-button svg {
+  width: 12px;
+  height: 12px;
+  stroke: #FFFFFF;
+  transition: transform 0.2s ease;
 }
 
-.fit-tips-title {
-  font-size: 16px !important;
-  font-weight: 600 !important;
-  color: #292524 !important; /* stone-800 */
-  margin: 0 0 12px 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
+.pointfour-reviews-button:hover svg {
+  transform: translate(1px, -1px);
 }
 
-.fit-tip-item {
-  display: flex !important;
-  align-items: flex-start !important;
-  gap: 8px !important;
-  padding: 8px 0 !important;
-  border-bottom: 1px solid rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
+/* Alternative subtle button style (if you prefer) */
+.pointfour-reviews-button.subtle {
+  background: transparent;
+  color: #000000 !important;
+  border: 1px solid #e8e0d5;
+  padding: 6px 12px;
 }
 
-.fit-tip-item:last-child {
-  border-bottom: none !important;
+.pointfour-reviews-button.subtle:hover {
+  background: #f8f7f4;
+  border-color: #d4c4a8;
 }
 
-.tip-icon {
-  font-size: 16px !important;
-  margin-top: 2px !important;
-}
-
-.tip-text {
-  font-size: 13px !important;
-  line-height: 1.4 !important;
-  color: #44403c !important; /* stone-700 */
-  flex: 1 !important;
-}
-
-/* Source tabs */
-.source-tabs {
-  display: flex !important;
-  gap: 4px !important;
-  margin-bottom: 12px !important;
-}
-
-.source-tab {
-  padding: 6px 12px !important;
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  color: #78716c !important; /* stone-500 */
-  background: rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
-  border: 1px solid rgba(168, 162, 158, 0.2) !important; /* stone-300 with transparency */
-  border-radius: 6px !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
-}
-
-.source-tab:hover {
-  background: rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
-  border-color: rgba(168, 162, 158, 0.3) !important; /* stone-300 with transparency */
-}
-
-.source-tab.active {
-  background: rgba(34, 197, 94, 0.1) !important; /* green-500 with transparency */
-  color: #16a34a !important; /* green-600 */
-  border-color: rgba(34, 197, 94, 0.3) !important; /* green-500 with transparency */
-}
-
-/* Widget footer */
-.widget-footer {
-  padding: 16px 20px !important;
-  border-top: 1px solid rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
-  display: flex !important;
-  gap: 12px !important;
-  justify-content: flex-end !important;
-}
-
-.widget-btn {
-  padding: 8px 16px !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  border-radius: 6px !important;
-  border: 1px solid transparent !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
-  font-family: 'Inter', sans-serif !important;
-}
-
-.widget-btn.secondary {
-  background: rgba(168, 162, 158, 0.1) !important; /* stone-300 with transparency */
-  color: #57534e !important; /* stone-600 */
-  border-color: rgba(168, 162, 158, 0.2) !important; /* stone-300 with transparency */
-}
-
-.widget-btn.secondary:hover {
-  background: rgba(168, 162, 158, 0.15) !important; /* stone-300 with transparency */
-  border-color: rgba(168, 162, 158, 0.3) !important; /* stone-300 with transparency */
-}
-
-.widget-btn.primary {
-  background: rgba(168, 162, 158, 0.9) !important; /* stone-300 with transparency */
-  color: #44403c !important; /* stone-700 */
-  border-color: rgba(168, 162, 158, 0.9) !important; /* stone-300 with transparency */
-}
-
-.widget-btn.primary:hover {
-  background: rgba(168, 162, 158, 1) !important; /* stone-300 solid */
-  border-color: rgba(168, 162, 158, 1) !important; /* stone-300 solid */
-  transform: translateY(-1px) !important;
+.pointfour-reviews-button.subtle svg {
+  stroke: #000000;
 }
