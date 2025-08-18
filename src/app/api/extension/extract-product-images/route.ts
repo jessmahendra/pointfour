@@ -34,7 +34,8 @@ function scoreImage(url: string, alt: string, selector: string, imageIndex: numb
   // Negative indicators for model/editorial shots
   const modelKeywords = [
     'model', 'look', 'editorial', 'campaign', 'onfigure', 'on-figure', 
-    'worn', 'street', 'runway', 'lifestyle', 'lookbook', 'hero', '01'
+    'worn', 'street', 'runway', 'lifestyle', 'lookbook', 'hero', '01',
+    'person', 'woman', 'man', 'girl', 'boy', 'female', 'male', 'portrait'
   ];
 
   // Fashion-specific positive patterns
@@ -60,8 +61,13 @@ function scoreImage(url: string, alt: string, selector: string, imageIndex: numb
   // Check URL for negative keywords
   for (const keyword of modelKeywords) {
     if (urlLower.includes(keyword)) {
-      score -= 15;
+      score -= 25; // Stronger penalty for model indicators in URL
     }
+  }
+  
+  // Heavily penalize URLs that suggest model shots
+  if (urlLower.includes('model') || urlLower.includes('person') || urlLower.includes('portrait')) {
+    score -= 50; // Very strong penalty for obvious model shots
   }
 
   // Check alt text for positive keywords
@@ -84,16 +90,28 @@ function scoreImage(url: string, alt: string, selector: string, imageIndex: numb
     
     // Fashion sites often have hero/model shot first, then product images
     if (position === 1) {
-      score -= 5; // First image often has model
+      score -= 20; // First image often has model - stronger penalty
+    } else if (position === 2) {
+      score -= 10; // Second image often still has model
     } else if (position >= 4 && position <= 6) {
-      score += 15; // 4th-6th images are often product-only (Rohe pattern)
-    } else if (position > 6) {
-      score += 8; // Later images are usually product details
+      score += 25; // 4th-6th images are often product-only (Rohe/Realisation pattern)
+    } else if (position >= 7 && position <= 10) {
+      score += 15; // Later images are usually product details
+    } else if (position > 10) {
+      score += 8; // Much later images might be lifestyle but still product-focused
     }
     
     // Bonus for being in the "sweet spot" for product images
-    if (position >= 3 && position <= 7) {
-      score += 10;
+    if (position >= 3 && position <= 8) {
+      score += 15;
+    }
+    
+    // Extra bonus for the exact positions you mentioned
+    if (position === 5) {
+      score += 10; // Rohe pattern
+    }
+    if (position === 6) {
+      score += 10; // Realisation Par pattern
     }
   }
 
@@ -102,15 +120,30 @@ function scoreImage(url: string, alt: string, selector: string, imageIndex: numb
     score += 25;
   }
 
-  // Rohe-specific bonuses
+  // Fashion site specific bonuses
   if (urlLower.includes('rohe') || urlLower.includes('roheframes')) {
     // Rohe often uses sequential numbering for product images
     if (/\d{2,3}/.test(urlLower)) {
-      score += 12;
+      score += 15;
     }
     // Rohe product images often have specific patterns
     if (urlLower.includes('_') && /\d/.test(urlLower)) {
-      score += 8;
+      score += 10;
+    }
+    // Rohe product images are often in specific positions
+    if (imageIndex >= 3 && imageIndex <= 5) {
+      score += 20; // Extra bonus for positions 4-6
+    }
+  }
+  
+  if (urlLower.includes('realisation') || urlLower.includes('realisationpar')) {
+    // Realisation Par specific patterns
+    if (urlLower.includes('product') || urlLower.includes('item')) {
+      score += 12;
+    }
+    // Realisation Par product images are often in position 6
+    if (imageIndex === 5) { // 0-indexed, so position 6
+      score += 25;
     }
   }
 
@@ -205,6 +238,39 @@ export async function POST(request: Request) {
     const $ = cheerio.load(html);
     const domain = new URL(pageUrl).hostname;
     console.log('🌐 Domain:', domain);
+    
+    // Debug: Analyze page structure
+    console.log('🔍 Page analysis:');
+    console.log(`  - Total img tags: ${$('img').length}`);
+    console.log(`  - Product gallery selectors found:`);
+    const productGallerySelectors = [
+      '.product-gallery img',
+      '.product-images img', 
+      '.product-photos img',
+      '.gallery img',
+      '.product-image img',
+      '.product-photo img',
+      '.product-thumbnails img',
+      '.product-thumbs img',
+      '.product-carousel img',
+      '.product-slider img',
+      '[class*="gallery"] img',
+      '[class*="product"] img',
+      '[class*="carousel"] img',
+      '[class*="slider"] img',
+      'main img',
+      '.main img',
+      '.content img',
+      '.product-content img',
+      'img'
+    ];
+    
+    productGallerySelectors.forEach(selector => {
+      const count = $(selector).length;
+      if (count > 0) {
+        console.log(`    ${selector}: ${count} images`);
+      }
+    });
 
     const imageCandidates: ImageCandidate[] = [];
 
@@ -260,42 +326,63 @@ export async function POST(request: Request) {
     });
 
     // 4. Extract from img elements in product gallery containers
-    const productGallerySelectors = [
-      '.product-gallery img',
-      '.product-images img',
-      '.product-photos img',
-      '.gallery img',
-      '.product-image img',
-      '.product-photo img',
-      '[class*="gallery"] img',
-      '[class*="product"] img',
-      'main img',
-      'picture img'
-    ];
+    // Using the selectors defined above in the debug section
 
-    // Collect all images first to get total count for scoring
-    const allImages: Array<{src: string, alt: string, selector: string}> = [];
+    // Collect images with priority-based approach
+    const allImages: Array<{src: string, alt: string, selector: string, priority: number}> = [];
     
-    productGallerySelectors.forEach(selector => {
+    productGallerySelectors.forEach((selector, selectorIndex) => {
+      const priority = 100 - selectorIndex; // Higher priority for more specific selectors
+      
       $(selector).each((_, element) => {
         const src = $(element).attr('src');
         const alt = $(element).attr('alt') || '';
         
         if (src && src.startsWith('http')) {
-          allImages.push({ src, alt, selector });
+          // Skip very small images and obvious navigation elements
+          const imgElement = $(element);
+          const width = imgElement.attr('width') || imgElement.attr('data-width') || '';
+          const height = imgElement.attr('height') || imgElement.attr('data-height') || '';
+          
+          // Skip tiny images (likely icons/navigation)
+          if (width && height && parseInt(width) < 100 && parseInt(height) < 100) {
+            return;
+          }
+          
+          // Skip images that are clearly not product images
+          if (alt.toLowerCase().includes('logo') || 
+              alt.toLowerCase().includes('icon') || 
+              alt.toLowerCase().includes('nav') ||
+              src.includes('logo') ||
+              src.includes('icon')) {
+            return;
+          }
+          
+          allImages.push({ src, alt, selector, priority });
         }
       });
     });
 
+    // Remove duplicates and sort by priority
+    const uniqueImages = allImages.filter((img, index, self) => 
+      index === self.findIndex(i => i.src === img.src)
+    ).sort((a, b) => b.priority - a.priority);
+
+    console.log(`🖼️ Found ${uniqueImages.length} unique product images`);
+
     // Now score images with position information
-    allImages.forEach((img, index) => {
+    uniqueImages.forEach((img, index) => {
       const normalizedUrl = normalizeImageUrl(img.src, domain);
+      const score = scoreImage(normalizedUrl, img.alt, img.selector, index, uniqueImages.length);
+      
       imageCandidates.push({
         src: normalizedUrl,
         alt: img.alt,
         selector: img.selector,
-        score: scoreImage(normalizedUrl, img.alt, img.selector, index, allImages.length)
+        score: score
       });
+      
+      console.log(`🖼️ Image ${index + 1}: Score ${score}, URL: ${normalizedUrl.substring(0, 80)}...`);
     });
 
     // 5. Extract from script tags with JSON data
