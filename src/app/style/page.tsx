@@ -5,6 +5,7 @@ interface StylePageProps {
   searchParams: Promise<{
     brand?: string;
     itemName?: string;
+    item?: string;
     imageUrl?: string;
     pageUrl?: string;
   }>;
@@ -13,17 +14,21 @@ interface StylePageProps {
 export default async function StylePage({ searchParams }: StylePageProps) {
   const params = await searchParams;
   return (
-    <Suspense fallback={
-      <div style={{ 
-        minHeight: "100vh", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center",
-        backgroundColor: "#F8F7F4" 
-      }}>
-        <div>Loading...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div
+          style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#F8F7F4",
+          }}
+        >
+          <div>Loading...</div>
+        </div>
+      }
+    >
       <StylePageContent searchParams={params} />
     </Suspense>
   );

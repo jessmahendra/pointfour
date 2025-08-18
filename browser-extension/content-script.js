@@ -258,6 +258,12 @@
           return false;
       }
       
+      // Skip PointFour's own domain to avoid widget showing on style page
+      if (window.location.hostname.includes('pointfour.in') || window.location.hostname.includes('localhost')) {
+          console.log('[PointFour] Skipping: PointFour domain');
+          return false;
+      }
+      
       if (window.location.href === 'about:blank' || window.location.href === '') {
           console.log('[PointFour] Skipping: Blank page');
           return false;
@@ -446,7 +452,8 @@
         insights.push({
             type: 'quality',
             recommendation: sections.quality.recommendation,
-            confidence: sections.quality.confidence
+            confidence: sections.quality.confidence,
+            priority: 3 // Highest priority
         });
     }
     
@@ -455,7 +462,8 @@
         insights.push({
             type: 'fabric',
             recommendation: sections.fabric.recommendation,
-            confidence: sections.fabric.confidence
+            confidence: sections.fabric.confidence,
+            priority: 2
         });
     }
     
@@ -464,7 +472,8 @@
         insights.push({
             type: 'care',
             recommendation: sections.washCare.recommendation,
-            confidence: sections.washCare.confidence
+            confidence: sections.washCare.confidence,
+            priority: 1
         });
     }
     
@@ -472,18 +481,44 @@
         return null;
     }
     
-    // Combine insights into a single recommendation
-    const recommendations = insights.map(insight => insight.recommendation).filter(Boolean);
-    const confidences = insights.map(insight => insight.confidence).filter(Boolean);
+    // Sort by priority (highest first) and combine
+    insights.sort((a, b) => b.priority - a.priority);
     
-    // Get the highest confidence level
-    const highestConfidence = confidences.includes('high') ? 'high' : 
-                             confidences.includes('medium') ? 'medium' : 'low';
+    // Build a comprehensive but concise recommendation
+    const recommendations = [];
     
-    return {
+    // Add quality info first if available
+    const qualityInsight = insights.find(i => i.type === 'quality');
+    if (qualityInsight) {
+        recommendations.push(qualityInsight.recommendation);
+    }
+    
+    // Add fabric info if different from quality
+    const fabricInsight = insights.find(i => i.type === 'fabric');
+    if (fabricInsight && !qualityInsight?.recommendation.toLowerCase().includes('material')) {
+        recommendations.push(fabricInsight.recommendation);
+    }
+    
+    // Add care info if significant
+    const careInsight = insights.find(i => i.type === 'care');
+    if (careInsight && careInsight.confidence !== 'low') {
+        recommendations.push(careInsight.recommendation);
+    }
+    
+    // Get the highest confidence level from included insights
+    const includedConfidences = recommendations.length > 0 ? 
+        insights.filter(i => recommendations.some(r => r === i.recommendation))
+               .map(i => i.confidence)
+               .filter(Boolean) : [];
+    
+    const highestConfidence = includedConfidences.includes('high') ? 'high' : 
+                             includedConfidences.includes('medium') ? 'medium' : 'low';
+    
+    return recommendations.length > 0 ? {
         recommendation: recommendations.join('. '),
-        confidence: highestConfidence
-    };
+        confidence: highestConfidence,
+        sections: insights.length
+    } : null;
   }
 
   // ========================================
@@ -748,27 +783,82 @@
             return;
         }
         
-        // Enhanced summary display with confidence and source info
-        let summaryHtml = `<p class="pointfour-description">${recommendation}</p>`;
-        
-        // Add metadata if we have a good summary
-        if (recommendation !== 'Analyzing fit information...' && totalReviews > 0) {
-            // Try to extract confidence from structured data
-            const confidence = data.externalSearchResults?.brandFitSummary?.confidence ||
-                             data.richSummaryData?.brandFitSummary?.confidence ||
-                             data.brandFitSummary?.confidence;
+        // Extract structured fit and quality data from search results
+        const extractStructuredAnalysis = () => {
+            const searchData = data.externalSearchResults?.brandFitSummary || 
+                              data.richSummaryData?.brandFitSummary || 
+                              data.brandFitSummary;
             
-            if (confidence) {
-                summaryHtml += `<div class="pointfour-confidence">Confidence: ${confidence.toUpperCase()}</div>`;
-            }
-        }
+            if (!searchData) return null;
+            
+            return {
+                fit: searchData.sections?.fit,
+                quality: searchData.sections?.quality,
+                fabric: searchData.sections?.fabric,
+                washCare: searchData.sections?.washCare,
+                confidence: searchData.confidence,
+                totalResults: totalReviews
+            };
+        };
 
+        const structuredData = extractStructuredAnalysis();
+        
         let content = `
             <div class="pointfour-results">
                 <h3>${brandName}</h3>
-                <div class="pointfour-fit-info">
-                    ${summaryHtml}
         `;
+        
+        // FIT SECTION - Always show if we have fit data
+        if (structuredData?.fit) {
+            content += `
+                <div class="pointfour-fit-info">
+                    <h4>Fit:</h4>
+                    <p class="pointfour-description">${structuredData.fit.recommendation}</p>
+                    ${structuredData.fit.confidence ? `<div class="pointfour-confidence">Confidence: ${structuredData.fit.confidence.toUpperCase()}</div>` : ''}
+                </div>
+            `;
+        } else if (recommendation !== 'Analyzing fit information...' && totalReviews > 0) {
+            // Fallback: try to extract fit info from the general recommendation
+            const fitKeywords = ['runs small', 'runs large', 'true to size', 'size up', 'size down', 'tight', 'loose', 'fits'];
+            const hassFitInfo = fitKeywords.some(keyword => recommendation.toLowerCase().includes(keyword));
+            
+            if (hassFitInfo) {
+                content += `
+                    <div class="pointfour-fit-info">
+                        <h4>Fit:</h4>
+                        <p class="pointfour-description">${recommendation}</p>
+                    </div>
+                `;
+            } else {
+                // Show general summary under brand name if no specific fit data
+                content += `
+                    <div class="pointfour-fit-info">
+                        <p class="pointfour-description">${recommendation}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // QUALITY & MATERIALS SECTION - Show structured quality info
+        const qualityInsights = structuredData ? extractQualityInsights({ brandFitSummary: { sections: structuredData } }) : null;
+        if (qualityInsights) {
+            content += `
+                <div class="pointfour-quality-info">
+                    <h4>Quality & Materials:</h4>
+                    <p>${qualityInsights.recommendation}</p>
+                    ${qualityInsights.confidence ? `<div class="pointfour-confidence">Confidence: ${qualityInsights.confidence.toUpperCase()}</div>` : ''}
+                </div>
+            `;
+        }
+        
+        // Add confidence indicator for overall analysis
+        if (structuredData?.confidence && totalReviews > 0) {
+            content += `
+                <div class="pointfour-confidence">
+                    <small>Based on ${totalReviews} review${totalReviews === 1 ? '' : 's'} • ${structuredData.confidence.toUpperCase()} confidence</small>
+                </div>
+            `;
+        }
         
         if (fitTips.length > 0) {
             content += `
@@ -779,36 +869,6 @@
                     </ul>
                 </div>
             `;
-        }
-
-        // Add quality insights if available
-        const findQualityData = () => {
-            const locations = [
-                data.externalSearchResults,
-                data.richSummaryData,
-                data
-            ];
-            
-            for (const searchData of locations) {
-                if (searchData && searchData.brandFitSummary && searchData.brandFitSummary.sections) {
-                    return searchData;
-                }
-            }
-            return null;
-        };
-
-        const qualityData = findQualityData();
-        if (qualityData) {
-            const qualityInsights = extractQualityInsights(qualityData);
-            if (qualityInsights) {
-                content += `
-                    <div class="pointfour-quality-info">
-                        <h4>Quality & Materials:</h4>
-                        <p>${qualityInsights.recommendation}</p>
-                        ${qualityInsights.confidence ? `<div class="pointfour-confidence">Confidence: ${qualityInsights.confidence.toUpperCase()}</div>` : ''}
-                    </div>
-                `;
-            }
         }
         
         // Add clickable button for review count
@@ -887,36 +947,123 @@
       window.open(styleUrl, '_blank', 'noopener,noreferrer');
   }
   
-  function extractProductImageFromPage() {
-      const imageSelectors = [
-          'meta[property="og:image"]',
-          'meta[name="twitter:image"]',
-          '[data-testid*="product"] img',
-          '.product-image img',
-          '.product-photo img',
-          '.product img',
-          '.hero-image img',
-          '.main-image img',
-          'img[src*="product"]',
-          'img[alt*="product" i]',
-          'picture img',
-          '.gallery img',
-          '[class*="image"] img',
-          'main img'
-      ];
-
-      for (const selector of imageSelectors) {
-          const element = document.querySelector(selector);
-          if (element) {
-              const src = element.tagName === 'META' ? element.content : element.src;
-              if (src && src.startsWith('http') && !src.includes('placeholder') && !src.includes('loading')) {
-                  console.log('🎨 Found product image with selector:', selector, 'URL:', src);
-                  return src;
-              }
-          }
-      }
+function extractProductImageFromPage() {
+    // Helper to check if image URL suggests it's product-only
+    const isLikelyProductOnly = (url) => {
+      if (!url) return false;
+      const urlLower = url.toLowerCase();
       
-      return null;
+      // Positive indicators (product only)
+      const productIndicators = ['_flat', '_alt', '_back', '_detail', '_zoom', '_product', '_still', '_02', '_03', '_04'];
+      // Negative indicators (has model)
+      const modelIndicators = ['_model', '_worn', '_lifestyle', '_hero', '_campaign', '_01'];
+      
+      const hasProductIndicator = productIndicators.some(ind => urlLower.includes(ind));
+      const hasModelIndicator = modelIndicators.some(ind => urlLower.includes(ind));
+      
+      return hasProductIndicator && !hasModelIndicator;
+    };
+  
+    // First, try to find product gallery images
+    const galleryImages = [];
+    const gallerySelectors = [
+      '.product-thumbnails img',
+      '.product-gallery__thumbnail img',
+      '.thumbnails img',
+      '[class*="thumb"] img',
+      '.product-images img',
+      '.product__photos img',
+      '[class*="ProductThumbnail"] img',
+      '.swiper-slide img',
+      '.slick-slide img'
+    ];
+    
+    for (const selector of gallerySelectors) {
+      document.querySelectorAll(selector).forEach(img => {
+        if (img.src && img.src.startsWith('http')) {
+          const cleanSrc = img.src.split('?')[0]; // Remove query parameters
+          if (!galleryImages.includes(cleanSrc)) {
+            galleryImages.push(cleanSrc);
+          }
+        }
+      });
+    }
+    
+    console.log('🎨 Found gallery images:', galleryImages.length);
+    
+    // Check gallery images for product-only shots
+    for (const imgUrl of galleryImages) {
+      if (isLikelyProductOnly(imgUrl)) {
+        console.log('🎨 Found product-only image in gallery:', imgUrl);
+        return imgUrl;
+      }
+    }
+    
+    // If gallery has multiple images, often 2nd or 3rd is product-only
+    if (galleryImages.length > 1) {
+      // Skip first (usually hero/model) and check next few
+      for (let i = 1; i < Math.min(4, galleryImages.length); i++) {
+        if (!galleryImages[i].includes('_01') && !galleryImages[i].includes('hero')) {
+          console.log('🎨 Using gallery image #' + (i+1) + ' as likely product-only:', galleryImages[i]);
+          return galleryImages[i];
+        }
+      }
+    }
+    
+    // Try specific selectors for product-only images
+    const productOnlySelectors = [
+      'img[alt*="flat" i]',
+      'img[alt*="product" i]',
+      'img[alt*="detail" i]',
+      'img[src*="_flat"]',
+      'img[src*="_alt"]',
+      'img[src*="_detail"]',
+      'img[src*="_back"]',
+      '.product-image-alt img',
+      '.product-flat-lay img'
+    ];
+    
+    for (const selector of productOnlySelectors) {
+      try {
+        const element = document.querySelector(selector);
+        if (element && element.src && element.src.startsWith('http')) {
+          console.log('🎨 Found product-only image with selector:', selector);
+          return element.src.split('?')[0];
+        }
+      } catch (e) {
+        // Continue if selector fails
+      }
+    }
+    
+    // Fallback to meta tags but check if they're product-only
+    const metaImage = document.querySelector('meta[property="og:image"]');
+    if (metaImage && metaImage.content) {
+      const metaImageUrl = metaImage.content;
+      if (isLikelyProductOnly(metaImageUrl)) {
+        console.log('🎨 Using meta image as product-only');
+        return metaImageUrl;
+      }
+    }
+    
+    // Last resort: main product image
+    const mainImageSelectors = [
+      '.product-image img',
+      '.product-photo img',
+      '[class*="ProductImage"] img',
+      'picture img',
+      'main img'
+    ];
+  
+    for (const selector of mainImageSelectors) {
+      const element = document.querySelector(selector);
+      if (element && element.src && element.src.startsWith('http')) {
+        console.log('🎨 Using main image (may include model):', selector);
+        return element.src.split('?')[0];
+      }
+    }
+    
+    console.log('🎨 No product image found');
+    return null;
   }
   
   function extractItemNameFromPage() {

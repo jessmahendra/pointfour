@@ -2,7 +2,10 @@ import { airtableService } from '@/lib/airtable';
 
 export async function POST(request: Request) {
   try {
-    const { brand, itemName } = await request.json();
+    const { brand, itemName, item } = await request.json();
+    
+    // Fix query param mismatch: read itemName if present, else item
+    const finalItemName = itemName || item;
     
     if (!brand) {
       return new Response(
@@ -70,8 +73,8 @@ export async function POST(request: Request) {
       let finalReviews = processedReviews;
       
       // If item name is provided, also filter by item name (fuzzy match)
-      if (itemName && itemName.trim()) {
-        const normalizedItemName = itemName.toLowerCase().trim();
+      if (finalItemName && finalItemName.trim()) {
+        const normalizedItemName = finalItemName.toLowerCase().trim();
         console.log('🔍 DEBUG: Looking for item:', normalizedItemName);
         
         finalReviews = finalReviews.filter(review => {
@@ -154,7 +157,7 @@ export async function POST(request: Request) {
       const responseData = {
         success: true,
         brand: brand,
-        itemName: itemName || null,
+        itemName: finalItemName || null,
         totalReviews: finalReviews.length,
         reviews: limitedReviews.map(review => ({
           id: review.id,

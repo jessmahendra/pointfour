@@ -3,7 +3,7 @@
 
 // Use production URL by default, fallback to localhost for development
 const API_BASE_URL = 'https://www.pointfour.in';
-const BRAND_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const BRAND_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (reduced for testing fresh data)
 const brandCache = new Map();
 const tabStates = new Map();
 
@@ -290,10 +290,15 @@ async function detectBrand(tabId, domainOrBrand, url) {
     const cacheKey = `${domainOrBrand}_${url}`;
     if (brandCache.has(cacheKey)) {
       const cached = brandCache.get(cacheKey);
-      if (Date.now() - cached.timestamp < BRAND_CACHE_DURATION) {
-        console.log('🎯 Background: Using cached brand data for:', domainOrBrand);
+      const age = Date.now() - cached.timestamp;
+      if (age < BRAND_CACHE_DURATION) {
+        console.log(`🎯 Background: Using cached brand data for: ${domainOrBrand} (age: ${Math.round(age/1000)}s)`);
+        console.log('🎯 Background: Cached data preview:', cached.data.brandName, cached.data.externalSearchResults?.totalResults || 0, 'reviews');
         sendBrandDataToTab(tabId, cached.data);
         return;
+      } else {
+        console.log(`🎯 Background: Cache expired for ${domainOrBrand} (age: ${Math.round(age/1000)}s), fetching fresh data`);
+        brandCache.delete(cacheKey);
       }
     }
 
@@ -394,7 +399,9 @@ async function fetchBrandData(brandName, category = 'general') {
     }
     
     // Use the working search-reviews endpoint for brands that should show fit advice
-    console.log('🔍 Using enhanced search-reviews endpoint for:', brandName, 'category:', category);
+    console.log('🔍 Making API call to search-reviews endpoint for brand:', brandName, 'category:', category);
+    console.log('🔍 API URL:', `${API_BASE_URL}/api/extension/search-reviews`);
+    console.log('🔍 Request body:', JSON.stringify({ brand: brandName, itemName: '', category, enhancedAnalysis: true }));
     
     const response = await fetch(`${API_BASE_URL}/api/extension/search-reviews`, {
       method: 'POST',
@@ -408,6 +415,8 @@ async function fetchBrandData(brandName, category = 'general') {
         enhancedAnalysis: true // Flag for enhanced analysis
       })
     });
+    
+    console.log('🔍 API response status:', response.status, response.statusText);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -416,7 +425,13 @@ async function fetchBrandData(brandName, category = 'general') {
     }
 
     const data = await response.json();
-    console.log('✅ Brand data fetched successfully:', data);
+    console.log('✅ API Response received for brand:', brandName);
+    console.log('✅ Response summary:', {
+      totalResults: data.totalResults || 0,
+      hasBrandFitSummary: !!data.brandFitSummary,
+      summaryPreview: data.brandFitSummary?.summary?.substring(0, 100) + '...' || 'N/A',
+      sectionsCount: data.brandFitSummary?.sections ? Object.keys(data.brandFitSummary.sections).length : 0
+    });
     
     // Don't generate old-style summary - let popup handle rich summaries
     // Enhanced analysis of the response
@@ -555,71 +570,249 @@ function analyzeSearchResults(data, brandName) {
 }
 
 // Extract product image from page
+
 async function extractProductImage(tabId) {
   try {
-    console.log('🖼️ Extracting product image from tab:', tabId);
+    console.log('🖼️ Extracting product images from tab:', tabId);
     
     const results = await chrome.scripting.executeScript({
       target: { tabId: tabId },
       func: () => {
-        // Try to find the main product image using common selectors
-        const imageSelectors = [
-          'img[data-testid*="product"]',
-          'img[class*="product"]',
-          'img[class*="hero"]',
-          'img[class*="main"]',
-          '.product-image img',
-          '.hero-image img',
-          '.gallery img:first-child',
-          '[data-testid="pdp-image"] img',
-          '.pdp-image img',
-          'main img:first-of-type',
-          '.product-gallery img:first-child'
+        // Function to check if image likely shows product only (no model)
+        const isProductOnlyImage = (imgUrl) => {
+          if (!imgUrl) return false;
+          const urlLower = imgUrl.toLowerCase();
+          
+          // Strong indicators of product-only images
+          const productOnlyKeywords = [
+            '_flat', 'flat_', 'flatlay',
+            '_still', 'still_', 
+            '_alt', 'alternate',
+            '_detail', 'detail_',
+            '_back', 'back_',
+            '_close', 'closeup',
+            '_product', 'product_',
+            '_lay', 'lay_',
+            // Numbered images after first are often product-only
+            '_02', '_03', '_04', '_05', '_06',
+            '/2_', '/3_', '/4_', '/5_', '/6_',
+            '-2.', '-3.', '-4.', '-5.', '-6.'
+          ];
+          
+          // Indicators that image has a model
+          const modelKeywords = [
+            '_model', 'model_', 
+            '_worn', 'worn_',
+            '_lifestyle', 'lifestyle_',
+            '_campaign', 'campaign_',
+            '_editorial', 'editorial_',
+            '_lookbook', 'lookbook_',
+            '_on-figure', 'onfigure',
+            // First image often has model
+            '_01', '_1.', '/1_', '-1.'
+          ];
+          
+          const hasProductKeyword = productOnlyKeywords.some(kw => urlLower.includes(kw));
+          const hasModelKeyword = modelKeywords.some(kw => urlLower.includes(kw));
+          
+          // If URL suggests it's image 2-6, likely product-only
+          const imageNumberMatch = urlLower.match(/[_\-\/]([2-6])[_\-\.]/);
+          if (imageNumberMatch) {
+            return !hasModelKeyword;
+          }
+          
+          return hasProductKeyword && !hasModelKeyword;
+        };
+
+        // Collect all unique image URLs from the page
+        const allImageUrls = new Set();
+        const images = {
+          primary: null,
+          productOnly: null,
+          gallery: [],
+          allImages: []
+        };
+
+        // Strategy 1: Find ALL images in product galleries (including hidden/inactive slides)
+        const gallerySelectors = [
+          // Swiper/Slick sliders (including inactive slides)
+          '.swiper-wrapper img',
+          '.swiper-slide img',
+          '.slick-list img',
+          '.slick-slide img',
+          '.slick-track img',
+          
+          // Product galleries
+          '.product-images img',
+          '.product-gallery img',
+          '.product__images img',
+          '.product-photos img',
+          '.product__photos img',
+          '.product-thumbnails img',
+          '.product-gallery-thumbnails img',
+          
+          // Thumbnail specific
+          '[class*="thumbnail"] img',
+          '[class*="thumb"] img',
+          '.thumbs img',
+          
+          // Generic gallery patterns
+          '[class*="gallery"] img',
+          '[class*="ProductImage"] img',
+          '[class*="product-image"] img',
+          
+          // Data attributes
+          '[data-image] img',
+          '[data-src]',
+          '[data-zoom]',
+          
+          // Róhe specific patterns
+          '.product__slideshow img',
+          '.product-single__photos img'
         ];
-        
-        for (const selector of imageSelectors) {
-          const img = document.querySelector(selector);
-          if (img && img.src && img.src.startsWith('http')) {
-            return {
-              src: img.src,
-              alt: img.alt || '',
-              selector: selector
-            };
+
+        // Collect all images from galleries
+        for (const selector of gallerySelectors) {
+          try {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(img => {
+              // Get actual image URL from various sources
+              let imgUrl = img.src || img.dataset.src || img.dataset.zoom || img.getAttribute('data-src');
+              
+              if (imgUrl && imgUrl.startsWith('http')) {
+                // Clean URL
+                imgUrl = imgUrl.split('?')[0];
+                
+                if (!allImageUrls.has(imgUrl)) {
+                  allImageUrls.add(imgUrl);
+                  images.allImages.push(imgUrl);
+                  
+                  // Check if this is likely a product-only image
+                  if (isProductOnlyImage(imgUrl)) {
+                    console.log('Found product-only image:', imgUrl);
+                    if (!images.productOnly) {
+                      images.productOnly = imgUrl;
+                    }
+                  }
+                }
+              }
+            });
+          } catch (e) {
+            // Continue if selector fails
           }
         }
-        
-        // Fallback: find the largest image on the page
-        const allImages = Array.from(document.querySelectorAll('img'));
-        const validImages = allImages.filter(img => 
-          img.src && 
-          img.src.startsWith('http') && 
-          img.naturalWidth > 200 && 
-          img.naturalHeight > 200 &&
-          !img.src.includes('logo') &&
-          !img.src.includes('icon')
-        );
-        
-        if (validImages.length > 0) {
-          // Sort by size and take the largest
-          validImages.sort((a, b) => (b.naturalWidth * b.naturalHeight) - (a.naturalWidth * a.naturalHeight));
-          const largestImg = validImages[0];
-          return {
-            src: largestImg.src,
-            alt: largestImg.alt || '',
-            selector: 'fallback-largest'
-          };
+
+        // Strategy 2: Check for images in data attributes (lazy loaded images)
+        const lazyImageSelectors = [
+          '[data-src*="product"]',
+          '[data-src*="flat"]',
+          '[data-src*="_2"]',
+          '[data-src*="_3"]',
+          '[data-src*="_4"]',
+          '[data-src*="_5"]'
+        ];
+
+        for (const selector of lazyImageSelectors) {
+          try {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(elem => {
+              const imgUrl = elem.getAttribute('data-src');
+              if (imgUrl && imgUrl.startsWith('http')) {
+                const cleanUrl = imgUrl.split('?')[0];
+                if (!allImageUrls.has(cleanUrl)) {
+                  allImageUrls.add(cleanUrl);
+                  images.allImages.push(cleanUrl);
+                  
+                  if (isProductOnlyImage(cleanUrl)) {
+                    if (!images.productOnly) {
+                      images.productOnly = cleanUrl;
+                    }
+                  }
+                }
+              }
+            });
+          } catch (e) {
+            // Continue
+          }
         }
-        
-        return null;
+
+        // Strategy 3: Extract from JavaScript objects (many sites store gallery data in JS)
+        try {
+          // Look for product data in window object
+          const productDataKeys = ['product', 'productData', 'productImages', 'galleryImages'];
+          for (const key of productDataKeys) {
+            if (window[key] && typeof window[key] === 'object') {
+              const extractImagesFromObj = (obj) => {
+                if (typeof obj === 'string' && obj.startsWith('http')) {
+                  const cleanUrl = obj.split('?')[0];
+                  if (!allImageUrls.has(cleanUrl)) {
+                    allImageUrls.add(cleanUrl);
+                    images.allImages.push(cleanUrl);
+                  }
+                } else if (Array.isArray(obj)) {
+                  obj.forEach(item => extractImagesFromObj(item));
+                } else if (obj && typeof obj === 'object') {
+                  Object.values(obj).forEach(value => extractImagesFromObj(value));
+                }
+              };
+              extractImagesFromObj(window[key]);
+            }
+          }
+        } catch (e) {
+          // Continue
+        }
+
+        // Strategy 4: If no product-only image found yet, use position-based heuristic
+        if (!images.productOnly && images.allImages.length > 1) {
+          // Images at position 2-5 are often product-only (skip first which is usually model)
+          for (let i = 1; i < Math.min(6, images.allImages.length); i++) {
+            const imgUrl = images.allImages[i];
+            // Skip if URL suggests it's the main/model image
+            if (!imgUrl.includes('_01') && !imgUrl.includes('_1.') && !imgUrl.includes('model')) {
+              console.log(`Using image at position ${i + 1} as likely product-only:`, imgUrl);
+              images.productOnly = imgUrl;
+              break;
+            }
+          }
+        }
+
+        // Get main image as fallback
+        const mainImg = document.querySelector('.product-image-main img, .product__main-photos img, [class*="ProductImage"] img');
+        if (mainImg && mainImg.src) {
+          images.primary = mainImg.src.split('?')[0];
+        }
+
+        // Final fallback: use any found image
+        if (!images.productOnly && images.allImages.length > 0) {
+          // Try position 4 or 5 first (often flat lay)
+          images.productOnly = images.allImages[4] || images.allImages[3] || images.allImages[1] || images.allImages[0];
+        }
+
+        console.log('🖼️ Image extraction complete:', {
+          totalImages: images.allImages.length,
+          productOnly: images.productOnly ? 'Found' : 'Not found',
+          usingPosition: images.productOnly ? images.allImages.indexOf(images.productOnly) + 1 : 'N/A'
+        });
+
+        return {
+          src: images.productOnly || images.primary || images.allImages[0],
+          productOnly: images.productOnly,
+          primary: images.primary,
+          allImages: images.allImages,
+          selector: images.productOnly ? `product-only (position ${images.allImages.indexOf(images.productOnly) + 1})` : 'fallback'
+        };
       }
     });
     
     if (results && results[0] && results[0].result) {
-      console.log('✅ Product image extracted:', results[0].result);
+      console.log('✅ Product images extracted:', {
+        ...results[0].result,
+        totalFound: results[0].result.allImages?.length || 0
+      });
       return results[0].result;
     }
     
-    console.log('❌ No product image found');
+    console.log('❌ No product images found');
     return null;
   } catch (error) {
     console.error('Error extracting product image:', error);
@@ -1044,14 +1237,43 @@ chrome.action.onClicked.addListener((tab) => {
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     console.log('Pointfour Fashion Assistant installed');
+    brandCache.clear();
   } else if (details.reason === 'update') {
     console.log('Pointfour Fashion Assistant updated to version:', chrome.runtime.getManifest().version);
+    brandCache.clear();
   }
 });
 
 // Handle extension startup
 chrome.runtime.onStartup.addListener(() => {
   console.log('Pointfour Fashion Assistant started');
+  brandCache.clear();
+});
+
+// Add manual cache clearing for debugging
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'CLEAR_CACHE') {
+    console.log('🧹 Background: Manually clearing cache');
+    brandCache.clear();
+    sendResponse({ success: true, message: 'Cache cleared' });
+    return true;
+  }
+  
+  if (message.type === 'GET_CACHE_INFO') {
+    console.log('📊 Background: Cache status requested');
+    const cacheInfo = {
+      size: brandCache.size,
+      entries: Array.from(brandCache.keys()),
+      ages: Array.from(brandCache.entries()).map(([key, value]) => ({
+        key,
+        ageSeconds: Math.round((Date.now() - value.timestamp) / 1000),
+        brand: value.data.brandName
+      }))
+    };
+    console.log('📊 Background: Cache info:', cacheInfo);
+    sendResponse(cacheInfo);
+    return true;
+  }
 });
 
 // Handle extension shutdown

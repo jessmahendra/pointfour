@@ -21,40 +21,48 @@ interface StylePageContentProps {
   searchParams: {
     brand?: string;
     itemName?: string;
+    item?: string;
     imageUrl?: string;
     pageUrl?: string;
   };
 }
 
-export default function StylePageContent({ searchParams }: StylePageContentProps) {
+export default function StylePageContent({
+  searchParams,
+}: StylePageContentProps) {
   // Initialize productInfo directly from searchParams if available
-  const initialProductInfo = searchParams.brand ? {
-    brand: searchParams.brand,
-    itemName: searchParams.itemName || "",
-    imageUrl: searchParams.imageUrl || "",
-    pageUrl: searchParams.pageUrl || ""
-  } : null;
-  
-  const [productInfo, setProductInfo] = useState<ProductInfo | null>(initialProductInfo);
+  const initialProductInfo = searchParams.brand
+    ? {
+        brand: searchParams.brand,
+        // Fix query param mismatch: read itemName if present, else item
+        itemName: searchParams.itemName || searchParams.item || "",
+        imageUrl: searchParams.imageUrl || "",
+        pageUrl: searchParams.pageUrl || "",
+      }
+    : null;
+
+  const [productInfo, setProductInfo] = useState<ProductInfo | null>(
+    initialProductInfo
+  );
   const [userItems, setUserItems] = useState<UserItem[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("tops");
   const [collageDataUrl, setCollageDataUrl] = useState<string | null>(null);
   const [currentOutfitIndex, setCurrentOutfitIndex] = useState(0);
-  
+
   // Clothing categories
   const categories = [
     { id: "tops", name: "Tops", emoji: "👔" },
     { id: "bottoms", name: "Bottoms", emoji: "👖" },
     { id: "shoes", name: "Shoes", emoji: "👟" },
     { id: "accessories", name: "Accessories", emoji: "👜" },
-    { id: "outerwear", name: "Outerwear", emoji: "🧥" }
+    { id: "outerwear", name: "Outerwear", emoji: "🧥" },
   ];
 
   useEffect(() => {
     // Update productInfo if searchParams change (for client-side navigation)
     const brand = searchParams.brand || "";
-    const itemName = searchParams.itemName || "";
+    const itemName = searchParams.itemName || searchParams.item || "";
     const imageUrl = searchParams.imageUrl || "";
     const pageUrl = searchParams.pageUrl || "";
 
@@ -63,41 +71,97 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
     }
   }, [searchParams, productInfo]);
 
+  // If we only have a pageUrl (and possibly no imageUrl), fetch best product image from server
+  useEffect(() => {
+    const shouldExtract =
+      !!productInfo && !!productInfo.pageUrl && !productInfo.imageUrl;
+    if (!shouldExtract) return;
+
+    let isCancelled = false;
+
+    const extract = async () => {
+      try {
+        const resp = await fetch("/api/extension/extract-product-images", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pageUrl: productInfo!.pageUrl }),
+        });
+        if (!resp.ok) return;
+        const data: {
+          bestImage?: { src: string; alt: string; selector: string };
+        } = await resp.json();
+        if (!isCancelled && data?.bestImage?.src) {
+          setProductInfo((prev) =>
+            prev ? { ...prev, imageUrl: data.bestImage!.src } : prev
+          );
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    extract();
+    return () => {
+      isCancelled = true;
+    };
+  }, [productInfo?.pageUrl, productInfo?.imageUrl]);
+
   const addUserItem = () => {
     if (inputValue.trim()) {
       const newItem: UserItem = {
         id: Date.now().toString(),
         text: inputValue.trim(),
         category: selectedCategory,
-        color: extractColorFromText(inputValue)
+        color: extractColorFromText(inputValue),
       };
       setUserItems([...userItems, newItem]);
       setInputValue("");
     }
   };
-  
+
   // Helper function to extract color information from text
   const extractColorFromText = (text: string): string | undefined => {
-    const colors = ['black', 'white', 'blue', 'red', 'green', 'yellow', 'pink', 'purple', 'orange', 'brown', 'gray', 'grey', 'beige', 'navy', 'cream'];
+    const colors = [
+      "black",
+      "white",
+      "blue",
+      "red",
+      "green",
+      "yellow",
+      "pink",
+      "purple",
+      "orange",
+      "brown",
+      "gray",
+      "grey",
+      "beige",
+      "navy",
+      "cream",
+    ];
     const lowerText = text.toLowerCase();
-    return colors.find(color => lowerText.includes(color));
+    return colors.find((color) => lowerText.includes(color));
   };
-  
+
   // Group items by category
   const groupedItems = categories.reduce((acc, category) => {
-    acc[category.id] = userItems.filter(item => item.category === category.id);
+    acc[category.id] = userItems.filter(
+      (item) => item.category === category.id
+    );
     return acc;
   }, {} as Record<string, UserItem[]>);
-  
+
   // Generate outfit combinations
   const generateOutfitCombinations = () => {
-    const combinations = [];
+    const combinations: Array<{
+      id: number;
+      pieces: (ProductInfo | UserItem)[];
+    }> = [];
     const tops = groupedItems.tops;
     const bottoms = groupedItems.bottoms;
     const shoes = groupedItems.shoes;
-    
+
     if (tops.length === 0 && bottoms.length === 0) return [];
-    
+
     // Create combinations with the new product
     for (let t = 0; t < Math.max(1, tops.length); t++) {
       for (let b = 0; b < Math.max(1, bottoms.length); b++) {
@@ -108,18 +172,20 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
             tops[t],
             bottoms[b],
             ...(shoes.length > 0 ? [shoes[0]] : []),
-            ...(groupedItems.accessories.length > 0 ? [groupedItems.accessories[0]] : [])
-          ].filter(Boolean)
+            ...(groupedItems.accessories.length > 0
+              ? [groupedItems.accessories[0]]
+              : []),
+          ].filter(Boolean) as (ProductInfo | UserItem)[],
         };
         combinations.push(outfit);
       }
     }
-    
+
     return combinations.slice(0, 6); // Limit to 6 combinations
   };
 
   const removeUserItem = (id: string) => {
-    setUserItems(userItems.filter(item => item.id !== id));
+    setUserItems(userItems.filter((item) => item.id !== id));
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -157,7 +223,11 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
       // Add subtitle
       ctx.font = "18px Inter, Arial";
       ctx.fillStyle = "#666";
-      ctx.fillText(`Featuring ${productInfo.brand} - ${productInfo.itemName}`, canvas.width / 2, 85);
+      ctx.fillText(
+        `Featuring ${productInfo.brand} - ${productInfo.itemName}`,
+        canvas.width / 2,
+        85
+      );
 
       // Draw product image placeholder or actual image
       if (productInfo.imageUrl) {
@@ -169,9 +239,9 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
             const imgSize = 200;
             const imgX = 50;
             const imgY = 120;
-            
+
             ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
-            
+
             // Continue with drawing user items
             drawUserItems();
           };
@@ -192,15 +262,15 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
 
       function drawProductPlaceholder() {
         if (!ctx) return;
-        
+
         // Draw product placeholder
         const imgSize = 200;
         const imgX = 50;
         const imgY = 120;
-        
+
         ctx.fillStyle = "#E5E5E5";
         ctx.fillRect(imgX, imgY, imgSize, imgSize);
-        
+
         ctx.fillStyle = "#666";
         ctx.font = "14px Arial";
         ctx.textAlign = "center";
@@ -209,37 +279,196 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
 
       function drawUserItems() {
         if (!ctx) return;
-        
+
         // Draw outfit layout in a more sophisticated manner
-        let currentY = 130;
+        const currentY = 130;
         const leftColumn = 80;
         const rightColumn = 520;
         const centerX = canvas.width / 2;
-        
+
         // Draw the featured product prominently in the center
         ctx.fillStyle = "#2D2D2D";
         ctx.font = "bold 20px Inter, Arial";
         ctx.textAlign = "center";
         ctx.fillText("✨ NEW PIECE", centerX, currentY);
-        
+
         // Draw product card
         const productCardY = currentY + 20;
         const cardWidth = 200;
         const cardHeight = 280;
-        
+
         // Product card background with subtle shadow
         ctx.fillStyle = "rgba(0,0,0,0.1)";
-        ctx.fillRect(centerX - cardWidth/2 + 3, productCardY + 3, cardWidth, cardHeight);
-        
+        ctx.fillRect(
+          centerX - cardWidth / 2 + 3,
+          productCardY + 3,
+          cardWidth,
+          cardHeight
+        );
+
         ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(centerX - cardWidth/2, productCardY, cardWidth, cardHeight);
-        
+        ctx.fillRect(
+          centerX - cardWidth / 2,
+          productCardY,
+          cardWidth,
+          cardHeight
+        );
+
         ctx.strokeStyle = "#E5E5E5";
         ctx.lineWidth = 2;
-        ctx.strokeRect(centerX - cardWidth/2, productCardY, cardWidth, cardHeight);
-        
+        ctx.strokeRect(
+          centerX - cardWidth / 2,
+          productCardY,
+          cardWidth,
+          cardHeight
+        );
+
         // Draw categories around the main product
-        const categoryPositions = [\n          { category: 'tops', x: leftColumn, y: currentY + 50, label: 'TOPS' },\n          { category: 'bottoms', x: leftColumn, y: currentY + 200, label: 'BOTTOMS' },\n          { category: 'shoes', x: rightColumn, y: currentY + 200, label: 'SHOES' },\n          { category: 'accessories', x: rightColumn, y: currentY + 50, label: 'ACCESSORIES' },\n          { category: 'outerwear', x: centerX - 100, y: currentY + 350, label: 'OUTERWEAR' }\n        ];\n        \n        categoryPositions.forEach(pos => {\n          const categoryItems = groupedItems[pos.category] || [];\n          if (categoryItems.length === 0) return;\n          \n          // Category header\n          ctx.fillStyle = "#9F513A";\n          ctx.font = "bold 14px Inter, Arial";\n          ctx.textAlign = "center";\n          ctx.fillText(pos.label, pos.x + 75, pos.y);\n          \n          // Draw items in this category\n          categoryItems.slice(0, 2).forEach((item, index) => {\n            const itemY = pos.y + 15 + (index * 50);\n            const itemWidth = 150;\n            const itemHeight = 40;\n            \n            // Item background with category color\n            const categoryColors = {\n              tops: '#F4E8D7',\n              bottoms: '#E8F0E8',\n              shoes: '#E8E8F0',\n              accessories: '#F0E8F0',\n              outerwear: '#E8F0F0'\n            };\n            \n            ctx.fillStyle = categoryColors[pos.category as keyof typeof categoryColors] || '#F0F0F0';\n            ctx.fillRect(pos.x, itemY, itemWidth, itemHeight);\n            \n            ctx.strokeStyle = "#D0D0D0";\n            ctx.lineWidth = 1;\n            ctx.strokeRect(pos.x, itemY, itemWidth, itemHeight);\n            \n            // Item text\n            ctx.fillStyle = "#2D2D2D";\n            ctx.font = "12px Inter, Arial";\n            ctx.textAlign = "left";\n            \n            // Truncate long text\n            let displayText = item.text;\n            if (displayText.length > 18) {\n              displayText = displayText.substring(0, 15) + "...";\n            }\n            \n            ctx.fillText(displayText, pos.x + 8, itemY + 25);\n            \n            // Add color indicator if available\n            if (item.color) {\n              const colorMap: Record<string, string> = {\n                'black': '#000000', 'white': '#FFFFFF', 'blue': '#4A90E2',\n                'red': '#E24A4A', 'green': '#4AE24A', 'yellow': '#E2E24A',\n                'pink': '#E24AA4', 'purple': '#A44AE2', 'orange': '#E2A44A',\n                'brown': '#8B4513', 'gray': '#808080', 'grey': '#808080',\n                'beige': '#F5F5DC', 'navy': '#000080', 'cream': '#FFFDD0'\n              };\n              \n              const colorHex = colorMap[item.color] || '#CCCCCC';\n              ctx.fillStyle = colorHex;\n              ctx.beginPath();\n              ctx.arc(pos.x + itemWidth - 15, itemY + 12, 6, 0, 2 * Math.PI);\n              ctx.fill();\n              \n              if (item.color === 'white' || item.color === 'cream') {\n                ctx.strokeStyle = '#CCCCCC';\n                ctx.lineWidth = 1;\n                ctx.stroke();\n              }\n            }\n          });\n          \n          // Draw connection line to center product\n          ctx.strokeStyle = "#B8A898";\n          ctx.lineWidth = 2;\n          ctx.setLineDash([5, 5]);\n          ctx.beginPath();\n          \n          if (pos.x < centerX) {\n            ctx.moveTo(pos.x + 150, pos.y + 25);\n            ctx.lineTo(centerX - cardWidth/2 - 10, productCardY + cardHeight/2);\n          } else {\n            ctx.moveTo(pos.x, pos.y + 25);\n            ctx.lineTo(centerX + cardWidth/2 + 10, productCardY + cardHeight/2);\n          }\n          ctx.stroke();\n        });\n        \n        // Add styling tip at the bottom\n        ctx.fillStyle = "#666";\n        ctx.font = "italic 16px Inter, Arial";\n        ctx.textAlign = "center";\n        ctx.fillText("💡 Mix and match these pieces for different looks!", centerX, currentY + 450);\n        \n        // Convert to data URL and set\n        const dataUrl = canvas.toDataURL();\n        setCollageDataUrl(dataUrl);\n      }
+        const categoryPositions = [
+          { category: "tops", x: leftColumn, y: currentY + 50, label: "TOPS" },
+          {
+            category: "bottoms",
+            x: leftColumn,
+            y: currentY + 200,
+            label: "BOTTOMS",
+          },
+          {
+            category: "shoes",
+            x: rightColumn,
+            y: currentY + 200,
+            label: "SHOES",
+          },
+          {
+            category: "accessories",
+            x: rightColumn,
+            y: currentY + 50,
+            label: "ACCESSORIES",
+          },
+          {
+            category: "outerwear",
+            x: centerX - 100,
+            y: currentY + 350,
+            label: "OUTERWEAR",
+          },
+        ];
+
+        categoryPositions.forEach((pos) => {
+          const categoryItems = groupedItems[pos.category] || [];
+          if (categoryItems.length === 0) return;
+
+          // Category header
+          ctx.fillStyle = "#9F513A";
+          ctx.font = "bold 14px Inter, Arial";
+          ctx.textAlign = "center";
+          ctx.fillText(pos.label, pos.x + 75, pos.y);
+
+          // Draw items in this category
+          categoryItems.slice(0, 2).forEach((item, index) => {
+            const itemY = pos.y + 15 + index * 50;
+            const itemWidth = 150;
+            const itemHeight = 40;
+
+            // Item background with category color
+            const categoryColors = {
+              tops: "#F4E8D7",
+              bottoms: "#E8F0E8",
+              shoes: "#E8E8F0",
+              accessories: "#F0E8F0",
+              outerwear: "#E8F0F0",
+            };
+
+            ctx.fillStyle =
+              categoryColors[pos.category as keyof typeof categoryColors] ||
+              "#F0F0F0";
+            ctx.fillRect(pos.x, itemY, itemWidth, itemHeight);
+
+            ctx.strokeStyle = "#D0D0D0";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(pos.x, itemY, itemWidth, itemHeight);
+
+            // Item text
+            ctx.fillStyle = "#2D2D2D";
+            ctx.font = "12px Inter, Arial";
+            ctx.textAlign = "left";
+
+            // Truncate long text
+            let displayText = item.text;
+            if (displayText.length > 18) {
+              displayText = displayText.substring(0, 15) + "...";
+            }
+
+            ctx.fillText(displayText, pos.x + 8, itemY + 25);
+
+            // Add color indicator if available
+            if (item.color) {
+              const colorMap: Record<string, string> = {
+                black: "#000000",
+                white: "#FFFFFF",
+                blue: "#4A90E2",
+                red: "#E24A4A",
+                green: "#4AE24A",
+                yellow: "#E2E24A",
+                pink: "#E24AA4",
+                purple: "#A44AE2",
+                orange: "#E2A44A",
+                brown: "#8B4513",
+                gray: "#808080",
+                grey: "#808080",
+                beige: "#F5F5DC",
+                navy: "#000080",
+                cream: "#FFFDD0",
+              };
+
+              const colorHex = colorMap[item.color] || "#CCCCCC";
+              ctx.fillStyle = colorHex;
+              ctx.beginPath();
+              ctx.arc(pos.x + itemWidth - 15, itemY + 12, 6, 0, 2 * Math.PI);
+              ctx.fill();
+
+              if (item.color === "white" || item.color === "cream") {
+                ctx.strokeStyle = "#CCCCCC";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+              }
+            }
+          });
+
+          // Draw connection line to center product
+          ctx.strokeStyle = "#B8A898";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+
+          if (pos.x < centerX) {
+            ctx.moveTo(pos.x + 150, pos.y + 25);
+            ctx.lineTo(
+              centerX - cardWidth / 2 - 10,
+              productCardY + cardHeight / 2
+            );
+          } else {
+            ctx.moveTo(pos.x, pos.y + 25);
+            ctx.lineTo(
+              centerX + cardWidth / 2 + 10,
+              productCardY + cardHeight / 2
+            );
+          }
+          ctx.stroke();
+        });
+
+        // Add styling tip at the bottom
+        ctx.fillStyle = "#666";
+        ctx.font = "italic 16px Inter, Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          "💡 Mix and match these pieces for different looks!",
+          centerX,
+          currentY + 450
+        );
+
+        // Convert to data URL and set
+        const dataUrl = canvas.toDataURL();
+        setCollageDataUrl(dataUrl);
+      }
     } catch (error) {
       console.error("Error generating collage:", error);
     }
@@ -247,17 +476,27 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
 
   if (!productInfo) {
     return (
-      <div style={{ 
-        minHeight: "100vh", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center",
-        backgroundColor: "#F8F7F4" 
-      }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#F8F7F4",
+        }}
+      >
         <div style={{ textAlign: "center" }}>
-          <h1 style={{ color: "#2D2D2D", marginBottom: "16px" }}>Style with your pieces</h1>
-          <p style={{ color: "#666" }}>No product information found. Please use the extension to access this page.</p>
-          <Link href="/" style={{ color: "#2D2D2D", textDecoration: "underline" }}>
+          <h1 style={{ color: "#2D2D2D", marginBottom: "16px" }}>
+            Style with your pieces
+          </h1>
+          <p style={{ color: "#666" }}>
+            No product information found. Please use the extension to access
+            this page.
+          </p>
+          <Link
+            href="/"
+            style={{ color: "#2D2D2D", textDecoration: "underline" }}
+          >
             Go back to home
           </Link>
         </div>
@@ -266,82 +505,143 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
   }
 
   return (
-    <div style={{ 
-      minHeight: "100vh", 
-      backgroundColor: "#F8F7F4", 
-      padding: "24px" 
-    }}>
-      <div style={{ 
-        maxWidth: "1200px", 
-        margin: "0 auto",
-        backgroundColor: "#FFFFFF",
-        borderRadius: "12px",
-        padding: "32px"
-      }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#F8F7F4",
+        padding: "24px",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "1200px",
+          margin: "0 auto",
+          backgroundColor: "#FFFFFF",
+          borderRadius: "12px",
+          padding: "32px",
+        }}
+      >
         {/* Header */}
         <div style={{ marginBottom: "32px" }}>
-          <Link href="/" style={{ color: "#666", textDecoration: "none", fontSize: "14px" }}>
+          <Link
+            href="/"
+            style={{ color: "#666", textDecoration: "none", fontSize: "14px" }}
+          >
             ← Back to PointFour
           </Link>
-          <h1 style={{ 
-            color: "#2D2D2D", 
-            fontSize: "32px", 
-            fontWeight: "600",
-            margin: "16px 0 8px 0" 
-          }}>
+          <h1
+            style={{
+              color: "#2D2D2D",
+              fontSize: "32px",
+              fontWeight: "600",
+              margin: "16px 0 8px 0",
+            }}
+          >
             Style with your pieces
           </h1>
           <p style={{ color: "#666", fontSize: "16px" }}>
-            Create an outfit visualization with {productInfo.brand} and your existing wardrobe
+            Create an outfit visualization with {productInfo.brand} and your
+            existing wardrobe
           </p>
         </div>
 
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "1fr 1fr", 
-          gap: "32px",
-          marginBottom: "32px"
-        }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "32px",
+            marginBottom: "32px",
+          }}
+        >
           {/* Left side - Product */}
           <div>
-            <h2 style={{ 
-              color: "#2D2D2D", 
-              fontSize: "20px", 
-              fontWeight: "600",
-              marginBottom: "16px" 
-            }}>
+            <h2
+              style={{
+                color: "#2D2D2D",
+                fontSize: "20px",
+                fontWeight: "600",
+                marginBottom: "16px",
+              }}
+            >
               Product
             </h2>
-            
+
             {productInfo.imageUrl ? (
-              <img 
-                src={productInfo.imageUrl} 
-                alt={`${productInfo.brand} ${productInfo.itemName}`}
-                style={{
-                  width: "100%",
-                  maxWidth: "300px",
-                  height: "auto",
-                  borderRadius: "8px",
-                  border: "1px solid #E5E5E5"
-                }}
-              />
+              <div>
+                <img
+                  src={productInfo.imageUrl}
+                  alt={`${productInfo.brand} ${productInfo.itemName}`}
+                  style={{
+                    width: "100%",
+                    maxWidth: "300px",
+                    height: "auto",
+                    borderRadius: "8px",
+                    border: "1px solid #E5E5E5",
+                    backgroundColor: "#FFFFFF",
+                    objectFit: "contain",
+                  }}
+                  onError={(e) => {
+                    // If image fails, show placeholder
+                    console.log("Image failed to load:", productInfo.imageUrl);
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                    const placeholder = document.createElement("div");
+                    placeholder.style.width = "300px";
+                    placeholder.style.height = "300px";
+                    placeholder.style.backgroundColor = "#E5E5E5";
+                    placeholder.style.borderRadius = "8px";
+                    placeholder.style.display = "flex";
+                    placeholder.style.alignItems = "center";
+                    placeholder.style.justifyContent = "center";
+                    placeholder.style.color = "#666";
+                    placeholder.textContent = "Image unavailable";
+                    target.parentNode?.appendChild(placeholder);
+                  }}
+                />
+
+                {/* Add a note about the image type */}
+                <p
+                  style={{
+                    fontSize: "11px",
+                    color: "#999",
+                    marginTop: "8px",
+                    fontStyle: "italic",
+                  }}
+                >
+                  💡 We try to show the product without a model for better
+                  visualization
+                </p>
+              </div>
             ) : (
-              <div style={{
-                width: "300px",
-                height: "300px",
-                backgroundColor: "#E5E5E5",
-                borderRadius: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#666"
-              }}>
-                No image available
+              <div
+                style={{
+                  width: "300px",
+                  height: "300px",
+                  backgroundColor: "#E5E5E5",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#666",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}
+              >
+                <div style={{ fontSize: "14px" }}>No image available</div>
+                <div style={{ fontSize: "11px", opacity: 0.7 }}>
+                  Product image will appear here
+                </div>
               </div>
             )}
-            
+
             <div style={{ marginTop: "16px" }}>
-              <h3 style={{ color: "#2D2D2D", fontSize: "18px", fontWeight: "600" }}>
+              <h3
+                style={{
+                  color: "#2D2D2D",
+                  fontSize: "18px",
+                  fontWeight: "600",
+                }}
+              >
                 {productInfo.brand}
               </h3>
               {productInfo.itemName && (
@@ -354,47 +654,54 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
 
           {/* Right side - User items input */}
           <div>
-            <h2 style={{ 
-              color: "#2D2D2D", 
-              fontSize: "20px", 
-              fontWeight: "600",
-              marginBottom: "16px" 
-            }}>
+            <h2
+              style={{
+                color: "#2D2D2D",
+                fontSize: "20px",
+                fontWeight: "600",
+                marginBottom: "16px",
+              }}
+            >
               Your pieces
             </h2>
-            
+
             {/* Category Selection */}
             <div style={{ marginBottom: "16px" }}>
-              <label style={{ 
-                display: "block", 
-                marginBottom: "8px", 
-                fontSize: "14px", 
-                fontWeight: "600", 
-                color: "#2D2D2D" 
-              }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "8px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  color: "#2D2D2D",
+                }}
+              >
                 What type of item?
               </label>
-              <div style={{ 
-                display: "flex", 
-                flexWrap: "wrap", 
-                gap: "8px", 
-                marginBottom: "16px" 
-              }}>
-                {categories.map(category => (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                  marginBottom: "16px",
+                }}
+              >
+                {categories.map((category) => (
                   <button
                     key={category.id}
                     onClick={() => setSelectedCategory(category.id)}
                     style={{
                       padding: "8px 12px",
-                      border: selectedCategory === category.id 
-                        ? "2px solid #9F513A" 
-                        : "1px solid #E5E5E5",
-                      backgroundColor: selectedCategory === category.id 
-                        ? "#F4E8D7" 
-                        : "#FFFFFF",
-                      color: selectedCategory === category.id 
-                        ? "#9F513A" 
-                        : "#666",
+                      border:
+                        selectedCategory === category.id
+                          ? "2px solid #9F513A"
+                          : "1px solid #E5E5E5",
+                      backgroundColor:
+                        selectedCategory === category.id
+                          ? "#F4E8D7"
+                          : "#FFFFFF",
+                      color:
+                        selectedCategory === category.id ? "#9F513A" : "#666",
                       borderRadius: "20px",
                       fontSize: "12px",
                       fontWeight: "500",
@@ -402,7 +709,7 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
                       transition: "all 0.2s ease",
                       display: "flex",
                       alignItems: "center",
-                      gap: "4px"
+                      gap: "4px",
                     }}
                   >
                     <span>{category.emoji}</span>
@@ -411,25 +718,31 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
                 ))}
               </div>
             </div>
-            
+
             <div style={{ marginBottom: "16px" }}>
               <input
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder={`e.g., ${selectedCategory === 'tops' ? 'White cotton t-shirt' : 
-                  selectedCategory === 'bottoms' ? 'Black skinny jeans' :
-                  selectedCategory === 'shoes' ? 'White leather sneakers' :
-                  selectedCategory === 'accessories' ? 'Gold chain necklace' :
-                  'Navy wool coat'}`}
+                placeholder={`e.g., ${
+                  selectedCategory === "tops"
+                    ? "White cotton t-shirt"
+                    : selectedCategory === "bottoms"
+                    ? "Black skinny jeans"
+                    : selectedCategory === "shoes"
+                    ? "White leather sneakers"
+                    : selectedCategory === "accessories"
+                    ? "Gold chain necklace"
+                    : "Navy wool coat"
+                }`}
                 style={{
                   width: "100%",
                   padding: "12px 16px",
                   border: "1px solid #E5E5E5",
                   borderRadius: "8px",
                   fontSize: "16px",
-                  outline: "none"
+                  outline: "none",
                 }}
               />
               <button
@@ -442,35 +755,37 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
                   border: "none",
                   borderRadius: "6px",
                   fontSize: "14px",
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
-                Add to {categories.find(c => c.id === selectedCategory)?.name}
+                Add to {categories.find((c) => c.id === selectedCategory)?.name}
               </button>
             </div>
 
             {/* User items list organized by category */}
             <div style={{ marginBottom: "24px" }}>
-              {categories.map(category => {
+              {categories.map((category) => {
                 const categoryItems = groupedItems[category.id] || [];
                 if (categoryItems.length === 0) return null;
-                
+
                 return (
                   <div key={category.id} style={{ marginBottom: "16px" }}>
-                    <div style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      marginBottom: "8px",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      color: "#9F513A"
-                    }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "8px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        color: "#9F513A",
+                      }}
+                    >
                       <span>{category.emoji}</span>
                       {category.name} ({categoryItems.length})
                     </div>
                     {categoryItems.map((item) => (
-                      <div 
+                      <div
                         key={item.id}
                         style={{
                           display: "flex",
@@ -481,25 +796,48 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
                           border: "1px solid #E5E5E5",
                           borderRadius: "6px",
                           marginBottom: "6px",
-                          marginLeft: "20px"
+                          marginLeft: "20px",
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span style={{ color: "#2D2D2D", fontSize: "14px" }}>{item.text}</span>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <span style={{ color: "#2D2D2D", fontSize: "14px" }}>
+                            {item.text}
+                          </span>
                           {item.color && (
-                            <div 
+                            <div
                               style={{
                                 width: "12px",
                                 height: "12px",
                                 borderRadius: "50%",
-                                backgroundColor: {
-                                  'black': '#000000', 'white': '#FFFFFF', 'blue': '#4A90E2',
-                                  'red': '#E24A4A', 'green': '#4AE24A', 'yellow': '#E2E24A',
-                                  'pink': '#E24AA4', 'purple': '#A44AE2', 'orange': '#E2A44A',
-                                  'brown': '#8B4513', 'gray': '#808080', 'grey': '#808080',
-                                  'beige': '#F5F5DC', 'navy': '#000080', 'cream': '#FFFDD0'
-                                }[item.color] || '#CCCCCC',
-                                border: item.color === 'white' || item.color === 'cream' ? '1px solid #CCC' : 'none'
+                                backgroundColor:
+                                  {
+                                    black: "#000000",
+                                    white: "#FFFFFF",
+                                    blue: "#4A90E2",
+                                    red: "#E24A4A",
+                                    green: "#4AE24A",
+                                    yellow: "#E2E24A",
+                                    pink: "#E24AA4",
+                                    purple: "#A44AE2",
+                                    orange: "#E2A44A",
+                                    brown: "#8B4513",
+                                    gray: "#808080",
+                                    grey: "#808080",
+                                    beige: "#F5F5DC",
+                                    navy: "#000080",
+                                    cream: "#FFFDD0",
+                                  }[item.color] || "#CCCCCC",
+                                border:
+                                  item.color === "white" ||
+                                  item.color === "cream"
+                                    ? "1px solid #CCC"
+                                    : "none",
                               }}
                               title={`Color: ${item.color}`}
                             />
@@ -513,7 +851,7 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
                             color: "#666",
                             cursor: "pointer",
                             fontSize: "16px",
-                            padding: "2px 6px"
+                            padding: "2px 6px",
                           }}
                         >
                           ×
@@ -523,15 +861,18 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
                   </div>
                 );
               })}
-              
+
               {userItems.length === 0 && (
-                <div style={{
-                  textAlign: "center",
-                  padding: "24px",
-                  color: "#666",
-                  fontStyle: "italic"
-                }}>
-                  Add your wardrobe pieces to see styling combinations with this {productInfo?.brand} item
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "24px",
+                    color: "#666",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Add your wardrobe pieces to see styling combinations with this{" "}
+                  {productInfo?.brand} item
                 </div>
               )}
             </div>
@@ -549,7 +890,7 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
                   borderRadius: "8px",
                   fontSize: "16px",
                   fontWeight: "600",
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
                 Generate Outfit Visualization
@@ -560,29 +901,33 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
 
         {/* Collage display */}
         {collageDataUrl && (
-          <div style={{
-            marginTop: "32px",
-            padding: "24px",
-            backgroundColor: "#F8F7F4",
-            borderRadius: "12px",
-            textAlign: "center"
-          }}>
-            <h2 style={{ 
-              color: "#2D2D2D", 
-              fontSize: "24px", 
-              fontWeight: "600",
-              marginBottom: "16px" 
-            }}>
+          <div
+            style={{
+              marginTop: "32px",
+              padding: "24px",
+              backgroundColor: "#F8F7F4",
+              borderRadius: "12px",
+              textAlign: "center",
+            }}
+          >
+            <h2
+              style={{
+                color: "#2D2D2D",
+                fontSize: "24px",
+                fontWeight: "600",
+                marginBottom: "16px",
+              }}
+            >
               Your Outfit Visualization
             </h2>
-            <img 
-              src={collageDataUrl} 
+            <img
+              src={collageDataUrl}
               alt="Outfit collage"
               style={{
                 maxWidth: "100%",
                 height: "auto",
                 border: "1px solid #E5E5E5",
-                borderRadius: "8px"
+                borderRadius: "8px",
               }}
             />
             <div style={{ marginTop: "16px" }}>
@@ -596,7 +941,7 @@ export default function StylePageContent({ searchParams }: StylePageContentProps
                   color: "#FFFFFF",
                   textDecoration: "none",
                   borderRadius: "6px",
-                  fontSize: "14px"
+                  fontSize: "14px",
                 }}
               >
                 Download Image
