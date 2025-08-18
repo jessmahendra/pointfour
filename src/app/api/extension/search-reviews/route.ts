@@ -303,7 +303,7 @@ function calculateConfidence(result: SerperResult): "high" | "medium" | "low" {
   return 'low';
 }
 
-function analyzeResults(results: SerperResult[], brand: string): AnalysisResult {
+function analyzeResults(results: SerperResult[], _brand: string): AnalysisResult {
   const analysis: AnalysisResult = {};
   const allText = results.map(r => `${r.title} ${r.snippet}`).join(' ').toLowerCase();
   

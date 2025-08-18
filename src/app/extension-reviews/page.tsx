@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -59,17 +59,7 @@ function ExtensionReviewsContent() {
   const brandName = searchParams.get("brand") || "";
   const itemName = searchParams.get("item") || "";
 
-  useEffect(() => {
-    if (!brandName) {
-      setError("No brand specified");
-      setLoading(false);
-      return;
-    }
-
-    fetchReviews();
-  }, [brandName, itemName]);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -114,7 +104,17 @@ function ExtensionReviewsContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [brandName, itemName]);
+
+  useEffect(() => {
+    if (!brandName) {
+      setError("No brand specified");
+      setLoading(false);
+      return;
+    }
+
+    fetchReviews();
+  }, [brandName, itemName, fetchReviews]);
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections);
