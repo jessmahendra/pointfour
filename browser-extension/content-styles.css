@@ -121,7 +121,7 @@
   height: 32px;
   margin: 0 auto 12px;
   border: 3px solid #e8e0d5; /* Stone border */
-  border-top: 3px solid #b8a898; /* Stone accent */
+  border-top: 3px solid #C19A5B; /* Warm beige accent - matches quality badge */
   border-radius: 50%;
   animation: pointfour-spin 1s linear infinite;
 }
@@ -217,7 +217,7 @@
 
 .pointfour-quality-info h4 {
   margin: 0 0 6px 0;
-  color: #2d2d2d; /* Dark gray */
+  color: #A0613A; /* Warm orangey brown - slightly lighter than main heading */
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -226,9 +226,58 @@
 
 .pointfour-quality-info p {
   margin: 0 0 6px 0;
-  color: #000000; /* Solid black text */
+  color: #4E4B4B; /* Warm dark gray instead of harsh black */
   font-size: 12px;
   line-height: 1.4;
+}
+
+/* Quality badges with simple stoney beige pill design */
+.pointfour-quality-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 16px; /* Pill shape */
+  font-weight: 500;
+  font-size: 11px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  transition: all 0.2s ease;
+  
+  /* High quality/construction - warm stone */
+  background: #D6C0A0; /* Warm stoney beige */
+  color: #5D4E37; /* Dark stone brown */
+  border: 1px solid #C4A887;
+}
+
+.pointfour-quality-badge.medium-quality {
+  background: #E5D5C0; /* Lighter stone */
+  color: #6C5D47; /* Medium stone brown */
+  border: 1px solid #D4C4A8;
+}
+
+.pointfour-quality-badge.low-quality {
+  background: #F0E8D8; /* Very light stone */
+  color: #8B7355; /* Muted stone brown */
+  border: 1px solid #E0D4C4;
+}
+
+.pointfour-quality-badge:hover {
+  transform: translateY(-0.5px);
+  box-shadow: 0 2px 6px rgba(139, 115, 85, 0.15);
+}
+
+.pointfour-quality-badge svg {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* Override any purple/violet colors that might be applied */
+.pointfour-widget * {
+  /* Remove any violet/purple colors that might leak in */
+  color: inherit !important;
 }
 
 /* Error state */
@@ -290,7 +339,7 @@
   font-size: 13px;
   font-weight: 600;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
-  color: #000000; /* Solid black text for maximum readability */
+  color: #A0613A; /* Warm orangey brown to match other headings */
 }
 
 .pointfour-fit-tips ul {
@@ -384,6 +433,8 @@
 .pointfour-reviews-button.subtle svg {
   stroke: #000000;
 }
+
+
 
 /* Style with your pieces button */
 .pointfour-style-info {

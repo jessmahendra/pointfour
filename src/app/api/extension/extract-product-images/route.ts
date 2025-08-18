@@ -123,6 +123,7 @@ export async function POST(request: Request) {
     }
 
     // Fetch the page content
+    console.log('🔍 Fetching page:', pageUrl);
     const response = await fetch(pageUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -130,12 +131,15 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch page: ${response.status}`);
+      console.error('❌ Failed to fetch page:', response.status, response.statusText);
+      throw new Error(`Failed to fetch page: ${response.status} ${response.statusText}`);
     }
 
     const html = await response.text();
+    console.log('📄 HTML length:', html.length);
     const $ = cheerio.load(html);
     const domain = new URL(pageUrl).hostname;
+    console.log('🌐 Domain:', domain);
 
     const imageCandidates: ImageCandidate[] = [];
 
@@ -253,8 +257,18 @@ export async function POST(request: Request) {
       index === self.findIndex(c => c.src === candidate.src)
     );
 
+    console.log('🖼️ Total image candidates found:', imageCandidates.length);
+    console.log('🖼️ Unique candidates after deduplication:', uniqueCandidates.length);
+
     // Sort by score (highest first)
     uniqueCandidates.sort((a, b) => b.score - a.score);
+    
+    if (uniqueCandidates.length > 0) {
+      console.log('🏆 Top 3 candidates:');
+      uniqueCandidates.slice(0, 3).forEach((candidate, index) => {
+        console.log(`  ${index + 1}. Score: ${candidate.score}, URL: ${candidate.src}`);
+      });
+    }
 
     // Get the best image (highest score)
     const bestImage = uniqueCandidates.length > 0 ? {

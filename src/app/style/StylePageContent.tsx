@@ -49,6 +49,7 @@ export default function StylePageContent({
   const [selectedCategory, setSelectedCategory] = useState("tops");
   const [collageDataUrl, setCollageDataUrl] = useState<string | null>(null);
   const [currentOutfitIndex, setCurrentOutfitIndex] = useState(0);
+  const [isExtractingImage, setIsExtractingImage] = useState(false);
 
   // Clothing categories
   const categories = [
@@ -71,16 +72,20 @@ export default function StylePageContent({
     }
   }, [searchParams, productInfo]);
 
-  // If we only have a pageUrl (and possibly no imageUrl), fetch best product image from server
+  // Always fetch best product image from server when pageUrl is available
+  // This ensures we get product-only images instead of model shots
   useEffect(() => {
-    const shouldExtract =
-      !!productInfo && !!productInfo.pageUrl && !productInfo.imageUrl;
+    const shouldExtract = !!productInfo && !!productInfo.pageUrl;
     if (!shouldExtract) return;
+
+    console.log("🖼️ Starting image extraction for:", productInfo.pageUrl);
+    console.log("🖼️ Current imageUrl:", productInfo.imageUrl);
 
     let isCancelled = false;
 
     const extract = async () => {
       try {
+        setIsExtractingImage(true);
         const resp = await fetch("/api/extension/extract-product-images", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -91,12 +96,28 @@ export default function StylePageContent({
           bestImage?: { src: string; alt: string; selector: string };
         } = await resp.json();
         if (!isCancelled && data?.bestImage?.src) {
-          setProductInfo((prev) =>
-            prev ? { ...prev, imageUrl: data.bestImage!.src } : prev
-          );
+          console.log("🖼️ Extracted product image:", data.bestImage.src);
+          console.log("🖼️ Previous imageUrl:", productInfo?.imageUrl);
+          setProductInfo((prev) => {
+            const updated = prev
+              ? { ...prev, imageUrl: data.bestImage!.src }
+              : prev;
+            console.log("🖼️ Updated productInfo:", updated);
+            return updated;
+          });
+        } else {
+          console.log("🖼️ No best image found in response:", data);
         }
-      } catch {
-        // ignore
+      } catch (error) {
+        console.error("Failed to extract product image:", error);
+        // Show user-friendly error message
+        if (!isCancelled) {
+          setProductInfo((prev) => (prev ? { ...prev, imageUrl: "" } : prev));
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsExtractingImage(false);
+        }
       }
     };
 
@@ -568,7 +589,34 @@ export default function StylePageContent({
 
             {productInfo.imageUrl ? (
               <div>
+                {isExtractingImage && (
+                  <div
+                    style={{
+                      width: "100%",
+                      maxWidth: "300px",
+                      height: "300px",
+                      backgroundColor: "#F8F7F4",
+                      borderRadius: "8px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#666",
+                      border: "1px solid #E5E5E5",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "14px", marginBottom: "8px" }}>
+                        🔍 Extracting product image...
+                      </div>
+                      <div style={{ fontSize: "11px", opacity: 0.7 }}>
+                        Finding best packshot/flat image
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <img
+                  key={productInfo.imageUrl} // Force re-render when imageUrl changes
                   src={productInfo.imageUrl}
                   alt={`${productInfo.brand} ${productInfo.itemName}`}
                   style={{
@@ -579,6 +627,7 @@ export default function StylePageContent({
                     border: "1px solid #E5E5E5",
                     backgroundColor: "#FFFFFF",
                     objectFit: "contain",
+                    display: isExtractingImage ? "none" : "block",
                   }}
                   onError={(e) => {
                     // If image fails, show placeholder
@@ -629,8 +678,23 @@ export default function StylePageContent({
               >
                 <div style={{ fontSize: "14px" }}>No image available</div>
                 <div style={{ fontSize: "11px", opacity: 0.7 }}>
-                  Product image will appear here
+                  {productInfo.pageUrl
+                    ? "Image extraction failed or no suitable image found"
+                    : "Product image will appear here"}
                 </div>
+                {productInfo.pageUrl && (
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      opacity: 0.5,
+                      textAlign: "center",
+                      maxWidth: "250px",
+                    }}
+                  >
+                    The page may have anti-scraping protection or no
+                    product-only images
+                  </div>
+                )}
               </div>
             )}
 

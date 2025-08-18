@@ -803,9 +803,30 @@
 
         const structuredData = extractStructuredAnalysis();
         
+        // Determine if this is a bag brand for appropriate labeling
+        const isBagBrand = brandName.toLowerCase().includes('bag') || 
+                          brandName.toLowerCase().includes('backpack') ||
+                          brandName.toLowerCase().includes('handbag') ||
+                          window.location.href.toLowerCase().includes('bag') ||
+                          document.title.toLowerCase().includes('bag') ||
+                          document.title.toLowerCase().includes('backpack');
+        
+        // Create quality badge based on structured data
+        let qualityBadge = '';
+        if (structuredData?.quality) {
+            if (structuredData.quality.confidence === 'high') {
+                const badgeText = isBagBrand ? '⭐ HIGH CONSTRUCTION' : '⭐ HIGH QUALITY';
+                qualityBadge = `<div class="pointfour-quality-badge">${badgeText}</div>`;
+            } else if (structuredData.quality.confidence === 'medium') {
+                const badgeText = isBagBrand ? '✓ GOOD CONSTRUCTION' : '✓ GOOD QUALITY';
+                qualityBadge = `<div class="pointfour-quality-badge medium-quality">${badgeText}</div>`;
+            }
+        }
+        
         let content = `
             <div class="pointfour-results">
                 <h3>${brandName}</h3>
+                ${qualityBadge}
         `;
         
         // FIT SECTION - Always show if we have fit data
@@ -839,12 +860,14 @@
             }
         }
         
-        // QUALITY & MATERIALS SECTION - Show structured quality info
+        // QUALITY SECTION - Show structured quality info with appropriate header
         const qualityInsights = structuredData ? extractQualityInsights({ brandFitSummary: { sections: structuredData } }) : null;
         if (qualityInsights) {
+            const sectionHeader = isBagBrand ? 'Quality & Construction:' : 'Quality & Materials:';
+            
             content += `
                 <div class="pointfour-quality-info">
-                    <h4>Quality & Materials:</h4>
+                    <h4>${sectionHeader}</h4>
                     <p>${qualityInsights.recommendation}</p>
                     ${qualityInsights.confidence ? `<div class="pointfour-confidence">Confidence: ${qualityInsights.confidence.toUpperCase()}</div>` : ''}
                 </div>
