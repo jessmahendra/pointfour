@@ -17,6 +17,31 @@ interface ExtractProductImagesResponse {
   images: ImageCandidate[];
 }
 
+// Parse a srcset string and return the highest resolution URL
+function pickBestFromSrcset(srcset: string | undefined | null): string | null {
+  if (!srcset) return null;
+  try {
+    const parts = srcset
+      .split(',')
+      .map(p => p.trim())
+      .map(p => {
+        const [url, descriptor] = p.split(/\s+/);
+        const value = descriptor?.endsWith('w')
+          ? parseInt(descriptor)
+          : descriptor?.endsWith('x')
+          ? Math.round(parseFloat(descriptor) * 1000)
+          : 0;
+        return { url, value } as { url: string; value: number };
+      })
+      .filter(p => p.url && p.url.startsWith('http'));
+    if (parts.length === 0) return null;
+    parts.sort((a, b) => b.value - a.value);
+    return parts[0].url;
+  } catch {
+    return null;
+  }
+}
+
 // Enhanced scoring function for product images with AI-like analysis
 function scoreImage(url: string, alt: string, selector: string, imageIndex: number = 0, totalImages: number = 0): number {
   let score = 0;
@@ -325,7 +350,7 @@ export async function POST(request: Request) {
       }
     });
 
-    // 4. Extract from img elements in product gallery containers
+    // 4. Extract from img/picture/source elements in product gallery containers
     // Using the selectors defined above in the debug section
 
     // Collect images with priority-based approach
@@ -334,9 +359,34 @@ export async function POST(request: Request) {
     productGallerySelectors.forEach((selector, selectorIndex) => {
       const priority = 100 - selectorIndex; // Higher priority for more specific selectors
       
+      // IMG tags
       $(selector).each((_, element) => {
-        const src = $(element).attr('src');
+        let src = $(element).attr('src') || '';
         const alt = $(element).attr('alt') || '';
+        
+        // Consider data-src / data-original
+        if ((!src || !src.startsWith('http')) && $(element).attr('data-src')) {
+          src = $(element).attr('data-src') || '';
+        }
+        if ((!src || !src.startsWith('http')) && $(element).attr('data-original')) {
+          src = $(element).attr('data-original') || '';
+        }
+
+        // Consider srcset
+        if (!src || !src.startsWith('http')) {
+          const srcsetUrl = pickBestFromSrcset($(element).attr('srcset'));
+          if (srcsetUrl) src = srcsetUrl;
+        }
+
+        // If still empty, try parent <picture><source>
+        if ((!src || !src.startsWith('http')) && $(element).parent('picture').length) {
+          const sources = $(element).parent('picture').find('source');
+          sources.each((__, sourceEl) => {
+            if (src) return;
+            const typeSrcset = pickBestFromSrcset($(sourceEl).attr('srcset'));
+            if (typeSrcset) src = typeSrcset;
+          });
+        }
         
         if (src && src.startsWith('http')) {
           // Skip very small images and obvious navigation elements
@@ -361,12 +411,25 @@ export async function POST(request: Request) {
           allImages.push({ src, alt, selector, priority });
         }
       });
+
+      // SOURCE tags inside picture/carousels
+      // We derive a synthetic IMG when only <source> is present
+      const container = selector.replace(' img', '');
+      $(`${container} source`).each((_, sourceEl) => {
+        const srcsetUrl = pickBestFromSrcset($(sourceEl).attr('srcset'));
+        if (srcsetUrl && srcsetUrl.startsWith('http')) {
+          allImages.push({ src: srcsetUrl, alt: '', selector: `${container} source`, priority: priority - 1 });
+        }
+      });
     });
 
-    // Remove duplicates and sort by priority
+    // Remove duplicates and sort by priority, then by URL length (prefer full-size URLs)
     const uniqueImages = allImages.filter((img, index, self) => 
       index === self.findIndex(i => i.src === img.src)
-    ).sort((a, b) => b.priority - a.priority);
+    ).sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      return (b.src?.length || 0) - (a.src?.length || 0);
+    });
 
     console.log(`🖼️ Found ${uniqueImages.length} unique product images`);
 
