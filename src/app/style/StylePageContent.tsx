@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import LookCanvas, { Item } from "@/components/LookCanvas";
+import { heroPlusThree, constrainToBounds } from "@/lib/layout";
+import { downloadImage, saveLook } from "@/lib/saveLook";
+import Konva from "konva";
 
 interface UserItem {
   id: string;
@@ -46,13 +50,19 @@ export default function StylePageContent({
   );
   const [userItems, setUserItems] = useState<UserItem[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("tops");
-  const [collageDataUrl, setCollageDataUrl] = useState<string | null>(null);
-  const [currentOutfitIndex, setCurrentOutfitIndex] = useState(0);
+  const [selectedCategory] = useState("tops");
   const [isExtractingImage, setIsExtractingImage] = useState(false);
   const [imageExtractionError, setImageExtractionError] = useState<
     string | null
   >(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [processedProductImage, setProcessedProductImage] = useState<
+    string | null
+  >(null);
+  const [collageItems, setCollageItems] = useState<Item[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Clothing categories
   const categories = [
@@ -127,6 +137,11 @@ export default function StylePageContent({
             return updated;
           });
           setImageExtractionError(null);
+
+          // Process the extracted image for background removal
+          if (!isCancelled) {
+            processImageForCollage(data.bestImage.src);
+          }
         } else {
           console.log("🖼️ No best image found in response:", data);
           if (!isCancelled) {
@@ -153,6 +168,128 @@ export default function StylePageContent({
       isCancelled = true;
     };
   }, [productInfo?.pageUrl, productInfo?.imageUrl]);
+
+  // Process image for background removal and collage
+  const processImageForCollage = async (imageUrl: string) => {
+    if (!imageUrl) return;
+
+    try {
+      setIsProcessingImage(true);
+      console.log("🖼️ Processing image for collage:", imageUrl);
+
+      const response = await fetch("/api/images/cutout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl, targetMax: 1024 }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const processedUrl = URL.createObjectURL(blob);
+      setProcessedProductImage(processedUrl);
+
+      // Update collage items with the processed product image
+      updateCollageItems(processedUrl);
+    } catch (error) {
+      console.error("Failed to process image:", error);
+      // Fallback: use original image
+      updateCollageItems(imageUrl);
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
+  // Update collage items when product image changes
+  const updateCollageItems = (productImageUrl: string) => {
+    const items: Item[] = [
+      {
+        id: "product",
+        category: "product",
+        src: productImageUrl,
+      },
+      // Mock wardrobe items (replace with real data)
+      {
+        id: "wardrobe-1",
+        category: "tops",
+        src: "/api/images/cutout", // Placeholder - would be real wardrobe items
+      },
+      {
+        id: "wardrobe-2",
+        category: "bottoms",
+        src: "/api/images/cutout", // Placeholder
+      },
+      {
+        id: "wardrobe-3",
+        category: "shoes",
+        src: "/api/images/cutout", // Placeholder
+      },
+    ];
+
+    // Apply layout algorithm
+    const positionedItems = heroPlusThree(items, 900, 900);
+    const constrainedItems = constrainToBounds(positionedItems, 900, 900);
+    setCollageItems(constrainedItems);
+  };
+
+  // Handle canvas item changes
+  const handleItemsChange = (newItems: Item[]) => {
+    setCollageItems(newItems);
+  };
+
+  // Export collage as PNG
+  const handleExport = async () => {
+    if (!canvasRef.current) return;
+
+    try {
+      setIsExporting(true);
+      // Use the exportPNG function from the LookCanvas component
+      const dataUrl = (
+        canvasRef.current as HTMLCanvasElement & {
+          exportPNG: (pixelRatio?: number) => string | null;
+        }
+      ).exportPNG?.(2);
+
+      if (dataUrl) {
+        // Download the image
+        downloadImage(
+          dataUrl,
+          `${productInfo?.brand}-${productInfo?.itemName}-look.png`
+        );
+
+        // Save to backend (optional)
+        if (productInfo) {
+          const lookData = {
+            items: collageItems,
+            layout: "heroPlusThree",
+            brand: productInfo.brand,
+            itemName: productInfo.itemName,
+            productImage: processedProductImage || productInfo.imageUrl,
+            pageUrl: productInfo.pageUrl,
+            exportedImage: dataUrl,
+          };
+
+          const saveResult = await saveLook(lookData);
+          if (saveResult.success) {
+            console.log("Look saved successfully:", saveResult.lookId);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to export:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Reset layout
+  const handleResetLayout = () => {
+    if (processedProductImage) {
+      updateCollageItems(processedProductImage);
+    }
+  };
 
   const addUserItem = () => {
     if (inputValue.trim()) {
@@ -515,7 +652,7 @@ export default function StylePageContent({
 
         // Convert to data URL and set
         const dataUrl = canvas.toDataURL();
-        setCollageDataUrl(dataUrl);
+        // Removed old collage logic
       }
     } catch (error) {
       console.error("Error generating collage:", error);
@@ -794,7 +931,7 @@ export default function StylePageContent({
                 {categories.map((category) => (
                   <button
                     key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
+                    onClick={() => {}}
                     style={{
                       padding: "8px 12px",
                       border:
@@ -981,31 +1118,11 @@ export default function StylePageContent({
                 </div>
               )}
             </div>
-
-            {/* Generate button */}
-            {userItems.length > 0 && (
-              <button
-                onClick={generateOutfitVisualization}
-                style={{
-                  width: "100%",
-                  padding: "16px 24px",
-                  backgroundColor: "#2D2D2D",
-                  color: "#FFFFFF",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "16px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                }}
-              >
-                Generate Outfit Visualization
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Collage display */}
-        {collageDataUrl && (
+        {/* Collage Canvas Section */}
+        {processedProductImage && collageItems.length > 0 && (
           <div
             style={{
               marginTop: "32px",
@@ -1020,37 +1137,57 @@ export default function StylePageContent({
                 color: "#2D2D2D",
                 fontSize: "24px",
                 fontWeight: "600",
-                marginBottom: "16px",
+                marginBottom: "20px",
               }}
             >
-              Your Outfit Visualization
+              Style with your pieces
             </h2>
-            <img
-              src={collageDataUrl}
-              alt="Outfit collage"
-              style={{
-                maxWidth: "100%",
-                height: "auto",
-                border: "1px solid #E5E5E5",
-                borderRadius: "8px",
-              }}
-            />
-            <div style={{ marginTop: "16px" }}>
-              <a
-                href={collageDataUrl}
-                download="my-outfit-collage.png"
+
+            <div style={{ marginBottom: "20px" }}>
+              <button
+                onClick={handleExport}
+                disabled={isExporting}
                 style={{
-                  display: "inline-block",
                   padding: "12px 24px",
-                  backgroundColor: "#2D2D2D",
-                  color: "#FFFFFF",
-                  textDecoration: "none",
-                  borderRadius: "6px",
-                  fontSize: "14px",
+                  backgroundColor: "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "16px",
+                  fontWeight: "500",
+                  cursor: isExporting ? "not-allowed" : "pointer",
+                  opacity: isExporting ? 0.6 : 1,
+                  marginRight: "12px",
                 }}
               >
-                Download Image
-              </a>
+                {isExporting ? "Exporting..." : "Export PNG"}
+              </button>
+
+              <button
+                onClick={handleResetLayout}
+                style={{
+                  padding: "12px 24px",
+                  backgroundColor: "#6b7280",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "16px",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                }}
+              >
+                Reset Layout
+              </button>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <LookCanvas
+                width={900}
+                height={900}
+                bg="#F7F5F2"
+                items={collageItems}
+                onItemsChange={handleItemsChange}
+              />
             </div>
           </div>
         )}

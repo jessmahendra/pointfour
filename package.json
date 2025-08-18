@@ -14,12 +14,16 @@
     "axios": "^1.11.0",
     "cheerio": "^1.1.2",
     "dotenv": "^17.2.1",
+    "konva": "^9.3.22",
     "lucide-react": "^0.536.0",
     "next": "15.4.5",
     "next-plausible": "^3.12.4",
     "openai": "^5.11.0",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "react-konva": "^19.0.7",
+    "sharp": "^0.34.3",
+    "zustand": "^5.0.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
