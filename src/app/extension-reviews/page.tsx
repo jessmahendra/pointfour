@@ -39,6 +39,12 @@ interface ReviewData {
   };
   totalResults: number;
   timestamp?: number;
+  productImage?: {
+    src: string;
+    alt: string;
+    selector: string;
+  };
+  pageUrl?: string;
 }
 
 function ExtensionReviewsContent() {
@@ -386,6 +392,47 @@ function ExtensionReviewsContent() {
                 Based on {reviewData.brandFitSummary.totalResults} reviews
               </span>
             </div>
+          </div>
+        )}
+
+        {/* Style with your pieces button */}
+        {reviewData.brandFitSummary && (
+          <div style={{ margin: "24px 0" }}>
+            <button
+              onClick={() => {
+                const params = new URLSearchParams({
+                  brand: reviewData.brand,
+                  itemName: reviewData.itemName || '',
+                  imageUrl: reviewData.productImage?.src || '',
+                  pageUrl: reviewData.pageUrl || window.location.href
+                });
+                window.open(`https://www.pointfour.in/style?${params.toString()}`, '_blank');
+              }}
+              style={{
+                width: "100%",
+                padding: "16px 24px",
+                backgroundColor: "#2D2D2D",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "15px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "background-color 0.2s",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px"
+              }}
+              onMouseOver={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#1A1A1A";
+              }}
+              onMouseOut={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D2D2D";
+              }}
+            >
+              ✨ Style with your pieces
+            </button>
           </div>
         )}
 

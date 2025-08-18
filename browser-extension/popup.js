@@ -244,7 +244,7 @@ function detectBrand(url, itemName) {
       // Try to intelligently split camelCase or run-together words
       // Look for common brand patterns
       const commonBrands = [
-        'waxlondon', 'roheframes', 'ganni', 'reformation', 'madewell',
+        'waxlondon', 'rohe', 'roheframes', 'ganni', 'reformation', 'madewell',
         'everlane', 'sezane', 'toteme', 'khaite', 'motherdenim'
       ];
       
@@ -584,7 +584,20 @@ async function searchForReviews(brandName, itemName = '') {
     
   } catch (error) {
     console.error('Dynamic search failed:', error);
-    throw error;
+    
+    // Return a fallback object instead of throwing
+    return {
+      success: false,
+      error: true,
+      message: `Failed to fetch reviews: ${error.message}`,
+      reviews: [],
+      totalResults: 0,
+      brandFitSummary: {
+        summary: `Unable to load fit information for ${brandName}. This could be due to network issues or API unavailability. Please try refreshing the page or check back later.`,
+        confidence: 'low',
+        sections: {}
+      }
+    };
   }
 }
 
@@ -609,12 +622,22 @@ function classifyReviewRelevance(review, itemName, brandName) {
     tag.toLowerCase().includes('sizing')
   );
   
+  // Check for quality keywords
+  const hasQualityKeywords = review.tags.some(tag => 
+    tag.toLowerCase().includes('quality') || 
+    tag.toLowerCase().includes('durable') ||
+    tag.toLowerCase().includes('material') ||
+    tag.toLowerCase().includes('fabric') ||
+    tag.toLowerCase().includes('excellent') ||
+    tag.toLowerCase().includes('cheap')
+  );
+  
   // Determine relevance
-  if (hasExactItemMatch && hasExactBrandMatch && hasFitKeywords) {
+  if (hasExactItemMatch && hasExactBrandMatch && (hasFitKeywords || hasQualityKeywords)) {
     return { isItemSpecific: true, relevance: 'high' };
-  } else if ((hasExactItemMatch || hasExactBrandMatch) && hasFitKeywords) {
+  } else if ((hasExactItemMatch || hasExactBrandMatch) && (hasFitKeywords || hasQualityKeywords)) {
     return { isItemSpecific: true, relevance: 'medium' };
-  } else if (hasFitKeywords) {
+  } else if (hasFitKeywords || hasQualityKeywords) {
     return { isItemSpecific: false, relevance: 'medium' };
   } else {
     return { isItemSpecific: false, relevance: 'low' };
@@ -643,7 +666,20 @@ function displayReviewGroup(reviews, container, isItemSpecific = false) {
   sortedReviews.forEach((review, index) => {
     const sourceBadge = review.source ? `<span class="source-badge">${review.source}</span>` : '';
     const tags = review.tags && review.tags.length > 0 ? 
-      `<div class="review-tags">${review.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>` : '';
+      `<div class="review-tags">${review.tags.map(tag => {
+        let tagClass = 'tag';
+        
+        // Add quality-specific styling
+        if (tag.includes('high-quality') || tag.includes('excellent')) {
+          tagClass += ' quality-positive';
+        } else if (tag.includes('low-quality') || tag.includes('cheap')) {
+          tagClass += ' quality-negative';
+        } else if (tag.includes('quality')) {
+          tagClass += ' quality-tag';
+        }
+        
+        return `<span class="${tagClass}">${tag}</span>`;
+      }).join('')}</div>` : '';
     
     // Determine if this review is item-specific
     const relevance = window.currentItemName && window.currentBrandName ? 
@@ -680,16 +716,90 @@ function loadMoreReviews() {
   // TODO: Implement pagination for reviews
 }
 
+// Function to extract quality summary from search results
+function extractQualityInsights(searchResults) {
+  if (!searchResults) return null;
+  
+  // Check if brand fit summary has quality information
+  const brandSummary = searchResults.brandFitSummary;
+  if (brandSummary && brandSummary.sections && brandSummary.sections.quality) {
+    let qualityText = brandSummary.sections.quality.recommendation;
+    
+    // Add fabric information if available
+    if (brandSummary.sections.fabric) {
+      qualityText += `\n\n${brandSummary.sections.fabric.recommendation}`;
+    }
+    
+    // Add wash care information if available
+    if (brandSummary.sections.washCare) {
+      qualityText += `\n\n${brandSummary.sections.washCare.recommendation}`;
+    }
+    
+    return {
+      recommendation: qualityText,
+      confidence: brandSummary.sections.quality.confidence,
+      evidence: brandSummary.sections.quality.evidence || []
+    };
+  }
+  
+  // Extract quality information from reviews
+  const allReviews = searchResults.reviews || [];
+  const qualityReviews = allReviews.filter(review => 
+    review.tags.some(tag => 
+      tag.toLowerCase().includes('quality') ||
+      tag.toLowerCase().includes('durable') ||
+      tag.toLowerCase().includes('material') ||
+      tag.toLowerCase().includes('fabric')
+    )
+  );
+  
+  if (qualityReviews.length > 0) {
+    // Analyze quality sentiment from reviews
+    const positiveQuality = qualityReviews.filter(r => 
+      r.tags.some(tag => 
+        tag.includes('high-quality') || 
+        tag.includes('excellent') || 
+        tag.includes('durable')
+      )
+    ).length;
+    
+    const negativeQuality = qualityReviews.filter(r => 
+      r.tags.some(tag => 
+        tag.includes('low-quality') || 
+        tag.includes('cheap') || 
+        tag.includes('poor')
+      )
+    ).length;
+    
+    if (positiveQuality > 0 || negativeQuality > 0) {
+      const isPositive = positiveQuality > negativeQuality;
+      const confidence = (positiveQuality + negativeQuality) >= 3 ? 'high' : 'medium';
+      
+      return {
+        recommendation: isPositive 
+          ? 'High quality - Well-made and durable according to reviews'
+          : 'Quality concerns - Some reviews mention issues with construction',
+        confidence: confidence,
+        evidence: qualityReviews.slice(0, 3).map(r => r.snippet.substring(0, 100) + '...')
+      };
+    }
+  }
+  
+  return null;
+}
+
 // Function to update popup with review data
 async function updatePopupWithReviewData(reviewData) {
   const reviewStatusElement = document.getElementById('review-status');
   const reviewCountElement = document.getElementById('review-count');
   const fitSummarySection = document.getElementById('fit-summary-section');
   const fitSummaryElement = document.getElementById('fit-summary');
+  const qualitySummarySection = document.getElementById('quality-summary-section');
+  const qualitySummaryElement = document.getElementById('quality-summary');
   const reviewsSection = document.getElementById('reviews-section');
   const reviewsContent = document.getElementById('reviews-content');
   
-  if (!reviewStatusElement || !reviewCountElement || !fitSummarySection || !fitSummaryElement || !reviewsSection || !reviewsContent) {
+  if (!reviewStatusElement || !reviewCountElement || !fitSummarySection || !fitSummaryElement || !qualitySummarySection || !qualitySummaryElement || !reviewsSection || !reviewsContent) {
     console.error('Required elements not found');
     return;
   }
@@ -704,6 +814,9 @@ async function updatePopupWithReviewData(reviewData) {
   console.log('Review Count:', reviewData.reviewCount);
   console.log('Brand Data Object:', reviewData.brandData);
   console.log('Message:', reviewData.message);
+  console.log('Rich Summary:', reviewData.richSummary);
+  console.log('Rich Summary Data:', reviewData.richSummaryData);
+  console.log('External Search Results:', reviewData.externalSearchResults);
   console.log('Full Response:', JSON.stringify(reviewData, null, 2));
   console.log('======================');
   
@@ -712,36 +825,102 @@ async function updatePopupWithReviewData(reviewData) {
     reviewStatusElement.innerHTML = '<span class="status-unavailable">⚠️ Database Connection Failed</span>';
     reviewCountElement.textContent = reviewData.details || 'Check server logs for details';
     fitSummarySection.style.display = 'none';
+    qualitySummarySection.style.display = 'none';
   } else if (reviewData && reviewData.error) {
     reviewStatusElement.innerHTML = '<span class="status-unavailable">❌ Error checking data</span>';
     reviewCountElement.textContent = reviewData.details || '';
     fitSummarySection.style.display = 'none';
-  } else if (reviewData && reviewData.hasData) {
-    // Show fit summary section if we have brand data
-    if (reviewData.brandData && (reviewData.brandData.fitSummary || reviewData.brandData.sizingSystem)) {
+    qualitySummarySection.style.display = 'none';
+  } else if (reviewData && (reviewData.hasData || reviewData.recommendation || reviewData.externalSearchResults)) {
+    // Simplified: Look for summary in any of the possible locations
+    const findBrandFitSummary = () => {
+      // Check all possible locations for brandFitSummary
+      const locations = [
+        reviewData.externalSearchResults?.brandFitSummary,
+        reviewData.richSummaryData?.brandFitSummary, 
+        reviewData.brandFitSummary
+      ];
+      
+      for (const summary of locations) {
+        if (summary && summary.summary) {
+          return summary;
+        }
+      }
+      return null;
+    };
+
+    const findTotalResults = () => {
+      return reviewData.externalSearchResults?.totalResults || 
+             reviewData.richSummaryData?.totalResults || 
+             reviewData.totalResults || 
+             0;
+    };
+
+    const brandFitSummary = findBrandFitSummary();
+    const totalResults = findTotalResults();
+    
+    console.log('🎯 Summary detection:', {
+      found: !!brandFitSummary,
+      summaryText: brandFitSummary?.summary?.substring(0, 100) + '...',
+      totalResults,
+      hasData: reviewData.hasData,
+      hasRecommendation: !!reviewData.recommendation
+    });
+    
+    // Display fit summary - try structured summary first, then fallback to recommendation
+    if (brandFitSummary && brandFitSummary.summary) {
+      console.log('✅ Displaying structured brandFitSummary:', brandFitSummary.summary.substring(0, 100) + '...');
       fitSummarySection.style.display = 'block';
       
-      // Build fit summary content
-      let fitSummaryText = '';
-      if (reviewData.brandData.fitSummary) {
-        fitSummaryText += reviewData.brandData.fitSummary;
-      }
-      if (reviewData.brandData.sizingSystem) {
-        if (fitSummaryText) fitSummaryText += '\n\n';
-        fitSummaryText += `Sizing: ${reviewData.brandData.sizingSystem}`;
-      }
-      if (reviewData.brandData.bestForBodyTypes) {
-        if (fitSummaryText) fitSummaryText += '\n\n';
-        fitSummaryText += `Best for: ${reviewData.brandData.bestForBodyTypes}`;
-      }
-      if (reviewData.brandData.commonFitInformation) {
-        if (fitSummaryText) fitSummaryText += '\n\n';
-        fitSummaryText += `Fit notes: ${reviewData.brandData.commonFitInformation}`;
+      let fullSummaryText = brandFitSummary.summary;
+      
+      // Add confidence level prominently
+      if (brandFitSummary.confidence) {
+        const confidenceText = brandFitSummary.confidence.toUpperCase();
+        fullSummaryText += `\n\nConfidence: ${confidenceText}`;
       }
       
-      fitSummaryElement.textContent = fitSummaryText || 'No fit information available';
+      // Add total results info
+      if (totalResults > 0) {
+        fullSummaryText += ` (Based on ${totalResults} reviews)`;
+      }
+      
+      fitSummaryElement.textContent = fullSummaryText;
+    } else if (reviewData.recommendation && reviewData.recommendation.includes('Based on')) {
+      // Fallback: Use the recommendation field from background script
+      console.log('✅ Using recommendation fallback:', reviewData.recommendation.substring(0, 100) + '...');
+      fitSummarySection.style.display = 'block';
+      fitSummaryElement.textContent = reviewData.recommendation;
     } else {
+      console.log('❌ No summary found in brandFitSummary or recommendation');
       fitSummarySection.style.display = 'none';
+    }
+    
+    // Display quality summary using the same data source as fit summary
+    const qualityData = reviewData.richSummaryData || reviewData.externalSearchResults || reviewData;
+    if (qualityData) {
+      const qualityInsights = extractQualityInsights(qualityData);
+      if (qualityInsights) {
+        qualitySummarySection.style.display = 'block';
+        
+        let qualityText = qualityInsights.recommendation;
+        
+        // Add confidence level
+        if (qualityInsights.confidence) {
+          const confidenceText = qualityInsights.confidence.toUpperCase();
+          qualityText += `\n\nConfidence: ${confidenceText}`;
+        }
+        
+        qualitySummaryElement.textContent = qualityText;
+      }
+    }
+    
+    // Update debug section
+    const debugElement = document.getElementById('debug-summary');
+    if (debugElement) {
+      const totalResults = (reviewData.richSummaryData || reviewData.externalSearchResults || {}).totalResults || 0;
+      const summaryText = brandFitSummary?.summary?.substring(0, 100) || 'N/A';
+      debugElement.textContent = `RICH DATA: ${totalResults} results. Summary: ${brandFitSummary ? 'YES' : 'NO'} - "${summaryText}..."`;
     }
     
     // FIXED: Distinguish between brand data and review data
@@ -755,16 +934,58 @@ async function updatePopupWithReviewData(reviewData) {
       
       // First try to get database reviews
       fetchAndDisplayReviews(reviewData.brand, itemName).then(() => {
-        // After database reviews are processed, also try dynamic search for item-specific content
-        if (itemName && itemName !== 'Unknown Item') {
-          console.log('Database reviews loaded, now searching for additional item-specific content:', itemName);
-          
-          // Perform dynamic search for this specific item
-          return searchForReviews(reviewData.brand, itemName);
-        }
+        // Always try dynamic search to get rich brand summary, regardless of item name
+        console.log('Database reviews loaded, now searching for rich brand summary and item-specific content:', itemName);
+        
+        // Perform dynamic search (will get brand summary even without specific item name)
+        return searchForReviews(reviewData.brand, itemName);
       }).then(searchResults => {
+        // DEBUG: Show what we got from the API
+        const debugElement = document.getElementById('debug-summary');
+        if (searchResults) {
+          debugElement.textContent = `SUCCESS: ${searchResults.totalResults} results. BrandFitSummary: ${searchResults.brandFitSummary?.summary ? 'YES' : 'NO'} - "${searchResults.brandFitSummary?.summary?.substring(0, 100)}..."`;
+        } else {
+          debugElement.textContent = 'No search results returned';
+        }
+        
         if (searchResults && searchResults.success && searchResults.totalResults > 0) {
           console.log('Found additional dynamic content:', searchResults.totalResults, 'results');
+          
+          // Extract and display quality summary
+          const qualityInsights = extractQualityInsights(searchResults);
+          if (qualityInsights) {
+            qualitySummarySection.style.display = 'block';
+            
+            let qualityText = qualityInsights.recommendation;
+            
+            // Add confidence level
+            if (qualityInsights.confidence) {
+              const confidenceText = qualityInsights.confidence.toUpperCase();
+              qualityText += `\n\nConfidence: ${confidenceText}`;
+            }
+            
+            qualitySummaryElement.textContent = qualityText;
+          }
+          
+          // Use rich brandFitSummary from dynamic search for fit summary
+          if (searchResults.brandFitSummary && searchResults.brandFitSummary.summary) {
+            fitSummarySection.style.display = 'block';
+            
+            let fullSummaryText = searchResults.brandFitSummary.summary;
+            
+            // Add confidence level prominently
+            if (searchResults.brandFitSummary.confidence) {
+              const confidenceText = searchResults.brandFitSummary.confidence.toUpperCase();
+              fullSummaryText += `\n\nConfidence: ${confidenceText}`;
+            }
+            
+            // Add total results info
+            if (searchResults.totalResults) {
+              fullSummaryText += ` (Based on ${searchResults.totalResults} reviews)`;
+            }
+            
+            fitSummaryElement.textContent = fullSummaryText;
+          }
           
           // Add dynamic content to the existing reviews
           const reviewsContent = document.getElementById('reviews-content');
@@ -787,19 +1008,55 @@ async function updatePopupWithReviewData(reviewData) {
       reviewCountElement.textContent = 'Brand info available - No reviews yet';
       reviewsSection.style.display = 'none';
       
-      // NEW: Even with database brand data, try to get item-specific reviews
-      if (itemName && itemName !== 'Unknown Item') {
-        console.log('Brand data available but no reviews - trying dynamic search for item:', itemName);
-        
-        // Show loading state for item search
-        reviewCountElement.textContent = 'Brand info available - Searching for item-specific reviews...';
-        
-        // Perform dynamic search for this specific item
-        searchForReviews(reviewData.brand, itemName).then(searchResults => {
+      // Always try dynamic search to get rich brand summary and reviews
+      console.log('Brand data available but no reviews - trying dynamic search for brand:', reviewData.brand, 'item:', itemName);
+      
+      // Show loading state for search
+      reviewCountElement.textContent = 'Brand info available - Searching for comprehensive reviews...';
+      
+      // Perform dynamic search (will get brand summary and any available reviews)
+      searchForReviews(reviewData.brand, itemName).then(searchResults => {
           if (searchResults.success && searchResults.totalResults > 0) {
             // Show dynamic reviews alongside brand data
             reviewCountElement.textContent = `Brand info + ${searchResults.totalResults} item reviews found`;
             reviewsSection.style.display = 'block';
+            
+            // Extract and display quality summary
+            const qualityInsights = extractQualityInsights(searchResults);
+            if (qualityInsights) {
+              qualitySummarySection.style.display = 'block';
+              
+              let qualityText = qualityInsights.recommendation;
+              
+              // Add confidence level
+              if (qualityInsights.confidence) {
+                const confidenceText = qualityInsights.confidence.toUpperCase();
+                qualityText += `\n\nConfidence: ${confidenceText}`;
+              }
+              
+              qualitySummaryElement.textContent = qualityText;
+            }
+            
+            // Use rich brandFitSummary from dynamic search for fit summary
+            if (searchResults.brandFitSummary && searchResults.brandFitSummary.summary) {
+              fitSummarySection.style.display = 'block';
+              
+              let fullSummaryText = searchResults.brandFitSummary.summary;
+              
+              // Add confidence level prominently
+              if (searchResults.brandFitSummary.confidence) {
+                const confidenceText = searchResults.brandFitSummary.confidence.toUpperCase();
+                fullSummaryText += `\n\nConfidence: ${confidenceText}`;
+              }
+              
+              // Add total results info
+              if (searchResults.totalResults) {
+                fullSummaryText += ` (Based on ${searchResults.totalResults} reviews)`;
+              }
+              
+              fitSummaryElement.textContent = fullSummaryText;
+            }
+            
             displayDynamicReviews(searchResults);
           } else {
             reviewCountElement.textContent = 'Brand info available - No item-specific reviews found';
@@ -809,7 +1066,7 @@ async function updatePopupWithReviewData(reviewData) {
           reviewCountElement.textContent = 'Brand info available - Item search failed';
         });
       }
-    }
+    
   } else if (reviewData && !reviewData.hasData) {
     // Check if dynamic search is enabled
     const dynamicSearchToggle = document.getElementById('dynamic-search-toggle');
@@ -823,12 +1080,21 @@ async function updatePopupWithReviewData(reviewData) {
       reviewStatusElement.innerHTML = '<span class="status-loading">🔄 Searching for reviews...</span>';
       reviewCountElement.textContent = 'Searching the web for reviews...';
       fitSummarySection.style.display = 'none';
+      qualitySummarySection.style.display = 'none';
       reviewsSection.style.display = 'none';
       
       try {
         // Perform dynamic search
         const searchResults = await searchForReviews(reviewData.brand, itemName);
         
+        // DEBUG: Show what we got from the main dynamic search
+        const debugElement = document.getElementById('debug-summary');
+        if (searchResults) {
+          debugElement.textContent = `MAIN SEARCH: ${searchResults.totalResults || 0} results. BrandFitSummary: ${searchResults.brandFitSummary?.summary ? 'YES' : 'NO'} - "${searchResults.brandFitSummary?.summary?.substring(0, 100) || 'N/A'}..."`;
+        } else {
+          debugElement.textContent = 'MAIN SEARCH: No search results returned';
+        }
+
         if (searchResults.success && searchResults.totalResults > 0) {
           // Show dynamic reviews
           const statusText = searchResults.isFallback ? '🔍 Fallback reviews found' : '🔍 Dynamic reviews found';
@@ -839,6 +1105,42 @@ async function updatePopupWithReviewData(reviewData) {
           reviewStatusElement.innerHTML = `<span class="status-available">${statusText}</span>`;
           reviewCountElement.textContent = countText;
           
+          // Extract and display quality summary
+          const qualityInsights = extractQualityInsights(searchResults);
+          if (qualityInsights) {
+            qualitySummarySection.style.display = 'block';
+            
+            let qualityText = qualityInsights.recommendation;
+            
+            // Add confidence level
+            if (qualityInsights.confidence) {
+              const confidenceText = qualityInsights.confidence.toUpperCase();
+              qualityText += `\n\nConfidence: ${confidenceText}`;
+            }
+            
+            qualitySummaryElement.textContent = qualityText;
+          }
+          
+          // Use rich brandFitSummary from dynamic search for fit summary
+          if (searchResults.brandFitSummary && searchResults.brandFitSummary.summary) {
+            fitSummarySection.style.display = 'block';
+            
+            let fullSummaryText = searchResults.brandFitSummary.summary;
+            
+            // Add confidence level prominently
+            if (searchResults.brandFitSummary.confidence) {
+              const confidenceText = searchResults.brandFitSummary.confidence.toUpperCase();
+              fullSummaryText += `\n\nConfidence: ${confidenceText}`;
+            }
+            
+            // Add total results info
+            if (searchResults.totalResults) {
+              fullSummaryText += ` (Based on ${searchResults.totalResults} reviews)`;
+            }
+            
+            fitSummaryElement.textContent = fullSummaryText;
+          }
+          
           // Display dynamic reviews
           displayDynamicReviews(searchResults);
           reviewsSection.style.display = 'block';
@@ -846,12 +1148,14 @@ async function updatePopupWithReviewData(reviewData) {
           // No dynamic reviews found
           reviewStatusElement.innerHTML = '<span class="status-unavailable">❌ No reviews found</span>';
           reviewCountElement.textContent = 'No reviews found in database or live web search';
+          qualitySummarySection.style.display = 'none';
           reviewsSection.style.display = 'none';
         }
       } catch (error) {
         console.error('Dynamic search failed:', error);
         reviewStatusElement.innerHTML = '<span class="status-unavailable">❌ Search failed</span>';
         reviewCountElement.textContent = 'Dynamic search failed - try again later';
+        qualitySummarySection.style.display = 'none';
         reviewsSection.style.display = 'none';
       }
     } else {
@@ -859,14 +1163,155 @@ async function updatePopupWithReviewData(reviewData) {
       reviewStatusElement.innerHTML = '<span class="status-unavailable">❌ No brand data yet</span>';
       reviewCountElement.textContent = 'This brand is not in our database (live search disabled)';
       fitSummarySection.style.display = 'none';
+      qualitySummarySection.style.display = 'none';
       reviewsSection.style.display = 'none';
     }
   } else {
     reviewStatusElement.innerHTML = '<span class="status-loading">🔄 Checking...</span>';
     reviewCountElement.textContent = '';
     fitSummarySection.style.display = 'none';
+    qualitySummarySection.style.display = 'none';
     reviewsSection.style.display = 'none';
   }
+
+  // Show/hide Style with your pieces button based on available data
+  const styleButtonSection = document.getElementById('style-button-section');
+  console.log('🎨 Style button debug:', {
+    styleButtonSection: !!styleButtonSection,
+    hasBrandData: reviewData && (reviewData.hasData || reviewData.brand),
+    hasFitSummary: fitSummarySection && fitSummarySection.style.display !== 'none',
+    fitSummaryDisplay: fitSummarySection?.style.display,
+    reviewData
+  });
+  
+  if (styleButtonSection) {
+    // Show button if we have brand data and fit summary
+    const hasBrandData = reviewData && (reviewData.hasData || reviewData.brand);
+    const hasFitSummary = fitSummarySection && fitSummarySection.style.display !== 'none';
+    // Also check if we have any analysis content visible
+    const hasAnalysis = hasFitSummary || (reviewData && (reviewData.richSummary || reviewData.recommendation));
+    
+    console.log('🎨 Style button conditions:', { hasBrandData, hasFitSummary, hasAnalysis });
+    
+    if (hasBrandData && hasAnalysis) {
+      // Store current data for button click
+      currentBrandData = {
+        brandName: reviewData.brand || reviewData.brandName,
+        itemName: reviewData.itemName || itemName
+      };
+      
+      // Get product image if available
+      chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+        if (tabs[0]) {
+          currentPageUrl = tabs[0].url;
+          // Extract product image from current page
+          chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            func: extractProductImage
+          }, (results) => {
+            if (results && results[0] && results[0].result) {
+              currentProductImage = results[0].result;
+              console.log('Product image extracted:', currentProductImage);
+            }
+          });
+        }
+      });
+      
+      styleButtonSection.style.display = 'block';
+      console.log('🎨 Style button SHOWN');
+    } else {
+      styleButtonSection.style.display = 'none';
+      console.log('🎨 Style button HIDDEN - conditions not met');
+    }
+  } else {
+    console.log('🎨 Style button section not found in DOM');
+  }
+}
+
+// Function to extract product image from page (injected into content script)
+function extractProductImage() {
+  const imageSelectors = [
+    'meta[property="og:image"]',
+    'meta[name="twitter:image"]',
+    '[data-testid*="product"] img',
+    '.product-image img',
+    '.product-photo img',
+    '.product img',
+    '.hero-image img',
+    '.main-image img',
+    'img[src*="product"]',
+    'img[alt*="product" i]',
+    'picture img',
+    '.gallery img',
+    '[class*="image"] img',
+    'main img'
+  ];
+
+  for (const selector of imageSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      const src = element.tagName === 'META' ? element.content : element.src;
+      if (src && src.startsWith('http') && !src.includes('placeholder') && !src.includes('loading')) {
+        console.log('Found product image with selector:', selector, 'URL:', src);
+        return src;
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Function to display Reddit/Substack summary as bullet points
+function displayPrimarySourcesSummary(primaryReviews) {
+  if (!primaryReviews || primaryReviews.length === 0) return '';
+  
+  const redditReviews = primaryReviews.filter(r => r.url.includes('reddit'));
+  const substackReviews = primaryReviews.filter(r => r.url.includes('substack'));
+  
+  let summaryHTML = '';
+  
+  if (redditReviews.length > 0 || substackReviews.length > 0) {
+    summaryHTML += `
+      <div class="primary-sources-summary">
+        <h4>Key Insights from Reddit & Substack</h4>
+        <div class="summary-bullets">
+    `;
+    
+    // Extract key points from Reddit reviews
+    if (redditReviews.length > 0) {
+      summaryHTML += '<div class="source-group"><strong>Reddit Community:</strong><ul>';
+      redditReviews.slice(0, 3).forEach(review => {
+        let snippet = review.snippet;
+        // Clean up and shorten snippet
+        if (snippet.length > 120) {
+          snippet = snippet.substring(0, 120) + '...';
+        }
+        summaryHTML += `<li>"${snippet}" - <a href="${review.url}" target="_blank" rel="noopener">reddit</a></li>`;
+      });
+      summaryHTML += '</ul></div>';
+    }
+    
+    // Extract key points from Substack reviews
+    if (substackReviews.length > 0) {
+      summaryHTML += '<div class="source-group"><strong>Substack Reviews:</strong><ul>';
+      substackReviews.slice(0, 3).forEach(review => {
+        let snippet = review.snippet;
+        // Clean up and shorten snippet
+        if (snippet.length > 120) {
+          snippet = snippet.substring(0, 120) + '...';
+        }
+        summaryHTML += `<li>"${snippet}" - <a href="${review.url}" target="_blank" rel="noopener">substack</a></li>`;
+      });
+      summaryHTML += '</ul></div>';
+    }
+    
+    summaryHTML += `
+        </div>
+      </div>
+    `;
+  }
+  
+  return summaryHTML;
 }
 
 // Function to display dynamic reviews
@@ -882,16 +1327,77 @@ function displayDynamicReviews(searchResults) {
     : '🔍 <strong>Live Search Results</strong> - These reviews were found through web search, not from our database';
   reviewsContent.appendChild(notification);
   
+  // Display primary sources summary first (Reddit/Substack bullet points)
+  const primaryReviews = searchResults.groupedReviews?.primary || [];
+  if (primaryReviews.length > 0) {
+    const primarySummaryHTML = displayPrimarySourcesSummary(primaryReviews);
+    reviewsContent.innerHTML += primarySummaryHTML;
+  }
+
   // Display brand fit summary if available
   if (searchResults.brandFitSummary) {
+    const sections = searchResults.brandFitSummary.sections || {};
+    let sectionsHTML = '';
+    
+    // Display quality section first if available
+    if (sections.quality) {
+      sectionsHTML += `
+        <div class="summary-section">
+          <strong>Quality:</strong> ${sections.quality.recommendation}
+          <span class="confidence-badge">${sections.quality.confidence}</span>
+        </div>
+      `;
+    }
+    
+    // Display fit section
+    if (sections.fit) {
+      sectionsHTML += `
+        <div class="summary-section">
+          <strong>Fit:</strong> ${sections.fit.recommendation}
+          <span class="confidence-badge">${sections.fit.confidence}</span>
+        </div>
+      `;
+    }
+    
+    // Display fabric section if available
+    if (sections.fabric) {
+      sectionsHTML += `
+        <div class="summary-section">
+          <strong>Materials:</strong> ${sections.fabric.recommendation}
+          <span class="confidence-badge">${sections.fabric.confidence}</span>
+        </div>
+      `;
+    }
+    
+    // Display wash care section if available
+    if (sections.washCare) {
+      sectionsHTML += `
+        <div class="summary-section">
+          <strong>Care:</strong> ${sections.washCare.recommendation}
+          <span class="confidence-badge">${sections.washCare.confidence}</span>
+        </div>
+      `;
+    }
+    
+    // Determine the appropriate title based on available sections
+    let sectionTitle = "Brand Review Summary";
+    if (sections.quality && sections.fit) {
+      sectionTitle = "Fit & Quality Summary";
+    } else if (sections.quality) {
+      sectionTitle = "Quality Summary";
+    } else if (sections.fit) {
+      sectionTitle = "Fit Summary";
+    }
+
     const summaryHTML = `
       <div class="brand-fit-summary">
-        <h4>Brand Fit Summary</h4>
+        <h4>${sectionTitle}</h4>
         <div class="summary-content">
           <div class="summary-text">${searchResults.brandFitSummary.summary}</div>
+          ${sectionsHTML}
           <div class="summary-meta">
-            <span class="confidence-badge">Confidence: ${searchResults.brandFitSummary.confidence}</span>
-            <span class="sources">Sources: ${searchResults.brandFitSummary.sources.join(', ')}</span>
+            <span class="confidence-badge">Overall: ${searchResults.brandFitSummary.confidence}</span>
+            <span class="sources">Sources: ${searchResults.totalResults} reviews</span>
           </div>
         </div>
       </div>
@@ -904,17 +1410,29 @@ function displayDynamicReviews(searchResults) {
   
   // Separate item-specific reviews from general brand reviews
   const itemSpecificReviews = searchResults.reviews.filter(r => 
-    r.tags.some(tag => tag.toLowerCase().includes('fit') || tag.toLowerCase().includes('size')) &&
+    r.tags.some(tag => 
+      tag.toLowerCase().includes('fit') || 
+      tag.toLowerCase().includes('size') ||
+      tag.toLowerCase().includes('quality') ||
+      tag.toLowerCase().includes('material') ||
+      tag.toLowerCase().includes('fabric')
+    ) &&
     !r.brandLevel
   );
   
   const generalBrandReviews = searchResults.reviews.filter(r => 
-    r.brandLevel || !r.tags.some(tag => tag.toLowerCase().includes('fit') || tag.toLowerCase().includes('size'))
+    r.brandLevel || !r.tags.some(tag => 
+      tag.toLowerCase().includes('fit') || 
+      tag.toLowerCase().includes('size') ||
+      tag.toLowerCase().includes('quality') ||
+      tag.toLowerCase().includes('material') ||
+      tag.toLowerCase().includes('fabric')
+    )
   );
   
   // Display item-specific reviews first (most relevant)
   if (itemSpecificReviews.length > 0) {
-    reviewsContent.innerHTML += '<h4>Item-Specific Reviews</h4>';
+    reviewsContent.innerHTML += '<h4>Item-Specific Reviews (Fit & Quality)</h4>';
     displayReviewGroup(itemSpecificReviews, reviewsContent, true);
   }
   
@@ -990,32 +1508,148 @@ async function analyzePage() {
     // Check if we have review data for this brand
     if (normalizedBrand && normalizedBrand !== 'Unknown Brand') {
       try {
-        console.log('🔍 Checking brand data for:', normalizedBrand);
-        console.log('🌐 API endpoint: https://www.pointfour.in/api/extension/check-brand');
+        console.log('🔍 Getting brand data from background script for:', normalizedBrand);
         
-        const response = await fetch('https://www.pointfour.in/api/extension/check-brand', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          mode: 'cors',
-          credentials: 'omit',
-          body: JSON.stringify({ brand: normalizedBrand })
-        });
+        // Update UI to show we're loading
+        const debugElement = document.getElementById('debug-summary');
+        if (debugElement) {
+          debugElement.textContent = 'Connecting to background script...';
+        }
         
-        console.log('📡 Response status:', response.status);
-        console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+        // Get data from background script instead of making separate API call
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         
-        if (response.ok) {
-          const data = await response.json();
-          console.log('📊 Raw API response:', data);
-          console.log('📊 Response structure:', {
+        // Try to get data from background script with timeout
+        let backgroundData;
+        try {
+          if (debugElement) {
+            debugElement.textContent = 'Requesting data from background script...';
+          }
+          
+          // Retry mechanism in case background script is still processing
+          let retries = 0;
+          const maxRetries = 3;
+          
+          while (retries < maxRetries) {
+            try {
+              console.log(`🔄 Popup: Attempting GET_BRAND_INFO for tab ${tab.id}, retry ${retries + 1}/${maxRetries}`);
+              backgroundData = await Promise.race([
+                chrome.runtime.sendMessage({
+                  type: 'GET_BRAND_INFO',
+                  tabId: tab.id
+                }),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Timeout')), 2000)
+                )
+              ]);
+              console.log('📨 Popup: Received response from background:', backgroundData);
+              
+              // If we got successful data, break out of retry loop
+              if (backgroundData?.success) {
+                break;
+              }
+              
+              // If no success but no error, wait and retry
+              if (retries < maxRetries - 1) {
+                console.log(`⏳ Background script not ready, retry ${retries + 1}/${maxRetries}...`);
+                if (debugElement) {
+                  debugElement.textContent = `Waiting for background processing... (${retries + 1}/${maxRetries})`;
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            } catch (timeoutError) {
+              console.log(`⏰ Popup: Timeout on attempt ${retries + 1}, error:`, timeoutError.message);
+              if (debugElement) {
+                debugElement.textContent = `Timeout, retrying... (${retries + 1}/${maxRetries})`;
+              }
+            }
+            
+            retries++;
+          }
+          console.log('📦 Background data received:', backgroundData);
+          
+          if (debugElement) {
+            debugElement.textContent = 'Background data received, processing...';
+          }
+        } catch (error) {
+          console.log('⚠️ Background communication failed, falling back to direct search:', error);
+          
+          if (debugElement) {
+            debugElement.textContent = 'Background failed, trying direct search...';
+          }
+          
+          // Fallback to direct search API call
+          try {
+            const searchResults = await searchForReviews(normalizedBrand, itemName);
+            
+            if (searchResults.success || searchResults.brandFitSummary) {
+              // Convert search results to background data format
+              backgroundData = {
+                success: true,
+                data: {
+                  hasData: true,
+                  brandName: normalizedBrand,
+                  externalSearchResults: searchResults,
+                  richSummary: searchResults.brandFitSummary?.summary,
+                  richSummaryData: searchResults
+                }
+              };
+            } else {
+              backgroundData = { 
+                success: true, 
+                data: { 
+                  hasData: false,
+                  brandName: normalizedBrand,
+                  message: searchResults.message || 'No reviews found'
+                }
+              };
+            }
+          } catch (searchError) {
+            console.error('Direct search also failed:', searchError);
+            backgroundData = { 
+              success: false, 
+              error: true,
+              message: 'All communication methods failed' 
+            };
+          }
+        }
+        
+        // Handle both background script and fallback API response formats
+        const response = { ok: backgroundData?.success || false };
+        let data;
+        
+        if (backgroundData?.success && backgroundData?.data) {
+          // Background script format
+          data = backgroundData.data;
+          console.log('📡 Using background script data');
+        } else if (backgroundData?.success === false) {
+          // Background script returned no data
+          data = { hasData: false, reviewCount: 0 };
+          console.log('📡 Background script has no data');
+        } else {
+          // Fallback or other format
+          data = backgroundData || { hasData: false, reviewCount: 0 };
+          console.log('📡 Using fallback data');
+        }
+        
+        console.log('📡 Processing data:', data);
+        
+        if (response.ok && data) {
+          console.log('📊 Final data to process:', data);
+          console.log('📊 Data structure:', {
             hasData: data.hasData,
             reviewCount: data.reviewCount,
             brandData: data.brandData ? 'Present' : 'Missing',
+            externalSearchResults: data.externalSearchResults ? 'Present' : 'Missing',
             message: data.message
           });
+          
+          // If we have external search results, use them for rich summary
+          if (data.externalSearchResults && data.externalSearchResults.brandFitSummary) {
+            console.log('🎯 Using rich brandFitSummary from background script');
+            data.richSummary = data.externalSearchResults.brandFitSummary.summary;
+            data.richSummaryData = data.externalSearchResults;
+          }
           
           // Update popup with review information
           updatePopupWithReviewData({ ...data, itemName });
@@ -1026,6 +1660,8 @@ async function analyzePage() {
           updatePopupWithReviewData({ 
             hasData: false, 
             reviewCount: 0, 
+            brandName: normalizedBrand,
+            error: true,
             message: 'Failed to fetch brand data' 
           });
         }
@@ -1039,6 +1675,8 @@ async function analyzePage() {
         updatePopupWithReviewData({ 
           hasData: false, 
           reviewCount: 0, 
+          brandName: normalizedBrand,
+          error: true,
           message: 'Network error' 
         });
       }
@@ -1048,6 +1686,7 @@ async function analyzePage() {
       updatePopupWithReviewData({ 
         hasData: false, 
         reviewCount: 0, 
+        brandName: 'Unknown Brand',
         message: 'No brand detected' 
       });
     }
@@ -1086,4 +1725,44 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('Dynamic search enabled:', this.checked);
     });
   }
+
+  // Add event listener for Style with your pieces button
+  const styleButton = document.getElementById('style-with-pieces-btn');
+  if (styleButton) {
+    styleButton.addEventListener('click', handleStyleButtonClick);
+  }
 });
+
+// Global variables to store detected data
+let currentBrandData = null;
+let currentProductImage = null;
+let currentPageUrl = null;
+
+// Function to handle Style with your pieces button click
+function handleStyleButtonClick() {
+  console.log('Style button clicked');
+  
+  if (!currentBrandData) {
+    console.error('No brand data available');
+    return;
+  }
+
+  // Get current tab URL
+  chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+    const pageUrl = tabs[0].url;
+    
+    // Build parameters for the style page
+    const params = new URLSearchParams({
+      brand: currentBrandData.brandName || '',
+      itemName: currentBrandData.itemName || '',
+      imageUrl: currentProductImage || '',
+      pageUrl: pageUrl
+    });
+
+    // Open the style page in a new tab
+    const styleUrl = `https://www.pointfour.in/style?${params.toString()}`;
+    console.log('Opening style URL:', styleUrl);
+    
+    chrome.tabs.create({ url: styleUrl });
+  });
+}

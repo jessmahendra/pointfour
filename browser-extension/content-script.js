@@ -16,12 +16,12 @@
           // Meta tag indicators
           META_KEYWORDS: [
               'fashion', 'clothing', 'apparel', 'wear', 'style', 'outfit',
-              'dress', 'shirt', 'pants', 'jeans', 'shoes', 'accessories',
+              'dress', 'shirt', 't-shirt', 'tshirt', 'pants', 'jeans', 'shoes', 'accessories',
               'mens', 'womens', 'unisex', 'designer', 'boutique', 'collection',
               'jacket', 'coat', 'sweater', 'blazer', 'suit', 'skirt',
               'handbag', 'footwear', 'sneakers', 'boots', 'heels',
               'athleisure', 'activewear', 'sportswear', 'streetwear',
-              'luxury', 'premium', 'couture', 'ready-to-wear', 'rtw'
+              'luxury', 'premium', 'couture', 'ready-to-wear', 'rtw', 'rohe'
           ],
           
           // Shopping cart indicators
@@ -66,7 +66,7 @@
       
       // Scoring thresholds
       DETECTION_THRESHOLDS: {
-          MIN_SCORE: 3,           // Minimum score to consider it a fashion site
+          MIN_SCORE: 2,           // Minimum score to consider it a fashion site (lowered from 3)
           HIGH_CONFIDENCE: 6,     // High confidence it's a fashion site
           PRODUCT_PAGE_BONUS: 3   // Extra points if it looks like a product page
       },
@@ -555,15 +555,128 @@
         `;
     } else if (data) {
         // Handle the actual data structure from background script
+        console.log('🔍 DEBUGGING: Complete data object received from background:', JSON.stringify(data, null, 2));
+        
         const brandName = data.brandName || currentBrand || 'Unknown Brand';
-        const recommendation = data.recommendation || 'Analyzing fit information...';
         const fitTips = data.fitTips || [];
         const hasData = data.hasData;
         const totalReviews = data.externalSearchResults?.totalResults || 0;
         
-        // Check if we have meaningful data
-        if (!hasData && !recommendation.includes('Based on')) {
-            // Still loading or no real data yet
+        // Smart summary detection - check multiple locations
+        const findBestSummary = () => {
+            console.log('🔍 DEBUGGING: Content script received data structure:', {
+                hasExternalSearchResults: !!data.externalSearchResults,
+                hasRichSummaryData: !!data.richSummaryData,
+                hasBrandFitSummary: !!data.brandFitSummary,
+                hasRecommendation: !!data.recommendation,
+                recommendationPreview: data.recommendation?.substring(0, 100) + '...' || 'N/A'
+            });
+            
+            console.log('🔍 DEBUGGING: External search results structure:', {
+                exists: !!data.externalSearchResults,
+                hasBrandFitSummary: !!data.externalSearchResults?.brandFitSummary,
+                brandFitSummaryStructure: data.externalSearchResults?.brandFitSummary ? Object.keys(data.externalSearchResults.brandFitSummary) : 'N/A',
+                summaryExists: !!data.externalSearchResults?.brandFitSummary?.summary,
+                summaryPreview: data.externalSearchResults?.brandFitSummary?.summary?.substring(0, 100) + '...' || 'N/A'
+            });
+            
+            // Priority 1: Check for structured brandFitSummary
+            const summaryLocations = [
+                {name: 'externalSearchResults', value: data.externalSearchResults?.brandFitSummary?.summary},
+                {name: 'richSummaryData', value: data.richSummaryData?.brandFitSummary?.summary},
+                {name: 'brandFitSummary', value: data.brandFitSummary?.summary}
+            ];
+            
+            console.log('🔍 DEBUGGING: Checking summary locations:', summaryLocations.map(loc => ({
+                location: loc.name,
+                exists: !!loc.value,
+                includesBasedOn: loc.value ? loc.value.includes('Based on') : false,
+                preview: loc.value?.substring(0, 50) + '...' || 'N/A'
+            })));
+            
+            for (const location of summaryLocations) {
+                if (location.value && location.value.trim().length > 50) {
+                    // Accept any substantial summary, not just ones starting with "Based on"
+                    console.log('✅ DEBUGGING: Found summary in:', location.name, 'Preview:', location.value.substring(0, 100) + '...');
+                    return location.value;
+                }
+            }
+            
+            // Priority 2: Use recommendation field (from Phase 1 fix)
+            console.log('🔍 DEBUGGING: Checking recommendation field:', {
+                exists: !!data.recommendation,
+                includesBasedOn: data.recommendation ? data.recommendation.includes('Based on') : false,
+                preview: data.recommendation?.substring(0, 100) + '...' || 'N/A'
+            });
+            
+            if (data.recommendation && data.recommendation.trim().length > 50 && data.recommendation !== 'Analyzing fit information...') {
+                console.log('✅ DEBUGGING: Using recommendation field');
+                return data.recommendation;
+            }
+            
+            // Priority 3: Try to find ANY summary content in the API response
+            console.log('🔍 DEBUGGING: Trying fallback - any summary content from API');
+            const fallbackSummary = data.externalSearchResults?.brandFitSummary?.summary || 
+                                   data.brandFitSummary?.summary ||
+                                   data.richSummaryData?.brandFitSummary?.summary;
+            
+            if (fallbackSummary && fallbackSummary.trim().length > 20) {
+                console.log('✅ DEBUGGING: Using fallback summary:', fallbackSummary.substring(0, 100) + '...');
+                return fallbackSummary;
+            }
+            
+            // Priority 3.5: Try to construct summary from sections if available
+            const sections = data.externalSearchResults?.brandFitSummary?.sections || data.brandFitSummary?.sections;
+            if (sections && Object.keys(sections).length > 0) {
+                console.log('🔍 DEBUGGING: Trying to construct summary from sections:', Object.keys(sections));
+                const sectionSummaries = [];
+                
+                if (sections.fit) {
+                    sectionSummaries.push(sections.fit.recommendation);
+                }
+                if (sections.quality) {
+                    sectionSummaries.push(sections.quality.recommendation);
+                }
+                if (sections.fabric) {
+                    sectionSummaries.push(sections.fabric.recommendation);
+                }
+                
+                if (sectionSummaries.length > 0) {
+                    const constructedSummary = sectionSummaries.join('. ');
+                    console.log('✅ DEBUGGING: Using constructed summary from sections');
+                    return constructedSummary;
+                }
+            }
+            
+            // Priority 4: If we have reviews, create a basic summary
+            if (totalReviews > 0) {
+                const basicSummary = `Found ${totalReviews} reviews for ${brandName}. Analysis in progress - detailed fit and quality information available.`;
+                console.log('✅ DEBUGGING: Using basic summary with review count');
+                return basicSummary;
+            }
+            
+            // Priority 5: Default loading message
+            console.log('❌ DEBUGGING: No valid summary found, using loading message');
+            return 'Analyzing fit information...';
+        };
+        
+        const recommendation = findBestSummary();
+        console.log('📋 Content script summary:', {
+            brandName,
+            summaryFound: recommendation !== 'Analyzing fit information...',
+            summaryPreview: recommendation.substring(0, 100) + '...',
+            hasData,
+            totalReviews
+        });
+        
+        // Check if we're still in loading state - be more restrictive about showing loading
+        const isStillLoading = recommendation === 'Analyzing fit information...' && 
+                              totalReviews === 0 && 
+                              !hasData &&
+                              !data.externalSearchResults;
+        
+        if (isStillLoading) {
+            // Still loading - show spinner
             contentDiv.innerHTML = `
                 <div class="pointfour-results">
                     <h3>${brandName}</h3>
@@ -578,11 +691,26 @@
             return;
         }
         
+        // Enhanced summary display with confidence and source info
+        let summaryHtml = `<p class="pointfour-description">${recommendation}</p>`;
+        
+        // Add metadata if we have a good summary
+        if (recommendation !== 'Analyzing fit information...' && totalReviews > 0) {
+            // Try to extract confidence from structured data
+            const confidence = data.externalSearchResults?.brandFitSummary?.confidence ||
+                             data.richSummaryData?.brandFitSummary?.confidence ||
+                             data.brandFitSummary?.confidence;
+            
+            if (confidence) {
+                summaryHtml += `<div class="pointfour-confidence">Confidence: ${confidence.toUpperCase()}</div>`;
+            }
+        }
+
         let content = `
             <div class="pointfour-results">
                 <h3>${brandName}</h3>
                 <div class="pointfour-fit-info">
-                    <p class="pointfour-description">${recommendation}</p>
+                    ${summaryHtml}
         `;
         
         if (fitTips.length > 0) {
@@ -594,6 +722,36 @@
                     </ul>
                 </div>
             `;
+        }
+
+        // Add quality insights if available
+        const findQualityData = () => {
+            const locations = [
+                data.externalSearchResults,
+                data.richSummaryData,
+                data
+            ];
+            
+            for (const searchData of locations) {
+                if (searchData && searchData.brandFitSummary && searchData.brandFitSummary.sections) {
+                    return searchData;
+                }
+            }
+            return null;
+        };
+
+        const qualityData = findQualityData();
+        if (qualityData) {
+            const qualityInsights = extractQualityInsights(qualityData);
+            if (qualityInsights) {
+                content += `
+                    <div class="pointfour-quality-info">
+                        <h4>Quality & Materials:</h4>
+                        <p>${qualityInsights.recommendation}</p>
+                        ${qualityInsights.confidence ? `<div class="pointfour-confidence">Confidence: ${qualityInsights.confidence.toUpperCase()}</div>` : ''}
+                    </div>
+                `;
+            }
         }
         
         // Add clickable button for review count
@@ -616,6 +774,17 @@
                 </div>
             `;
         }
+
+        // Add "Style with your pieces" button when we have fit data
+        if (recommendation !== 'Analyzing fit information...' && totalReviews > 0) {
+            content += `
+                <div class="pointfour-style-info">
+                    <button class="pointfour-style-button" id="pointfour-style-btn">
+                        <span>✨ Style with your pieces</span>
+                    </button>
+                </div>
+            `;
+        }
         
         content += `
                 </div>
@@ -623,8 +792,110 @@
         `;
         
         contentDiv.innerHTML = content;
+        
+        // Add event listener for Style button
+        const styleButton = contentDiv.querySelector('#pointfour-style-btn');
+        if (styleButton) {
+            styleButton.addEventListener('click', () => handleStyleButtonClick(brandName, data));
+        }
     }
 }
+
+  // ========================================
+  // STYLE BUTTON FUNCTIONALITY
+  // ========================================
+  
+  function handleStyleButtonClick(brandName, data) {
+      console.log('🎨 Style button clicked for brand:', brandName);
+      
+      // Extract product image from current page
+      const productImage = extractProductImageFromPage();
+      
+      // Extract item name from page title/URL
+      const itemName = extractItemNameFromPage();
+      
+      // Build parameters for the style page
+      const params = new URLSearchParams({
+          brand: brandName || '',
+          itemName: itemName || '',
+          imageUrl: productImage || '',
+          pageUrl: window.location.href
+      });
+
+      // Open the style page in a new tab
+      const styleUrl = `https://www.pointfour.in/style?${params.toString()}`;
+      console.log('🎨 Opening style URL:', styleUrl);
+      
+      window.open(styleUrl, '_blank', 'noopener,noreferrer');
+  }
+  
+  function extractProductImageFromPage() {
+      const imageSelectors = [
+          'meta[property="og:image"]',
+          'meta[name="twitter:image"]',
+          '[data-testid*="product"] img',
+          '.product-image img',
+          '.product-photo img',
+          '.product img',
+          '.hero-image img',
+          '.main-image img',
+          'img[src*="product"]',
+          'img[alt*="product" i]',
+          'picture img',
+          '.gallery img',
+          '[class*="image"] img',
+          'main img'
+      ];
+
+      for (const selector of imageSelectors) {
+          const element = document.querySelector(selector);
+          if (element) {
+              const src = element.tagName === 'META' ? element.content : element.src;
+              if (src && src.startsWith('http') && !src.includes('placeholder') && !src.includes('loading')) {
+                  console.log('🎨 Found product image with selector:', selector, 'URL:', src);
+                  return src;
+              }
+          }
+      }
+      
+      return null;
+  }
+  
+  function extractItemNameFromPage() {
+      // Try to extract item name from various page elements
+      const selectors = [
+          'h1',
+          '.product-title',
+          '.product-name',
+          '[data-testid*="title"]',
+          '[data-testid*="name"]',
+          '.pdp-title',
+          '.item-title'
+      ];
+      
+      for (const selector of selectors) {
+          const element = document.querySelector(selector);
+          if (element) {
+              const text = element.textContent?.trim();
+              if (text && text.length > 3 && text.length < 200) {
+                  console.log('🎨 Found item name with selector:', selector, 'Text:', text);
+                  return text;
+              }
+          }
+      }
+      
+      // Fallback to page title
+      const title = document.title;
+      if (title && title.length > 3 && title.length < 200) {
+          // Clean up title by removing common e-commerce suffixes
+          const cleanTitle = title.replace(/\s*[-|]\s*.+$/g, '').trim();
+          if (cleanTitle.length > 3) {
+              return cleanTitle;
+          }
+      }
+      
+      return '';
+  }
 
   // ========================================
   // API COMMUNICATION

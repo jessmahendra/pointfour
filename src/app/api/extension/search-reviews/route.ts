@@ -1,438 +1,488 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// Category definitions with keywords and patterns
-const ANALYSIS_CATEGORIES = {
-  fit: {
-    keywords: ['true to size', 'runs small', 'runs large', 'size up', 'size down', 'tight', 'loose', 'baggy', 'snug', 'roomy', 'fits', 'sizing'],
-    patterns: {
-      runsSmall: ['runs small', 'size up', 'tight', 'snug fit', 'order a size up', 'smaller than expected'],
-      runsLarge: ['runs large', 'size down', 'loose', 'baggy', 'oversized', 'order a size down', 'bigger than expected'],
-      trueToSize: ['true to size', 'fits as expected', 'perfect fit', 'accurate sizing', 'fits perfectly'],
-      inconsistent: ['inconsistent', 'varies', 'depends on style', 'different fits', 'some run small some run large']
-    }
-  },
-  washing: {
-    keywords: ['wash', 'shrink', 'stretch', 'laundry', 'care', 'machine wash', 'dry clean', 'after washing'],
-    patterns: {
-      shrinks: ['shrinks', 'shrank', 'got smaller', 'reduced in size', 'shrinkage'],
-      holds: ['holds up', 'maintains shape', "doesn't shrink", 'keeps its form', 'washes well'],
-      stretches: ['stretches out', 'loses shape', 'gets baggy', 'stretched after wash']
-    }
-  },
-  quality: {
-    keywords: ['quality', 'durable', 'last', 'wear', 'pilling', 'fade', 'tear', 'holds up', 'construction', 'stitching'],
-    patterns: {
-      highQuality: ['high quality', 'durable', 'lasts', 'holds up well', 'well-made', 'excellent quality', 'sturdy'],
-      lowQuality: ['poor quality', 'falls apart', 'pilling', 'fades quickly', 'cheap', 'flimsy', 'thin material']
-    }
-  },
-  fabric: {
-    keywords: ['cotton', 'polyester', 'wool', 'linen', 'silk', 'blend', 'material', 'fabric', 'rayon', 'viscose', 'spandex'],
-    patterns: {
-      natural: ['100% cotton', 'pure wool', 'linen', 'silk', 'organic cotton'],
-      synthetic: ['polyester', 'nylon', 'acrylic', 'spandex', 'elastane'],
-      blend: ['cotton blend', 'wool blend', 'mixed fabric', 'poly blend']
-    }
-  }
-};
-
-// Calculate relevance score for a piece of text
-function calculateRelevanceScore(text: string, brandName: string): number {
-  let score = 0;
-  const lowerText = text.toLowerCase();
-  const brandLower = brandName.toLowerCase();
-  
-  // Check for brand mention (required)
-  if (!lowerText.includes(brandLower)) {
-    return 0;
-  }
-  
-  // Base score for brand mention
-  score += 10;
-  
-  // Score based on category mentions
-  let categoriesFound = 0;
-  
-  for (const [category, config] of Object.entries(ANALYSIS_CATEGORIES)) {
-    const hasKeywords = config.keywords.some(keyword => 
-      lowerText.includes(keyword.toLowerCase())
-    );
-    
-    if (hasKeywords) {
-      score += 15;
-      categoriesFound++;
-    }
-  }
-  
-  // Bonus for multiple categories
-  if (categoriesFound >= 2) score += 20;
-  
-  // Check for specific user experience indicators
-  const experienceIndicators = [
-    /i (bought|purchased|ordered|wear|have)/i,
-    /size \d+/i,
-    /usually wear|normally a|typical size/i,
-    /months? ago|years? ago|weeks? ago/i,
-    /returned|kept|exchange/i
-  ];
-  
-  experienceIndicators.forEach(pattern => {
-    if (pattern.test(text)) score += 10;
-  });
-  
-  return score;
+interface SerperResult {
+  title?: string;
+  snippet?: string;
+  link?: string;
+  displayed_link?: string;
 }
 
-// Extract specific insights from text
-function extractInsights(text: string, category: keyof typeof ANALYSIS_CATEGORIES) {
-  const insights = {
-    mentions: [] as string[],
-    patterns: {} as Record<string, number>
+interface Review {
+  title: string;
+  snippet: string;
+  url: string;
+  source: string;
+  tags: string[];
+  confidence: "high" | "medium" | "low";
+  brandLevel: boolean;
+  fullContent: string;
+}
+
+interface AnalysisResult {
+  fit?: {
+    recommendation: string;
+    confidence: 'low' | 'medium' | 'high';
+    evidence: string[];
   };
-  
-  const config = ANALYSIS_CATEGORIES[category];
-  const lowerText = text.toLowerCase();
-  
-  // Count pattern occurrences
-  for (const [patternName, keywords] of Object.entries(config.patterns)) {
-    let count = 0;
-    keywords.forEach(keyword => {
-      if (lowerText.includes(keyword.toLowerCase())) {
-        count++;
-        // Extract the sentence containing this keyword
-        const sentences = text.split(/[.!?]+/);
-        const relevantSentence = sentences.find(s => 
-          s.toLowerCase().includes(keyword.toLowerCase())
-        );
-        if (relevantSentence && relevantSentence.length < 200) {
-          insights.mentions.push(relevantSentence.trim());
-        }
-      }
-    });
-    if (count > 0) {
-      insights.patterns[patternName] = count;
-    }
-  }
-  
-  return insights;
-}
-
-// Create structured prompt for GPT analysis
-function createAnalysisPrompt(brandName: string, relevantContent: Array<{source: string, text: string, score: number}>) {
-  const contentText = relevantContent.map(item => 
-    `Source: ${item.source}\nContent: ${item.text}\nRelevance Score: ${item.score}`
-  ).join('\n\n---\n\n');
-
-  return `
-    Analyze the following search results for ${brandName} clothing reviews.
-    
-    Your task is to extract ONLY explicitly mentioned information about:
-    1. Fit (true to size, runs small/large, sizing recommendations)
-    2. Washing behavior (shrinking, stretching, care instructions)
-    3. Quality over time (durability, pilling, fading)
-    4. Fabric composition (materials mentioned)
-    
-    STRICT RULES:
-    - Only include information that is EXPLICITLY stated in the reviews
-    - If a category has no relevant mentions, set it to null
-    - Require at least 2-3 consistent mentions to establish a pattern
-    - Include confidence scores: "high" (5+ mentions), "medium" (3-4 mentions), "low" (1-2 mentions)
-    - If the brand name is mentioned but no relevant fit/quality info, mark as "irrelevant"
-    
-    Return a JSON object with this structure:
-    {
-      "relevant": true/false,
-      "fit": {
-        "pattern": "runs_small" | "runs_large" | "true_to_size" | "inconsistent" | null,
-        "confidence": "low" | "medium" | "high",
-        "evidence": ["quote1", "quote2"],
-        "recommendation": "Size up" | "Size down" | "Order your usual size" | null
-      },
-      "washing": {
-        "behavior": "shrinks" | "holds_shape" | "stretches" | null,
-        "confidence": "low" | "medium" | "high",
-        "evidence": ["quote1", "quote2"]
-      },
-      "quality": {
-        "assessment": "high" | "medium" | "low" | null,
-        "confidence": "low" | "medium" | "high",
-        "evidence": ["quote1", "quote2"],
-        "durability_notes": "specific observations"
-      },
-      "fabric": {
-        "composition": ["material1", "material2"],
-        "confidence": "low" | "medium" | "high",
-        "evidence": ["quote1"]
-      },
-      "summary": "2-3 sentence summary of key findings"
-    }
-    
-    Content to analyze:
-    ${contentText}
-  `;
+  quality?: {
+    recommendation: string;
+    confidence: 'low' | 'medium' | 'high';
+    evidence: string[];
+  };
+  fabric?: {
+    recommendation: string;
+    confidence: 'low' | 'medium' | 'high';
+    evidence: string[];
+  };
+  washCare?: {
+    recommendation: string;
+    confidence: 'low' | 'medium' | 'high';
+    evidence: string[];
+  };
+  overallConfidence?: 'low' | 'medium' | 'high';
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { brand, itemName, category } = body;
-    
-    console.log('API received request for:', { brand, itemName, category });
+    const { brand } = body;
     
     if (!brand) {
-      return NextResponse.json(
-        { error: 'Brand name is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Brand name is required' }, { status: 400 });
     }
 
-         // Check if we have Serper API key
-     const serperApiKey = process.env.SERPER_API_KEY;
-     
-     if (!serperApiKey) {
-       console.error('SERPER_API_KEY not found in environment variables');
-       // Return a fallback response instead of erroring
-       return NextResponse.json({
-         brandFitSummary: {
-           summary: `Unable to fetch live reviews for ${brand}. Search API not configured.`,
-           confidence: 'low'
-         },
-         reviews: [],
-         groupedReviews: {},
-         totalResults: 0,
-         isFallback: true,
-         error: 'Search API not configured'
-       });
-     }
+    const serperApiKey = process.env.SERPER_API_KEY;
+    
+    if (!serperApiKey) {
+      return NextResponse.json({
+        brandFitSummary: {
+          summary: `Search API not configured. Add SERPER_API_KEY to environment.`,
+          confidence: 'low',
+          sections: {}
+        },
+        reviews: [],
+        groupedReviews: {
+          primary: [],
+          community: [],
+          blogs: [],
+          videos: [],
+          social: [],
+          publications: [],
+          other: []
+        },
+        totalResults: 0
+      });
+    }
 
-    // Construct search queries
+    // Search for reviews
     const searchQueries = [
       `${brand} clothing fit review "runs small" OR "runs large" OR "true to size"`,
-      `${brand} fashion sizing guide review experience`,
-      `${brand} clothes quality washing shrink review`
+      `${brand} fashion quality fabric review`,
+      `${brand} washing shrink care instructions`
     ];
     
-              interface SerperResult {
-       title?: string;
-       snippet?: string;
-       link?: string;
-       displayed_link?: string;
-       organic?: SerperResult[];
-     }
-     
-     let allResults: SerperResult[] = [];
+    let allResults: SerperResult[] = [];
     
-         // Perform searches using Serper API
-     for (const searchQuery of searchQueries) {
-       try {
-         const serperResponse = await fetch('https://google.serper.dev/search', {
-           method: 'POST',
-           headers: {
-             'X-API-KEY': serperApiKey,
-             'Content-Type': 'application/json'
-           },
-           body: JSON.stringify({
-             q: searchQuery,
-             gl: 'us',
-             num: 10
-           })
-         });
-         
-         if (serperResponse.ok) {
-           const data = await serperResponse.json();
-           if (data.organic) {
-             allResults = [...allResults, ...data.organic];
-           }
-         } else {
-           console.error('Serper API error:', serperResponse.status);
-         }
-       } catch (searchError) {
-         console.error('Error performing search:', searchError);
-       }
-     }
-    
-         // If no results from Serper API, try a different approach or return fallback
-     if (allResults.length === 0) {
-       console.log('No results from Serper API, returning fallback');
-       return NextResponse.json({
-         brandFitSummary: {
-           summary: `No reviews found for ${brand}. Try searching for specific items or check back later.`,
-           confidence: 'low'
-         },
-         reviews: [],
-         groupedReviews: {},
-         totalResults: 0,
-         isFallback: true
-       });
-     }
-    
-    // Process and score all results
-         interface RelevantContent {
-       text: string;
-       source: string;
-       score: number;
-       insights: {
-         fit: ReturnType<typeof extractInsights>;
-         washing: ReturnType<typeof extractInsights>;
-         quality: ReturnType<typeof extractInsights>;
-         fabric: ReturnType<typeof extractInsights>;
-       };
-     }
-
-    interface ProcessedReview {
-      source: string;
-      title: string;
-      snippet: string;
-      content: string;
-      relevanceScore: number;
-      tags: string[];
-    }
-
-    const relevantContent: RelevantContent[] = [];
-    const processedReviews: ProcessedReview[] = [];
-    
-    for (const result of allResults) {
-      const text = `${result.title || ''} ${result.snippet || ''}`;
-      const score = calculateRelevanceScore(text, brand);
-      
-             // Create review object for response
-       const review = {
-         source: result.link || result.displayed_link || 'Unknown',
-         title: result.title || '',
-         snippet: result.snippet || '',
-         content: text,
-         relevanceScore: score,
-         tags: score >= 30 ? ['relevant'] : ['not-relevant']
-       };
-      
-      processedReviews.push(review);
-      
-      if (score >= 30) { // Minimum threshold for relevance
-        relevantContent.push({
-          text,
-          source: result.link || result.displayed_link || 'Unknown',
-          score,
-          insights: {
-            fit: extractInsights(text, 'fit'),
-            washing: extractInsights(text, 'washing'),
-            quality: extractInsights(text, 'quality'),
-            fabric: extractInsights(text, 'fabric')
-          }
+    for (const query of searchQueries) {
+      try {
+        const response = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: {
+            'X-API-KEY': serperApiKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ q: query, gl: 'us', num: 10 })
         });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.organic) allResults = [...allResults, ...data.organic];
+        }
+      } catch (error) {
+        console.error('Search error:', error);
       }
     }
     
-    // Sort by relevance score
-    relevantContent.sort((a, b) => b.score - a.score);
-    processedReviews.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    // Analyze results for patterns
+    const analysis = analyzeResults(allResults, brand);
     
-         // Generate summary
-     const brandFitSummary: {
-       summary: string;
-       confidence: 'low' | 'medium' | 'high';
-     } = {
-       summary: `Found ${allResults.length} search results for ${brand}.`,
-       confidence: 'low'
-     };
-     if (relevantContent.length === 0) {
-       brandFitSummary.summary = `No relevant sizing or quality information found for ${brand} in ${allResults.length} search results.`;
-     } else {
-       // Use GPT to analyze if we have relevant content and API key
-       if (process.env.OPENAI_API_KEY && relevantContent.length > 0) {
-         try {
-           const analysisPrompt = createAnalysisPrompt(brand, relevantContent.slice(0, 10));
-           
-           const completion = await openai.chat.completions.create({
-             model: 'gpt-4-turbo-preview',
-             messages: [
-               {
-                 role: 'system',
-                 content: 'You are a fashion retail analyst specializing in fit and quality assessment. Analyze reviews and provide structured insights based only on explicit mentions in the text.'
-               },
-               {
-                 role: 'user',
-                 content: analysisPrompt
-               }
-             ],
-             response_format: { type: 'json_object' },
-             temperature: 0.3,
-             max_tokens: 1000
-           });
-           
-           const analysis = JSON.parse(completion.choices[0].message.content || '{}');
-           
-           if (analysis.summary) {
-             brandFitSummary.summary = analysis.summary;
-             brandFitSummary.confidence = analysis.fit?.confidence || 'low';
-           }
-         } catch (gptError) {
-           console.error('Error using GPT for analysis:', gptError);
-           // Fallback to simple summary
-           brandFitSummary.summary = `Found ${relevantContent.length} relevant reviews for ${brand}. Check individual reviews for specific sizing advice.`;
-         }
-       } else {
-         // No GPT API key, provide basic summary
-         brandFitSummary.summary = `Found ${relevantContent.length} relevant reviews for ${brand}. Reviews mention fit and quality information.`;
-         brandFitSummary.confidence = relevantContent.length >= 5 ? 'medium' as const : 'low' as const;
-       }
-     }
+    // Create structured sections
+    const sections: Record<string, {
+      title: string;
+      recommendation: string;
+      confidence: 'low' | 'medium' | 'high';
+      evidence: string[];
+    }> = {};
     
-         // Transform reviews to match frontend expectations
-     const reviews = processedReviews.map(review => ({
-       title: review.title || review.snippet.substring(0, 60) + '...',
-       snippet: review.snippet || review.content.substring(0, 200) + '...',
-       url: review.source,
-       source: new URL(review.source).hostname.replace('www.', ''),
-       tags: review.tags,
-       confidence: review.relevanceScore >= 50 ? "high" as const : review.relevanceScore >= 30 ? "medium" as const : "low" as const,
-       brandLevel: true,
-       fullContent: review.content
-     }));
-     
-     // Group reviews by source type (matching frontend expectations)
-     const groupedReviews = {
-       primary: reviews.filter(r => r.source.includes('reddit') || r.source.includes('substack')),
-       community: reviews.filter(r => r.source.includes('forum') || r.source.includes('community')),
-       blogs: reviews.filter(r => r.source.includes('blog') || r.source.includes('medium')),
-       videos: reviews.filter(r => r.source.includes('youtube') || r.source.includes('video')),
-       social: reviews.filter(r => r.source.includes('instagram') || r.source.includes('twitter')),
-       publications: reviews.filter(r => r.source.includes('magazine') || r.source.includes('vogue')),
-       other: reviews.filter(r => !['reddit', 'substack', 'forum', 'community', 'blog', 'medium', 'youtube', 'video', 'instagram', 'twitter', 'magazine', 'vogue'].some(s => r.source.includes(s)))
-     };
+    if (analysis.fit) {
+      sections.fit = {
+        title: 'Fit',
+        recommendation: analysis.fit.recommendation,
+        confidence: analysis.fit.confidence,
+        evidence: analysis.fit.evidence
+      };
+    }
     
-    // Return response in expected format
+    if (analysis.quality) {
+      sections.quality = {
+        title: 'Quality',
+        recommendation: analysis.quality.recommendation,
+        confidence: analysis.quality.confidence,
+        evidence: analysis.quality.evidence
+      };
+    }
+    
+    if (analysis.fabric) {
+      sections.fabric = {
+        title: 'Fabric & Material',
+        recommendation: analysis.fabric.recommendation,
+        confidence: analysis.fabric.confidence,
+        evidence: analysis.fabric.evidence
+      };
+    }
+    
+    if (analysis.washCare) {
+      sections.washCare = {
+        title: 'Wash & Care',
+        recommendation: analysis.washCare.recommendation,
+        confidence: analysis.washCare.confidence,
+        evidence: analysis.washCare.evidence
+      };
+    }
+    
+    // Create detailed summary based on analysis
+    const summary = generateDetailedSummary(analysis, allResults, brand);
+    
+    // Helper function to convert SerperResult to Review format
+    const convertToReview = (result: SerperResult): Review => {
+      const source = extractSourceName(result.link || '');
+      const tags = extractTags(result.title, result.snippet);
+      const confidence = calculateConfidence(result);
+      
+      return {
+        title: result.title || 'Untitled Review',
+        snippet: result.snippet || '',
+        url: result.link || '',
+        source: source,
+        tags: tags,
+        confidence: confidence,
+        brandLevel: false,
+        fullContent: result.snippet || ''
+      };
+    };
+    
+    // Convert all results to Review format
+    const formattedReviews = allResults.map(convertToReview);
+    
+    // Group reviews by source type with proper Review structure
+    const groupedReviews = {
+      primary: formattedReviews.filter(r => r.url.includes('reddit') || r.url.includes('substack')),
+      community: formattedReviews.filter(r => r.url.includes('forum') || r.url.includes('community')),
+      blogs: formattedReviews.filter(r => r.url.includes('blog') || r.url.includes('medium')),
+      videos: formattedReviews.filter(r => r.url.includes('youtube') || r.url.includes('video')),
+      social: formattedReviews.filter(r => r.url.includes('instagram') || r.url.includes('twitter')),
+      publications: formattedReviews.filter(r => r.url.includes('magazine') || r.url.includes('vogue')),
+      other: formattedReviews.filter(r => 
+        !['reddit', 'substack', 'forum', 'community', 'blog', 'medium', 'youtube', 'video', 'instagram', 'twitter', 'magazine', 'vogue']
+          .some(s => r.url.includes(s))
+      )
+    };
+
     return NextResponse.json({
-      brandFitSummary,
-      reviews: processedReviews.slice(0, 20), // Return top 20 reviews
+      brandFitSummary: {
+        summary,
+        confidence: analysis.overallConfidence || 'low',
+        sections,
+        hasData: Object.keys(sections).length > 0,
+        totalResults: allResults.length,
+        sources: []
+      },
+      reviews: formattedReviews.slice(0, 20),
       groupedReviews,
-      totalResults: allResults.length,
-      relevantResults: relevantContent.length,
-      isFallback: false,
-      metadata: {
-        searchQueriesUsed: searchQueries.length,
-        analysisDate: new Date().toISOString()
-      }
+      totalResults: allResults.length
     });
     
   } catch (error) {
-    console.error('Error in search-reviews API:', error);
-    
-    // Return error response in expected format
+    console.error('API Error:', error);
     return NextResponse.json({
       brandFitSummary: {
-        summary: 'Unable to load reviews due to an error. Please try again.',
-        confidence: 'low'
+        summary: 'Error loading reviews',
+        confidence: 'low',
+        sections: {},
+        totalResults: 0,
+        sources: []
       },
       reviews: [],
-      groupedReviews: {},
-      totalResults: 0,
-      isFallback: true,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      groupedReviews: {
+        primary: [],
+        community: [],
+        blogs: [],
+        videos: [],
+        social: [],
+        publications: [],
+        other: []
+      },
+      totalResults: 0
     });
   }
+}
+
+// Helper function to extract source name from URL
+function extractSourceName(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    
+    // Remove www. and .com/.org etc
+    let source = hostname.replace(/^www\./, '').split('.')[0];
+    
+    // Capitalize first letter
+    source = source.charAt(0).toUpperCase() + source.slice(1);
+    
+    return source;
+  } catch {
+    return 'Unknown Source';
+  }
+}
+
+// Helper function to extract tags from title and snippet
+function extractTags(title?: string, snippet?: string): string[] {
+  const tags: string[] = [];
+  const text = `${title || ''} ${snippet || ''}`.toLowerCase();
+  
+  // Check for fit-related tags
+  if (text.includes('runs small') || text.includes('size up')) tags.push('runs-small');
+  if (text.includes('runs large') || text.includes('size down')) tags.push('runs-large');
+  if (text.includes('true to size')) tags.push('true-to-size');
+  
+  // Check for quality-related tags
+  if (text.includes('high quality') || text.includes('excellent')) tags.push('high-quality');
+  if (text.includes('poor quality') || text.includes('cheap')) tags.push('low-quality');
+  
+  // Check for material tags
+  if (text.includes('cotton')) tags.push('cotton');
+  if (text.includes('polyester')) tags.push('polyester');
+  if (text.includes('wool')) tags.push('wool');
+  if (text.includes('sustainable')) tags.push('sustainable');
+  
+  // Check for care tags
+  if (text.includes('shrink')) tags.push('may-shrink');
+  if (text.includes('wash')) tags.push('care-instructions');
+  
+  // If no tags found, add a default
+  if (tags.length === 0) {
+    tags.push('general-review');
+  }
+  
+  return tags;
+}
+
+// Helper function to calculate confidence based on result relevance
+function calculateConfidence(result: SerperResult): "high" | "medium" | "low" {
+  const text = `${result.title || ''} ${result.snippet || ''}`.toLowerCase();
+  let score = 0;
+  
+  // Check for specific fit mentions
+  if (text.includes('runs small') || text.includes('runs large') || text.includes('true to size')) {
+    score += 2;
+  }
+  
+  // Check for quality mentions
+  if (text.includes('quality') || text.includes('fabric') || text.includes('material')) {
+    score += 1;
+  }
+  
+  // Check for detailed review indicators
+  if (text.includes('review') || text.includes('tried') || text.includes('bought')) {
+    score += 1;
+  }
+  
+  // Return confidence based on score
+  if (score >= 3) return 'high';
+  if (score >= 1) return 'medium';
+  return 'low';
+}
+
+function analyzeResults(results: SerperResult[], brand: string): AnalysisResult {
+  const analysis: AnalysisResult = {};
+  const allText = results.map(r => `${r.title} ${r.snippet}`).join(' ').toLowerCase();
+  
+  // Analyze fit
+  const fitPatterns = {
+    runsSmall: (allText.match(/runs small|size up|tight|snug/g) || []).length,
+    runsLarge: (allText.match(/runs large|size down|loose|baggy/g) || []).length,
+    trueToSize: (allText.match(/true to size|fits perfectly|accurate sizing/g) || []).length
+  };
+  
+  const dominantFit = Object.entries(fitPatterns).sort((a, b) => b[1] - a[1])[0];
+  
+  if (dominantFit[1] > 0) {
+    const recommendations = {
+      runsSmall: 'Runs small - Consider ordering one size up',
+      runsLarge: 'Runs large - Consider ordering one size down',
+      trueToSize: 'True to size - Order your usual size'
+    };
+    
+    analysis.fit = {
+      recommendation: recommendations[dominantFit[0] as keyof typeof recommendations],
+      confidence: dominantFit[1] >= 3 ? 'high' : dominantFit[1] >= 2 ? 'medium' : 'low',
+      evidence: extractEvidence(results, dominantFit[0])
+    };
+  }
+  
+  // Analyze quality
+  const qualityPositive = (allText.match(/high quality|durable|well-made|sturdy|excellent/g) || []).length;
+  const qualityNegative = (allText.match(/poor quality|cheap|flimsy|falls apart/g) || []).length;
+  
+  if (qualityPositive > 0 || qualityNegative > 0) {
+    analysis.quality = {
+      recommendation: qualityPositive > qualityNegative 
+        ? 'High quality - Built to last'
+        : 'Quality concerns - May not be durable',
+      confidence: (qualityPositive + qualityNegative) >= 3 ? 'high' : 'medium',
+      evidence: []
+    };
+  }
+  
+  // Analyze fabric
+  if (allText.includes('cotton') || allText.includes('polyester') || allText.includes('fabric')) {
+    const materials = [];
+    if (allText.includes('cotton')) materials.push('cotton');
+    if (allText.includes('polyester')) materials.push('polyester');
+    if (allText.includes('wool')) materials.push('wool');
+    
+    analysis.fabric = {
+      recommendation: `Materials mentioned: ${materials.join(', ')}`,
+      confidence: 'low',
+      evidence: []
+    };
+  }
+  
+  // Analyze washing
+  if (allText.includes('shrink') || allText.includes('wash') || allText.includes('care')) {
+    const shrinks = allText.includes('shrink');
+    const washesWell = allText.includes('washes well') || allText.includes('holds up');
+    
+    analysis.washCare = {
+      recommendation: shrinks 
+        ? 'May shrink - Wash in cold water'
+        : washesWell 
+        ? 'Washes well - Easy care'
+        : 'Check care label for instructions',
+      confidence: 'low',
+      evidence: []
+    };
+  }
+  
+  // Calculate overall confidence
+  const confidences = Object.values(analysis)
+    .map((a) => a.confidence)
+    .filter(Boolean);
+  
+  analysis.overallConfidence = confidences.includes('high') ? 'high' 
+    : confidences.includes('medium') ? 'medium' 
+    : 'low';
+  
+  return analysis;
+}
+
+function extractEvidence(results: SerperResult[], pattern: string): string[] {
+  const evidence = [];
+  const keywords = {
+    runsSmall: ['runs small', 'size up', 'tight'],
+    runsLarge: ['runs large', 'size down', 'loose'],
+    trueToSize: ['true to size', 'fits perfectly']
+  };
+  
+  const relevant = keywords[pattern as keyof typeof keywords] || [];
+  
+  for (const result of results.slice(0, 5)) {
+    const text = `${result.title} ${result.snippet}`.toLowerCase();
+    if (relevant.some(k => text.includes(k))) {
+      const snippet = result.snippet?.substring(0, 150) + '...';
+      if (snippet) evidence.push(snippet);
+    }
+    if (evidence.length >= 2) break;
+  }
+  
+  return evidence;
+}
+
+// Generate a detailed, nuanced summary from the analysis
+function generateDetailedSummary(analysis: AnalysisResult, results: SerperResult[], brand: string): string {
+  const summaryParts: string[] = [];
+  const totalReviews = results.length;
+  
+  // Start with overall context
+  if (totalReviews > 0) {
+    summaryParts.push(`Based on ${totalReviews} reviews analyzed for ${brand}`);
+  }
+  
+  // Add fit information with nuance
+  if (analysis.fit) {
+    const fitDetail = analysis.fit.recommendation.replace(/^[^\s]+ /, ''); // Remove emoji if any
+    if (analysis.fit.confidence === 'high') {
+      summaryParts.push(`the brand consistently ${fitDetail.toLowerCase()}`);
+    } else if (analysis.fit.confidence === 'medium') {
+      summaryParts.push(`the brand generally ${fitDetail.toLowerCase()}, though some variation exists between styles`);
+    } else {
+      summaryParts.push(`sizing feedback is mixed, with some items ${fitDetail.toLowerCase()}`);
+    }
+  }
+  
+  // Add quality assessment with detail
+  if (analysis.quality) {
+    const qualityText = analysis.quality.recommendation.includes('High quality')
+      ? analysis.quality.confidence === 'high' 
+        ? 'Customers consistently praise the build quality and durability'
+        : 'Most reviews indicate good quality construction'
+      : 'Some customers have raised concerns about construction quality and longevity';
+    
+    if (summaryParts.length > 0) {
+      summaryParts[summaryParts.length - 1] += '. ' + qualityText;
+    } else {
+      summaryParts.push(qualityText);
+    }
+  }
+  
+  // Add fabric/material insights if available
+  if (analysis.fabric) {
+    const materials = analysis.fabric.recommendation.replace('Materials mentioned: ', '');
+    if (materials && materials !== '') {
+      summaryParts[summaryParts.length - 1] += `, with materials including ${materials}`;
+    }
+  }
+  
+  // Add care instructions if relevant
+  if (analysis.washCare) {
+    if (analysis.washCare.recommendation.includes('shrink')) {
+      summaryParts[summaryParts.length - 1] += '. Several reviews mention potential shrinking after washing, so cold water washing is recommended';
+    } else if (analysis.washCare.recommendation.includes('Washes well')) {
+      summaryParts[summaryParts.length - 1] += ' and the items appear to hold up well after washing';
+    }
+  }
+  
+  // Add confidence context
+  if (analysis.overallConfidence) {
+    if (analysis.overallConfidence === 'low' && totalReviews < 5) {
+      summaryParts.push('. Note: Limited review data available, so these insights should be considered preliminary');
+    } else if (analysis.overallConfidence === 'medium') {
+      summaryParts.push('. Review patterns suggest these trends, though individual experiences may vary');
+    }
+  }
+  
+  // Fallback for no analysis
+  if (summaryParts.length === 0) {
+    return `Found ${totalReviews} results for ${brand}. Review content suggests varying experiences with fit and quality. Check individual reviews below for specific product insights.`;
+  }
+  
+  // Join parts and ensure proper sentence structure
+  let summary = summaryParts.join('');
+  
+  // Ensure it ends with a period
+  if (!summary.endsWith('.')) {
+    summary += '.';
+  }
+  
+  return summary;
 }

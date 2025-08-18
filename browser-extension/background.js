@@ -63,6 +63,7 @@ const BRAND_PATTERNS = {
   // Contemporary & Premium
   'reformation.com': { name: 'Reformation', category: 'fashion-clothing', subcategory: 'contemporary' },
   'everlane.com': { name: 'Everlane', category: 'fashion-clothing', subcategory: 'contemporary' },
+  'rohe.co': { name: 'Rohe', category: 'fashion-clothing', subcategory: 'contemporary' },
   'cos.com': { name: 'COS', category: 'fashion-clothing', subcategory: 'contemporary' },
   'whistles.co.uk': { name: 'Whistles', category: 'fashion-clothing', subcategory: 'contemporary' },
   'reiss.com': { name: 'Reiss', category: 'fashion-clothing', subcategory: 'contemporary' },
@@ -331,6 +332,20 @@ async function detectBrand(tabId, domainOrBrand, url) {
     const brandData = await fetchBrandData(brandName, category);
     console.log('🎯 Background: fetchBrandData returned:', brandData);
     
+    // Extract product image from the page
+    console.log('🖼️ Background: Extracting product image from tab:', tabId);
+    const productImage = await extractProductImage(tabId);
+    
+    // Add product image and URL to brand data
+    if (productImage) {
+      brandData.productImage = productImage;
+      brandData.pageUrl = url;
+      console.log('✅ Product image added to brand data:', productImage.src);
+    } else {
+      brandData.pageUrl = url;
+      console.log('❌ No product image found for tab:', tabId);
+    }
+    
     // Cache the result
     brandCache.set(cacheKey, {
       data: brandData,
@@ -403,21 +418,32 @@ async function fetchBrandData(brandName, category = 'general') {
     const data = await response.json();
     console.log('✅ Brand data fetched successfully:', data);
     
+    // Don't generate old-style summary - let popup handle rich summaries
     // Enhanced analysis of the response
     const analysis = analyzeSearchResults(data, brandName);
     
-    // Generate recommendation based on enhanced analysis
-    let recommendation = generateEnhancedRecommendation(brandName, analysis);
-    
-    // Extract high-quality fit tips
+    // Extract high-quality fit tips (but don't generate old summary)
     const fitTips = extractHighQualityFitTips(data.reviews, brandName);
     
-    return {
+    // Extract the summary from API response
+    const apiSummary = data.brandFitSummary?.summary || null;
+    const hasUsefulData = !!(apiSummary || (data.reviews && data.reviews.length > 0) || data.totalResults > 0);
+
+    console.log('🔍 BACKGROUND DEBUGGING: API response summary extraction:', {
+      hasBrandFitSummary: !!data.brandFitSummary,
+      brandFitSummaryStructure: data.brandFitSummary ? Object.keys(data.brandFitSummary) : 'N/A',
+      apiSummaryExists: !!apiSummary,
+      apiSummaryPreview: apiSummary?.substring(0, 100) + '...' || 'N/A',
+      hasUsefulData,
+      totalResults: data.totalResults || 0
+    });
+
+    const resultData = {
       brandName,
       category,
-      hasData: analysis.hasRelevantData,
+      hasData: hasUsefulData, // True if we have summary or reviews
       searchType: 'enhanced-analysis',
-      recommendation: recommendation,
+      recommendation: apiSummary, // Use the actual generated summary from API
       externalSearchResults: {
         brandFitSummary: data.brandFitSummary,
         reviews: data.reviews || [],
@@ -431,6 +457,9 @@ async function fetchBrandData(brandName, category = 'general') {
       timestamp: Date.now(),
       error: false
     };
+
+    console.log('🔍 BACKGROUND DEBUGGING: Final data structure being returned:', JSON.stringify(resultData, null, 2));
+    return resultData;
 
   } catch (error) {
     console.error('Error fetching brand data:', error);
@@ -523,6 +552,79 @@ function analyzeSearchResults(data, brandName) {
   analysis.fabricInfo = extractFabricInfo(relevantReviews);
   
   return analysis;
+}
+
+// Extract product image from page
+async function extractProductImage(tabId) {
+  try {
+    console.log('🖼️ Extracting product image from tab:', tabId);
+    
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: () => {
+        // Try to find the main product image using common selectors
+        const imageSelectors = [
+          'img[data-testid*="product"]',
+          'img[class*="product"]',
+          'img[class*="hero"]',
+          'img[class*="main"]',
+          '.product-image img',
+          '.hero-image img',
+          '.gallery img:first-child',
+          '[data-testid="pdp-image"] img',
+          '.pdp-image img',
+          'main img:first-of-type',
+          '.product-gallery img:first-child'
+        ];
+        
+        for (const selector of imageSelectors) {
+          const img = document.querySelector(selector);
+          if (img && img.src && img.src.startsWith('http')) {
+            return {
+              src: img.src,
+              alt: img.alt || '',
+              selector: selector
+            };
+          }
+        }
+        
+        // Fallback: find the largest image on the page
+        const allImages = Array.from(document.querySelectorAll('img'));
+        const validImages = allImages.filter(img => 
+          img.src && 
+          img.src.startsWith('http') && 
+          img.naturalWidth > 200 && 
+          img.naturalHeight > 200 &&
+          !img.src.includes('logo') &&
+          !img.src.includes('icon')
+        );
+        
+        if (validImages.length > 0) {
+          // Sort by size and take the largest
+          validImages.sort((a, b) => (b.naturalWidth * b.naturalHeight) - (a.naturalWidth * a.naturalHeight));
+          const largestImg = validImages[0];
+          return {
+            src: largestImg.src,
+            alt: largestImg.alt || '',
+            selector: 'fallback-largest'
+          };
+        }
+        
+        return null;
+      }
+    });
+    
+    if (results && results[0] && results[0].result) {
+      console.log('✅ Product image extracted:', results[0].result);
+      return results[0].result;
+    }
+    
+    console.log('❌ No product image found');
+    return null;
+  } catch (error) {
+    console.error('Error extracting product image:', error);
+    return null;
+  }
 }
 
 // Detect categories mentioned in text
@@ -665,8 +767,13 @@ function extractFabricInfo(reviews) {
   return Array.from(fabrics);
 }
 
-// Generate enhanced recommendation based on analysis
+// DEPRECATED: Generate enhanced recommendation based on analysis
+// This function is no longer used - popup now uses rich API summaries
 function generateEnhancedRecommendation(brandName, analysis) {
+  // Return null to prevent old-style summary generation
+  return null;
+  
+  /* DEPRECATED CODE - keeping for reference but not used
   if (!analysis.hasRelevantData) {
     return `No specific sizing or quality information found for ${brandName}. We searched but couldn't find relevant reviews. Try searching for a different brand or check back later.`;
   }
@@ -730,6 +837,7 @@ function generateEnhancedRecommendation(brandName, analysis) {
   }
   
   return recommendation;
+  */
 }
 
 // Extract high-quality fit tips from reviews
@@ -821,16 +929,40 @@ function sendBrandDataToTab(tabId, brandData) {
   }
 }
 
-// Handle messages from content script
+// Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_BRAND_INFO') {
-    const tabId = sender.tab.id;
+    // Handle both content script and popup requests
+    const tabId = sender.tab?.id || message.tabId;
+    
+    console.log('🎯 Background: GET_BRAND_INFO request for tab:', tabId);
+    console.log('🎯 Background: Sender:', sender);
+    console.log('🎯 Background: Message:', message);
+    console.log('🎯 Background: Available tab states:', Array.from(tabStates.keys()));
+    console.log('🎯 Background: All tab states:', Array.from(tabStates.entries()).map(([id, state]) => ({
+      tabId: id,
+      hasData: !!state.brandData,
+      brandName: state.brandData?.brandName || 'N/A'
+    })));
+    
     const tabState = tabStates.get(tabId);
     
     if (tabState && tabState.brandData) {
+      console.log('🎯 Background: Found brand data for tab:', tabId, 'Brand:', tabState.brandData.brandName);
       sendResponse({ success: true, data: tabState.brandData });
     } else {
-      sendResponse({ success: false, message: 'No brand data available' });
+      console.log('🎯 Background: No brand data available for tab:', tabId);
+      
+      // Try to find brand data in any tab state if exact match fails
+      const allStates = Array.from(tabStates.values());
+      const anyBrandData = allStates.find(state => state.brandData);
+      
+      if (anyBrandData) {
+        console.log('🎯 Background: Using brand data from any available tab:', anyBrandData.brandData.brandName);
+        sendResponse({ success: true, data: anyBrandData.brandData });
+      } else {
+        sendResponse({ success: false, message: 'No brand data available' });
+      }
     }
     
     return true; // Keep message channel open for async response

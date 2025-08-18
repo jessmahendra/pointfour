@@ -6,7 +6,7 @@
   <title>Fashion Item Detector</title>
   <style>
     body {
-      width: 320px;
+      width: 380px;
       min-height: 240px;
       margin: 0;
       padding: 20px;
@@ -45,6 +45,40 @@
       margin-bottom: 16px;
       border: 1px solid #e7e5e4; /* stone-200 - medium beige border */
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Quality summary specific styling */
+    #quality-summary-section {
+      background: #fef7cd; /* amber-50 */
+      border: 1px solid #f59e0b; /* amber-500 */
+    }
+
+    #quality-summary-section .info-label {
+      color: #92400e; /* amber-800 */
+    }
+
+    #quality-summary-section .info-value {
+      color: #451a03; /* amber-900 */
+      font-weight: 600;
+      line-height: 1.5;
+      white-space: pre-line; /* Preserve line breaks */
+    }
+
+    /* Fit summary enhancements */
+    #fit-summary-section {
+      background: #f0f9ff; /* sky-50 */
+      border: 1px solid #0ea5e9; /* sky-500 */
+    }
+
+    #fit-summary-section .info-label {
+      color: #075985; /* sky-800 */
+    }
+
+    #fit-summary-section .info-value {
+      color: #0c4a6e; /* sky-900 */
+      font-weight: 500;
+      line-height: 1.5;
+      white-space: pre-line; /* Preserve line breaks */
     }
     
     .info-label {
@@ -344,6 +378,23 @@
       font-weight: 500;
     }
 
+    .summary-section {
+      font-size: 12px;
+      color: #292524;
+      padding: 8px 12px;
+      background: #dcfce7; /* green-100 */
+      border-radius: 6px;
+      margin: 4px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .summary-section strong {
+      color: #15803d; /* green-700 */
+      font-weight: 600;
+    }
+
     .summary-meta {
       display: flex;
       gap: 12px;
@@ -370,6 +421,87 @@
       padding: 2px 6px;
       border-radius: 12px;
       text-transform: lowercase;
+    }
+
+    .tag.quality-tag {
+      background: #fef3c7; /* amber-100 */
+      color: #92400e; /* amber-800 */
+      font-weight: 600;
+    }
+
+    .tag.quality-positive {
+      background: #dcfce7; /* green-100 */
+      color: #15803d; /* green-700 */
+      font-weight: 600;
+    }
+
+    .tag.quality-negative {
+      background: #fecaca; /* red-100 */
+      color: #b91c1c; /* red-700 */
+      font-weight: 600;
+    }
+
+    /* Primary sources summary styles */
+    .primary-sources-summary {
+      background: #eff6ff; /* blue-50 */
+      border: 1px solid #3b82f6; /* blue-500 */
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .primary-sources-summary h4 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: #1d4ed8; /* blue-700 */
+      font-weight: 600;
+    }
+
+    .summary-bullets {
+      margin: 0;
+    }
+
+    .source-group {
+      margin-bottom: 16px;
+    }
+
+    .source-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .source-group strong {
+      color: #1e40af; /* blue-800 */
+      font-size: 13px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .source-group ul {
+      margin: 0;
+      padding-left: 16px;
+      list-style-type: disc;
+    }
+
+    .source-group li {
+      font-size: 12px;
+      color: #292524;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+
+    .source-group li:last-child {
+      margin-bottom: 0;
+    }
+
+    .source-group a {
+      color: #3b82f6; /* blue-500 */
+      text-decoration: none;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .source-group a:hover {
+      text-decoration: underline;
     }
 
     /* Section headers */
@@ -484,9 +616,42 @@
     <div class="info-value" id="fit-summary">Loading...</div>
   </div>
   
+  <div class="info-card" id="quality-summary-section" style="display: none;">
+    <div class="info-label">Quality Summary</div>
+    <div class="info-value" id="quality-summary">Loading...</div>
+  </div>
+  
+  <!-- DEBUG section temporarily visible to verify fix -->
+  <div class="info-card" id="debug-section" style="display: block; background: #dbeafe; border: 1px solid #3b82f6;">
+    <div class="info-label" style="color: #1d4ed8;">SYSTEM STATUS</div>
+    <div class="info-value" id="debug-summary" style="color: #1e40af; font-size: 11px; font-family: monospace;">Loading system status...</div>
+  </div>
+
   <div class="info-card" id="reviews-section" style="display: none;">
     <div class="info-label">User Reviews</div>
     <div class="info-value" id="reviews-content">Loading reviews...</div>
+  </div>
+
+  <!-- Style with your pieces button -->
+  <div class="info-card" id="style-button-section" style="display: none;">
+    <button id="style-with-pieces-btn" style="
+      width: 100%;
+      padding: 12px 16px;
+      background: #292524;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    ">
+      ✨ Style with your pieces
+    </button>
   </div>
   
   <script src="popup.js"></script>
