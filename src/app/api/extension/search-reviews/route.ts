@@ -447,48 +447,57 @@ function analyzeResults(results: SerperResult[], brand: string, category: 'cloth
     }
   }
   
-  // Analyze quality with more nuanced patterns
+  // Analyze quality with strict requirements - only include if we have substantial evidence
   const qualityPositive = (allText.match(/high quality|durable|well-made|sturdy|excellent|premium|luxury|solid construction|beautiful quality|great quality|amazing quality|love the quality|quality is great|quality is amazing|worth the money|investment piece/g) || []).length;
   const qualityNegative = (allText.match(/poor quality|cheap|flimsy|falls apart|thin material|see through|transparent|cheap feeling|not worth|disappointed|returned|poor construction|badly made/g) || []).length;
   
-  if (qualityPositive > 0 || qualityNegative > 0) {
-    const totalMentions = qualityPositive + qualityNegative;
-    const qualityRatio = qualityPositive / totalMentions;
+  // Only include quality analysis if we have at least 3 quality mentions total
+  const totalQualityMentions = qualityPositive + qualityNegative;
+  if (totalQualityMentions >= 3) {
+    const qualityRatio = qualityPositive / totalQualityMentions;
     const isPositive = qualityPositive > qualityNegative;
     
     // Extract actual quality-related quotes from reviews
     const qualityEvidence = extractQualityEvidence(results, isPositive);
     
-    let recommendation;
-    let confidence: 'low' | 'medium' | 'high';
+    let recommendation: string | undefined;
+    let confidence: 'low' | 'medium' | 'high' | undefined;
     
     // Get source information for quality evidence
     const qualitySources = extractSourcesFromEvidence(results, qualityEvidence);
     const qualitySourceText = qualitySources.length > 0 ? ` (from ${qualitySources.join(', ')})` : '';
     
-    if (qualityRatio >= 0.8) {
+    if (qualityRatio >= 0.8 && qualityPositive >= 4) {
       const topQuote = qualityEvidence[0] ? qualityEvidence[0].substring(0, 140) + '...' : '';
-      recommendation = `External reviews consistently praise the quality${qualitySourceText}. ${topQuote ? 'One review states: "' + topQuote + '"' : 'Multiple sources highlight durability and construction.'}`;
-      confidence = totalMentions >= 5 ? 'high' : totalMentions >= 3 ? 'medium' : 'low';
-    } else if (qualityRatio >= 0.6) {
+      recommendation = `Multiple reviews mention good quality${qualitySourceText}. ${topQuote ? 'One review states: "' + topQuote + '"' : 'Several sources highlight durability and construction.'}`;
+      confidence = totalQualityMentions >= 6 ? 'high' : 'medium';
+    } else if (qualityRatio >= 0.6 && qualityPositive >= 3) {
       const topQuote = qualityEvidence[0] ? qualityEvidence[0].substring(0, 140) + '...' : '';
-      recommendation = `Most external reviews are positive about quality${qualitySourceText}. ${topQuote ? 'A customer noted: "' + topQuote + '"' : 'Generally good construction reported across sources.'}`;
-      confidence = totalMentions >= 4 ? 'medium' : 'low';
-    } else if (qualityRatio >= 0.4) {
+      recommendation = `Most quality mentions are positive${qualitySourceText}. ${topQuote ? 'A customer noted: "' + topQuote + '"' : 'Generally good construction reported.'}`;
+      confidence = totalQualityMentions >= 5 ? 'medium' : 'low';
+    } else if (qualityRatio >= 0.4 && totalQualityMentions >= 4) {
       const concernQuote = qualityEvidence[0] ? qualityEvidence[0].substring(0, 120) + '...' : '';
-      recommendation = `Mixed quality feedback from external sources (${qualityPositive} positive vs ${qualityNegative} negative mentions)${qualitySourceText}. ${concernQuote ? 'Some concerns mentioned: "' + concernQuote + '"' : 'Individual experiences vary significantly.'}`;
+      recommendation = `Mixed quality feedback (${qualityPositive} positive vs ${qualityNegative} negative mentions)${qualitySourceText}. ${concernQuote ? 'Some concerns mentioned: "' + concernQuote + '"' : 'Individual experiences vary.'}`;
       confidence = 'medium';
-    } else {
+    } else if (qualityNegative >= 3) {
       const negativeQuote = qualityEvidence[0] ? qualityEvidence[0].substring(0, 140) + '...' : '';
-      recommendation = `Multiple quality concerns in external reviews${qualitySourceText}. ${negativeQuote ? 'Customers reported: "' + negativeQuote + '"' : 'Consider checking recent reviews carefully.'}`;
-      confidence = totalMentions >= 3 ? 'medium' : 'low';
+      recommendation = `Several quality concerns noted${qualitySourceText}. ${negativeQuote ? 'Customers reported: "' + negativeQuote + '"' : 'Consider checking recent reviews carefully.'}`;
+      confidence = totalQualityMentions >= 5 ? 'medium' : 'low';
+    } else {
+      // Not enough evidence for quality analysis
+      console.log(`🔍 ANALYSIS: Insufficient quality evidence (${totalQualityMentions} mentions, need 3+)`);
+      // Don't add quality analysis if insufficient evidence
     }
     
-    analysis.quality = {
-      recommendation,
-      confidence,
-      evidence: qualityEvidence
-    };
+    if (recommendation && confidence) {
+      analysis.quality = {
+        recommendation,
+        confidence,
+        evidence: qualityEvidence
+      };
+    }
+  } else {
+    console.log(`🔍 ANALYSIS: Insufficient quality mentions (${totalQualityMentions}, need 3+) - skipping quality analysis`);
   }
   
   // Analyze fabric/materials for relevant categories
@@ -881,25 +890,26 @@ function generateDetailedSummary(analysis: AnalysisResult, results: SerperResult
     }
   }
   
-  // Add quality assessment with actual feedback
+  // Add quality assessment with actual feedback (only if we have quality data)
   if (analysis.quality) {
     let qualityText = '';
     
-    if (analysis.quality.recommendation.includes('consistently praise')) {
+    // Extract actual quality sentiment from the recommendation
+    if (analysis.quality.recommendation.includes('Multiple reviews mention good quality')) {
       qualityText = analysis.quality.confidence === 'high' 
-        ? '. Customers consistently praise quality and construction'
-        : '. Most reviews highlight good quality';
-    } else if (analysis.quality.recommendation.includes('positive about quality')) {
-      qualityText = '. Reviews are generally positive about build quality';
-    } else if (analysis.quality.recommendation.includes('Mixed quality')) {
-      qualityText = '. Quality feedback is mixed across different items';
-    } else if (analysis.quality.recommendation.includes('concerns reported')) {
-      qualityText = '. Some customers have raised quality concerns';
+        ? '. Multiple reviews mention good quality and construction'
+        : '. Several reviews highlight good quality';
+    } else if (analysis.quality.recommendation.includes('Most quality mentions are positive')) {
+      qualityText = '. Most quality mentions in reviews are positive';
+    } else if (analysis.quality.recommendation.includes('Mixed quality feedback')) {
+      qualityText = '. Quality feedback varies across different items';
+    } else if (analysis.quality.recommendation.includes('Several quality concerns noted')) {
+      qualityText = '. Some customers have noted quality concerns';
     }
     
-    if (summaryParts.length > 0) {
+    if (qualityText && summaryParts.length > 0) {
       summaryParts[summaryParts.length - 1] += qualityText;
-    } else {
+    } else if (qualityText) {
       summaryParts.push(qualityText.replace('. ', ''));
     }
   }
@@ -937,7 +947,7 @@ function generateDetailedSummary(analysis: AnalysisResult, results: SerperResult
   
   // Fallback for no analysis
   if (summaryParts.length === 0) {
-    return `Found ${totalReviews} results for ${brand}. Review content includes varying experiences with fit and quality. Individual product reviews provide more specific insights.`;
+    return `Found ${totalReviews} results for ${brand}. Review content includes varying experiences with fit. ${analysis.quality ? 'Quality feedback available.' : 'Limited quality information found in reviews.'} Individual product reviews provide more specific insights.`;
   }
   
   // Join parts and ensure proper sentence structure

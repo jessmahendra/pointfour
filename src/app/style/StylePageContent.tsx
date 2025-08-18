@@ -50,6 +50,9 @@ export default function StylePageContent({
   const [collageDataUrl, setCollageDataUrl] = useState<string | null>(null);
   const [currentOutfitIndex, setCurrentOutfitIndex] = useState(0);
   const [isExtractingImage, setIsExtractingImage] = useState(false);
+  const [imageExtractionError, setImageExtractionError] = useState<
+    string | null
+  >(null);
 
   // Clothing categories
   const categories = [
@@ -86,18 +89,36 @@ export default function StylePageContent({
     const extract = async () => {
       try {
         setIsExtractingImage(true);
+        setImageExtractionError(null);
+
         const resp = await fetch("/api/extension/extract-product-images", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pageUrl: productInfo!.pageUrl }),
         });
-        if (!resp.ok) return;
-        const data: {
-          bestImage?: { src: string; alt: string; selector: string };
-        } = await resp.json();
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          throw new Error(data.error || `HTTP ${resp.status}`);
+        }
+
         if (!isCancelled && data?.bestImage?.src) {
           console.log("🖼️ Extracted product image:", data.bestImage.src);
           console.log("🖼️ Previous imageUrl:", productInfo?.imageUrl);
+          console.log(
+            "🖼️ All candidates:",
+            data.images
+              ?.slice(0, 3)
+              .map(
+                (img: { score: number; src: string }, i: number) =>
+                  `${i + 1}. Score: ${img.score}, URL: ${img.src.substring(
+                    0,
+                    80
+                  )}...`
+              )
+          );
+
           setProductInfo((prev) => {
             const updated = prev
               ? { ...prev, imageUrl: data.bestImage!.src }
@@ -105,14 +126,20 @@ export default function StylePageContent({
             console.log("🖼️ Updated productInfo:", updated);
             return updated;
           });
+          setImageExtractionError(null);
         } else {
           console.log("🖼️ No best image found in response:", data);
+          if (!isCancelled) {
+            setImageExtractionError("No product images found on this page");
+          }
         }
       } catch (error) {
         console.error("Failed to extract product image:", error);
-        // Show user-friendly error message
         if (!isCancelled) {
-          setProductInfo((prev) => (prev ? { ...prev, imageUrl: "" } : prev));
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+          setImageExtractionError(errorMessage);
+          // Don't clear imageUrl if extraction fails - keep any existing image
         }
       } finally {
         if (!isCancelled) {
@@ -660,6 +687,20 @@ export default function StylePageContent({
                   💡 We try to show the product without a model for better
                   visualization
                 </p>
+
+                {/* Show extraction error if any */}
+                {imageExtractionError && (
+                  <p
+                    style={{
+                      fontSize: "11px",
+                      color: "#e74c3c",
+                      marginTop: "4px",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    ⚠️ Image extraction: {imageExtractionError}
+                  </p>
+                )}
               </div>
             ) : (
               <div

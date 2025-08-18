@@ -66,8 +66,8 @@
       
       // Scoring thresholds
       DETECTION_THRESHOLDS: {
-          MIN_SCORE: 2,           // Minimum score to consider it a fashion site (lowered from 3)
-          HIGH_CONFIDENCE: 6,     // High confidence it's a fashion site
+          MIN_SCORE: 4,           // Increased minimum score to reduce false positives
+          HIGH_CONFIDENCE: 8,     // High confidence it's a fashion site
           PRODUCT_PAGE_BONUS: 3   // Extra points if it looks like a product page
       },
       
@@ -156,7 +156,7 @@
           signals.push(`Found shopping cart elements (${cartElements.length})`);
       }
       
-      // Check 4: Product page indicators
+      // Check 4: Product page indicators (REQUIRED for fashion sites)
       const productElements = CONFIG.FASHION_SIGNALS.PRODUCT_INDICATORS.filter(selector => {
           try {
               return document.querySelector(selector) !== null;
@@ -164,10 +164,15 @@
               return false;
           }
       });
+      const productElementsCount = productElements.length;
       
-      if (productElements.length >= 3) {
+      if (productElementsCount >= 3) {
           score += CONFIG.DETECTION_THRESHOLDS.PRODUCT_PAGE_BONUS;
-          signals.push(`Found product page elements (${productElements.length})`);
+          signals.push(`Found product page elements (${productElementsCount})`);
+      } else if (productElementsCount === 0) {
+          // Penalize sites with no product indicators
+          score -= 2;
+          signals.push('No product page indicators found');
       }
       
       // Check 5: URL analysis
@@ -217,6 +222,18 @@
           signals.push('Found shopping action buttons');
       }
       
+      // Check 7.5: Price elements (REQUIRED for fashion sites)
+      const priceElements = document.querySelectorAll('[class*="price"], [class*="Price"], [itemprop="price"], [data-price], .price, .Price');
+      const hasPriceElements = priceElements.length > 0;
+      if (!hasPriceElements) {
+          // Penalize sites with no price elements
+          score -= 2;
+          signals.push('No price elements found');
+      } else {
+          score += 1;
+          signals.push(`Found price elements (${priceElements.length})`);
+      }
+      
       // Check 8: Images with fashion-related alt text
       const images = Array.from(document.querySelectorAll('img')).slice(0, 20); // Check first 20 images
       const fashionImages = images.filter(img => {
@@ -241,7 +258,9 @@
           isFashionSite: score >= CONFIG.DETECTION_THRESHOLDS.MIN_SCORE,
           isHighConfidence: score >= CONFIG.DETECTION_THRESHOLDS.HIGH_CONFIDENCE,
           score: score,
-          signals: signals
+          signals: signals,
+          productElementsCount: productElementsCount,
+          hasPriceElements: hasPriceElements
       };
   }
   
@@ -258,8 +277,40 @@
           return false;
       }
       
+      // DOMAIN EXCLUSION LIST - Completely exclude these domains
+      const excludedDomains = [
+          'localhost', '127.0.0.1', '0.0.0.0',
+          'github.com', 'gitlab.com', 'bitbucket.org',
+          'stackoverflow.com', 'stackexchange.com', 'reddit.com',
+          'google.com', 'google.co.uk', 'google.ca',
+          'cursor.sh', 'claude.ai', 'chatgpt.com', 'openai.com',
+          'vercel.app', 'netlify.app', 'herokuapp.com',
+          'twitter.com', 'facebook.com', 'instagram.com', 'linkedin.com',
+          'youtube.com', 'twitch.tv', 'discord.com',
+          'medium.com', 'dev.to', 'hashnode.dev',
+          'notion.so', 'figma.com', 'canva.com',
+          'slack.com', 'zoom.us', 'teams.microsoft.com'
+      ];
+      
+      const hostname = window.location.hostname.toLowerCase();
+      if (excludedDomains.some(domain => hostname.includes(domain))) {
+          console.log(`[PointFour] Skipping: Excluded domain (${hostname})`);
+          return false;
+      }
+      
+      // DOMAIN WHITELIST - Always allow known fashion sites
+      const whitelistDomains = [
+          'deijistudios.com',
+          'aritzia.com',
+          'zara.com',
+          'roheframes.com',
+          'cos.com',
+          'everlane.com'
+      ];
+      const isWhitelisted = whitelistDomains.some(d => hostname === d || hostname.endsWith('.' + d));
+
       // Skip PointFour's own domain to avoid widget showing on style page
-      if (window.location.hostname.includes('pointfour.in') || window.location.hostname.includes('localhost')) {
+      if (hostname.includes('pointfour.in') || hostname.includes('localhost')) {
           console.log('[PointFour] Skipping: PointFour domain');
           return false;
       }
@@ -269,11 +320,20 @@
           return false;
       }
       
+      // DOMAIN VERIFICATION - Must look like e-commerce or fashion
+      const hasEcommerceIndicators = hostname.includes('shop') || 
+                                   hostname.includes('store') || 
+                                   hostname.includes('boutique') ||
+                                   hostname.includes('fashion') ||
+                                   hostname.includes('clothing') ||
+                                   hostname.includes('apparel');
+      
       // Skip pages that are definitely not shopping pages
       const excludePatterns = [
           '/cart', '/checkout', '/payment', '/login', '/register', 
           '/account', '/privacy', '/terms', '/about', '/contact',
-          '/help', '/support', '/faq', '/blog', '/news'
+          '/help', '/support', '/faq', '/blog', '/news', '/docs',
+          '/documentation', '/api', '/admin', '/dashboard'
       ];
       
       const currentPath = window.location.pathname.toLowerCase();
@@ -282,14 +342,24 @@
           return false;
       }
       
-      // Now do intelligent detection
+      // Now do intelligent detection with higher standards
       const detection = detectFashionSite();
       
-      if (detection.isFashionSite) {
-          console.log(`[PointFour] Fashion site detected! (Score: ${detection.score})`);
+      // Accept if:
+      // - Domain is whitelisted
+      // - OR we meet hostname e-commerce indicators
+      // - OR we have high confidence
+      // - OR we have strong product signals (product indicators + price elements)
+      const hasStrongProductSignals = (detection.productElementsCount >= 3 && detection.hasPriceElements);
+      
+      if (
+          isWhitelisted ||
+          (detection.isFashionSite && (hasEcommerceIndicators || detection.isHighConfidence || hasStrongProductSignals))
+      ) {
+          console.log(`[PointFour] Fashion site verified! (Score: ${detection.score}, E-commerce: ${hasEcommerceIndicators}, Whitelist: ${isWhitelisted}, StrongSignals: ${hasStrongProductSignals})`);
           return true;
       } else {
-          console.log(`[PointFour] Not a fashion site (Score: ${detection.score})`);
+          console.log(`[PointFour] Not a verified fashion site (Score: ${detection.score}, E-commerce: ${hasEcommerceIndicators}, Whitelist: ${isWhitelisted})`);
           return false;
       }
   }
@@ -829,7 +899,7 @@
                 ${qualityBadge}
         `;
         
-        // FIT SECTION - Always show if we have fit data
+        // FIT SECTION - Always show if we have fit data or general recommendation
         if (structuredData?.fit) {
             content += `
                 <div class="pointfour-fit-info">
@@ -841,9 +911,9 @@
         } else if (recommendation !== 'Analyzing fit information...' && totalReviews > 0) {
             // Fallback: try to extract fit info from the general recommendation
             const fitKeywords = ['runs small', 'runs large', 'true to size', 'size up', 'size down', 'tight', 'loose', 'fits'];
-            const hassFitInfo = fitKeywords.some(keyword => recommendation.toLowerCase().includes(keyword));
+            const hasFitInfo = fitKeywords.some(keyword => recommendation.toLowerCase().includes(keyword));
             
-            if (hassFitInfo) {
+            if (hasFitInfo) {
                 content += `
                     <div class="pointfour-fit-info">
                         <h4>Fit:</h4>
@@ -854,10 +924,19 @@
                 // Show general summary under brand name if no specific fit data
                 content += `
                     <div class="pointfour-fit-info">
+                        <h4>Analysis Summary:</h4>
                         <p class="pointfour-description">${recommendation}</p>
                     </div>
                 `;
             }
+        } else if (totalReviews > 0) {
+            // Show basic info when we have reviews but no detailed analysis
+            content += `
+                <div class="pointfour-fit-info">
+                    <h4>Fit Analysis:</h4>
+                    <p class="pointfour-description">Analysis in progress. Found ${totalReviews} review${totalReviews === 1 ? '' : 's'} for ${brandName}.</p>
+                </div>
+            `;
         }
         
         // QUALITY SECTION - Show structured quality info with appropriate header
@@ -872,6 +951,16 @@
                     ${qualityInsights.confidence ? `<div class="pointfour-confidence">Confidence: ${qualityInsights.confidence.toUpperCase()}</div>` : ''}
                 </div>
             `;
+        } else if (structuredData?.quality) {
+            // Fallback: show quality section directly if available
+            const sectionHeader = isBagBrand ? 'Quality & Construction:' : 'Quality & Materials:';
+            content += `
+                <div class="pointfour-quality-info">
+                    <h4>${sectionHeader}</h4>
+                    <p>${structuredData.quality.recommendation}</p>
+                    ${structuredData.quality.confidence ? `<div class="pointfour-confidence">Confidence: ${structuredData.quality.confidence.toUpperCase()}</div>` : ''}
+                </div>
+            `;
         }
         
         // Add confidence indicator for overall analysis
@@ -879,6 +968,13 @@
             content += `
                 <div class="pointfour-confidence">
                     <small>Based on ${totalReviews} review${totalReviews === 1 ? '' : 's'} • ${structuredData.confidence.toUpperCase()} confidence</small>
+                </div>
+            `;
+        } else if (totalReviews > 0) {
+            // Show basic confidence info when we have reviews but no structured confidence
+            content += `
+                <div class="pointfour-confidence">
+                    <small>Based on ${totalReviews} review${totalReviews === 1 ? '' : 's'}</small>
                 </div>
             `;
         }
@@ -922,6 +1018,20 @@
                     <button class="pointfour-style-button" id="pointfour-style-btn">
                         <span>✨ Style with your pieces</span>
                     </button>
+                </div>
+            `;
+        }
+        
+        // DEBUG: Show data structure when in development
+        if (window.location.hostname === 'localhost' || window.location.hostname.includes('pointfour.in')) {
+            content += `
+                <div class="pointfour-debug" style="margin-top: 12px; padding: 8px; background: #f5f5f5; border-radius: 4px; font-size: 10px; color: #666;">
+                    <strong>Debug Info:</strong><br>
+                    Has structured data: ${!!structuredData}<br>
+                    Has fit data: ${!!structuredData?.fit}<br>
+                    Has quality data: ${!!structuredData?.quality}<br>
+                    Total reviews: ${totalReviews}<br>
+                    Recommendation length: ${recommendation?.length || 0}
                 </div>
             `;
         }
