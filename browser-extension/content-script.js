@@ -430,6 +430,63 @@
   }
 
   // ========================================
+  // HELPER FUNCTIONS
+  // ========================================
+  
+  function extractQualityInsights(searchData) {
+    if (!searchData || !searchData.brandFitSummary || !searchData.brandFitSummary.sections) {
+        return null;
+    }
+    
+    const sections = searchData.brandFitSummary.sections;
+    const insights = [];
+    
+    // Check for quality section
+    if (sections.quality) {
+        insights.push({
+            type: 'quality',
+            recommendation: sections.quality.recommendation,
+            confidence: sections.quality.confidence
+        });
+    }
+    
+    // Check for fabric section
+    if (sections.fabric) {
+        insights.push({
+            type: 'fabric',
+            recommendation: sections.fabric.recommendation,
+            confidence: sections.fabric.confidence
+        });
+    }
+    
+    // Check for wash care section
+    if (sections.washCare) {
+        insights.push({
+            type: 'care',
+            recommendation: sections.washCare.recommendation,
+            confidence: sections.washCare.confidence
+        });
+    }
+    
+    if (insights.length === 0) {
+        return null;
+    }
+    
+    // Combine insights into a single recommendation
+    const recommendations = insights.map(insight => insight.recommendation).filter(Boolean);
+    const confidences = insights.map(insight => insight.confidence).filter(Boolean);
+    
+    // Get the highest confidence level
+    const highestConfidence = confidences.includes('high') ? 'high' : 
+                             confidences.includes('medium') ? 'medium' : 'low';
+    
+    return {
+        recommendation: recommendations.join('. '),
+        confidence: highestConfidence
+    };
+  }
+
+  // ========================================
   // WIDGET CREATION & MANAGEMENT
   // ========================================
   
@@ -800,6 +857,7 @@
         }
     }
 }
+
 
   // ========================================
   // STYLE BUTTON FUNCTIONALITY
