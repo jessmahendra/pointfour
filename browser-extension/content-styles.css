@@ -186,12 +186,62 @@
   border: 1px solid #e0e0d4;
 }
 
+/* Bullet point list styling */
+.pointfour-bullet-list {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0;
+}
+
+.pointfour-bullet-list li {
+    position: relative;
+    padding: 4px 0 4px 16px;
+    margin: 0;
+    line-height: 1.4;
+    font-size: 13px;
+    color: #2D2D2D;
+}
+
+.pointfour-bullet-list li:before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #9F513A;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+.pointfour-bullet-list li.pointfour-source {
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+    margin-top: 4px;
+}
+
+.pointfour-bullet-list li.pointfour-source:before {
+    content: "ℹ";
+    color: #666;
+    font-size: 12px;
+}
+
+/* Section headers */
+.pointfour-fit-info h4,
+.pointfour-quality-info h4,
+.pointfour-washcare-info h4,
+.pointfour-fabric-info h4 {
+    color: #9F513A;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 16px 0 8px 0;
+    padding: 0;
+    border-bottom: 1px solid #E5E5E5;
+    padding-bottom: 4px;
+}
+
+/* Remove old paragraph styling */
 .pointfour-description {
-  margin: 8px 0;
-  color: #000000; /* Solid black text for maximum readability */
-  font-size: 13px;
-  line-height: 1.5;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+    display: none;
 }
 
 .pointfour-confidence {

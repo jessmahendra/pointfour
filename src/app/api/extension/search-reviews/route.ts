@@ -69,7 +69,9 @@ function detectProductCategory(brand: string, itemName: string = ''): 'clothing'
   // Clothing indicators (or default)
   if (text.includes('dress') || text.includes('shirt') || text.includes('pants') || text.includes('jacket') ||
       text.includes('sweater') || text.includes('blouse') || text.includes('skirt') || text.includes('jeans') ||
-      text.includes('coat') || text.includes('top') || text.includes('clothing') || text.includes('apparel')) {
+      text.includes('coat') || text.includes('top') || text.includes('clothing') || text.includes('apparel') ||
+      text.includes('tee') || text.includes('t-shirt') || text.includes('cotton') || text.includes('silk') ||
+      text.includes('denim') || text.includes('knit') || text.includes('fabric') || text.includes('garment')) {
     return 'clothing';
   }
   
@@ -118,6 +120,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Brand name is required' }, { status: 400 });
     }
 
+    // Validate that this is a fashion brand, not a tech/general company
+    const nonFashionBrands = [
+      'google', 'microsoft', 'apple', 'amazon', 'facebook', 'meta', 'twitter', 'x',
+      'youtube', 'linkedin', 'instagram', 'tiktok', 'snapchat', 'pinterest',
+      'netflix', 'spotify', 'uber', 'lyft', 'airbnb', 'tesla', 'boeing',
+      'ford', 'gm', 'toyota', 'honda', 'bmw', 'mercedes', 'audi',
+      'walmart', 'target', 'costco', 'home depot', 'lowes', 'cvs', 'walgreens',
+      'mcdonalds', 'burger king', 'kfc', 'subway', 'starbucks', 'dunkin',
+      'visa', 'mastercard', 'paypal', 'stripe', 'square',
+      'reddit', 'github', 'stackoverflow', 'wikipedia', 'twitch'
+    ];
+
+    const brandLower = brand.toLowerCase().trim();
+    if (nonFashionBrands.includes(brandLower)) {
+      return NextResponse.json({
+        error: 'Brand not supported',
+        message: `${brand} is not a fashion or apparel brand. Our analysis is designed for clothing, footwear, and fashion accessories brands only.`,
+        brandFitSummary: {
+          summary: `${brand} is not a fashion brand.`,
+          confidence: 'none',
+          sections: {},
+          hasData: false,
+          totalResults: 0,
+          sources: []
+        }
+      }, { status: 400 });
+    }
+
     const serperApiKey = process.env.SERPER_API_KEY;
     
     if (!serperApiKey) {
@@ -142,7 +172,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Detect product category to tailor search queries
-    const productCategory = detectProductCategory(brand, body.itemName || '');
+    const productCategory = detectProductCategory(brand, body.productName || body.itemName || body.productType || '');
     
     // Search for reviews with category-appropriate queries
     const searchQueries = generateSearchQueries(brand, productCategory);
@@ -413,8 +443,6 @@ function analyzeResults(results: SerperResult[], brand: string, category: 'cloth
           trueToSize: (allText.match(/true to size|fits perfectly|accurate sizing/g) || []).length
         };
     
-    console.log(`🔍 ANALYSIS: Fit patterns found for ${category}:`, fitPatterns);
-    
     const dominantFit = Object.entries(fitPatterns).sort((a, b) => b[1] - a[1])[0];
     
     if (dominantFit[1] > 0) {
@@ -447,13 +475,13 @@ function analyzeResults(results: SerperResult[], brand: string, category: 'cloth
     }
   }
   
-  // Analyze quality with strict requirements - only include if we have substantial evidence
-  const qualityPositive = (allText.match(/high quality|durable|well-made|sturdy|excellent|premium|luxury|solid construction|beautiful quality|great quality|amazing quality|love the quality|quality is great|quality is amazing|worth the money|investment piece/g) || []).length;
-  const qualityNegative = (allText.match(/poor quality|cheap|flimsy|falls apart|thin material|see through|transparent|cheap feeling|not worth|disappointed|returned|poor construction|badly made/g) || []).length;
+  // Analyze quality with enhanced pattern matching for better detection
+  const qualityPositive = (allText.match(/high quality|durable|well-made|sturdy|excellent|premium|luxury|solid construction|beautiful quality|great quality|amazing quality|love the quality|quality is great|quality is amazing|worth the money|investment piece|good quality|decent quality|quality materials|quality fabric|nice quality|quality pieces|quality construction/g) || []).length;
+  const qualityNegative = (allText.match(/poor quality|cheap|flimsy|falls apart|thin material|see through|transparent|cheap feeling|not worth|disappointed|returned|poor construction|badly made|quality come down|quality has gone down|quality declined|fabric.*thinner|fabric.*thin|wish.*thicker|could be thicker|quality issues|quality concerns/g) || []).length;
   
-  // Only include quality analysis if we have at least 3 quality mentions total
+  // Include quality analysis if we have at least 2 quality mentions total (more lenient)
   const totalQualityMentions = qualityPositive + qualityNegative;
-  if (totalQualityMentions >= 3) {
+  if (totalQualityMentions >= 2) {
     const qualityRatio = qualityPositive / totalQualityMentions;
     const isPositive = qualityPositive > qualityNegative;
     
@@ -467,25 +495,25 @@ function analyzeResults(results: SerperResult[], brand: string, category: 'cloth
     const qualitySources = extractSourcesFromEvidence(results, qualityEvidence);
     const qualitySourceText = qualitySources.length > 0 ? ` (from ${qualitySources.join(', ')})` : '';
     
-    if (qualityRatio >= 0.8 && qualityPositive >= 4) {
+    if (qualityRatio >= 0.8 && qualityPositive >= 2) {
       const topQuote = qualityEvidence[0] ? qualityEvidence[0].substring(0, 140) + '...' : '';
-      recommendation = `Multiple reviews mention good quality${qualitySourceText}. ${topQuote ? 'One review states: "' + topQuote + '"' : 'Several sources highlight durability and construction.'}`;
-      confidence = totalQualityMentions >= 6 ? 'high' : 'medium';
-    } else if (qualityRatio >= 0.6 && qualityPositive >= 3) {
+      recommendation = `Reviews mention good quality${qualitySourceText}. ${topQuote ? 'One review states: "' + topQuote + '"' : 'Sources highlight durability and construction.'}`;
+      confidence = totalQualityMentions >= 4 ? 'high' : totalQualityMentions >= 3 ? 'medium' : 'low';
+    } else if (qualityRatio >= 0.6 && qualityPositive >= 2) {
       const topQuote = qualityEvidence[0] ? qualityEvidence[0].substring(0, 140) + '...' : '';
       recommendation = `Most quality mentions are positive${qualitySourceText}. ${topQuote ? 'A customer noted: "' + topQuote + '"' : 'Generally good construction reported.'}`;
-      confidence = totalQualityMentions >= 5 ? 'medium' : 'low';
-    } else if (qualityRatio >= 0.4 && totalQualityMentions >= 4) {
+      confidence = totalQualityMentions >= 4 ? 'medium' : 'low';
+    } else if (qualityRatio >= 0.4 && totalQualityMentions >= 3) {
       const concernQuote = qualityEvidence[0] ? qualityEvidence[0].substring(0, 120) + '...' : '';
       recommendation = `Mixed quality feedback (${qualityPositive} positive vs ${qualityNegative} negative mentions)${qualitySourceText}. ${concernQuote ? 'Some concerns mentioned: "' + concernQuote + '"' : 'Individual experiences vary.'}`;
       confidence = 'medium';
-    } else if (qualityNegative >= 3) {
+    } else if (qualityNegative >= 2) {
       const negativeQuote = qualityEvidence[0] ? qualityEvidence[0].substring(0, 140) + '...' : '';
-      recommendation = `Several quality concerns noted${qualitySourceText}. ${negativeQuote ? 'Customers reported: "' + negativeQuote + '"' : 'Consider checking recent reviews carefully.'}`;
-      confidence = totalQualityMentions >= 5 ? 'medium' : 'low';
+      recommendation = `Quality concerns noted${qualitySourceText}. ${negativeQuote ? 'Customers reported: "' + negativeQuote + '"' : 'Consider checking recent reviews carefully.'}`;
+      confidence = totalQualityMentions >= 4 ? 'medium' : 'low';
     } else {
       // Not enough evidence for quality analysis
-      console.log(`🔍 ANALYSIS: Insufficient quality evidence (${totalQualityMentions} mentions, need 3+)`);
+      console.log(`🔍 ANALYSIS: Insufficient quality evidence (${totalQualityMentions} mentions, need 2+)`);
       // Don't add quality analysis if insufficient evidence
     }
     
@@ -497,10 +525,56 @@ function analyzeResults(results: SerperResult[], brand: string, category: 'cloth
       };
     }
   } else {
-    console.log(`🔍 ANALYSIS: Insufficient quality mentions (${totalQualityMentions}, need 3+) - skipping quality analysis`);
+    console.log(`🔍 ANALYSIS: Insufficient quality mentions (${totalQualityMentions}, need 2+) - skipping quality analysis`);
   }
   
-  // Analyze fabric/materials for relevant categories
+  // Analyze wash/care behavior for clothing items
+  if (category === 'clothing') {
+    const washPatterns = {
+      shrinks: (allText.match(/shrinks?|shrank|got smaller|reduced in size|shrinkage|shrunk in wash|shrank after washing|after wash|washed it|after washing/g) || []).length,
+      holds: (allText.match(/holds up|maintains shape|doesn't shrink|keeps its form|washes well|holds shape|no shrinkage|maintained shape|kept its shape|still looks good|washes beautifully/g) || []).length,
+      stretches: (allText.match(/stretches out|loses shape|gets baggy|stretched after wash|lost shape|stretchy|elastic|loose after wash/g) || []).length
+    };
+    
+    console.log(`🔍 ANALYSIS: Wash patterns found:`, washPatterns);
+    
+    const totalWashMentions = washPatterns.shrinks + washPatterns.holds + washPatterns.stretches;
+    
+    if (totalWashMentions >= 2) {
+      const dominantWash = Object.entries(washPatterns).sort((a, b) => b[1] - a[1])[0];
+      
+      if (dominantWash[1] > 0) {
+        // Extract actual wash-related quotes from reviews
+        const washEvidence = extractWashCareEvidence(results, brand);
+        
+        // Get source information for wash evidence
+        const washSources = extractSourcesFromEvidence(results, washEvidence);
+        const washSourceText = washSources.length > 0 ? ` (from ${washSources.join(', ')})` : '';
+        
+        let recommendation = '';
+        if (dominantWash[0] === 'shrinks') {
+          const exampleQuote = washEvidence[0] ? washEvidence[0].substring(0, 120) + '...' : '';
+          recommendation = `Multiple customers report items shrink after washing${washSourceText}. ${exampleQuote ? 'One review: "' + exampleQuote + '"' : 'Consider cold wash or sizing up.'}`;
+        } else if (dominantWash[0] === 'holds') {
+          const exampleQuote = washEvidence[0] ? washEvidence[0].substring(0, 120) + '...' : '';
+          recommendation = `Items maintain shape well after washing${washSourceText}. ${exampleQuote ? 'Customer feedback: "' + exampleQuote + '"' : 'Good durability reported.'}`;
+        } else if (dominantWash[0] === 'stretches') {
+          const exampleQuote = washEvidence[0] ? washEvidence[0].substring(0, 120) + '...' : '';
+          recommendation = `Some items may stretch out with wear/washing${washSourceText}. ${exampleQuote ? 'Review mentions: "' + exampleQuote + '"' : 'Consider sizing down or gentle care.'}`;
+        }
+        
+        analysis.washCare = {
+          recommendation,
+          confidence: totalWashMentions >= 4 ? 'high' : totalWashMentions >= 2 ? 'medium' : 'low',
+          evidence: washEvidence
+        };
+      }
+    } else {
+      console.log(`🔍 ANALYSIS: Insufficient wash mentions (${totalWashMentions}, need 2+) - skipping wash analysis`);
+    }
+  }
+  
+  // Analyze fabric/material information
   if (category === 'clothing') {
     const materialMentions = {
       cotton: (allText.match(/cotton|organic cotton|100% cotton/g) || []).length,
@@ -605,78 +679,6 @@ function analyzeResults(results: SerperResult[], brand: string, category: 'cloth
         confidence: mentionedMaterials.length >= 2 ? 'medium' : 'low',
         evidence: materialEvidence
       };
-    }
-  }
-  
-  // Only analyze washing for clothing items
-  if (category === 'clothing') {
-    // Only analyze washing if there are actual customer experiences about post-wash results
-    const postWashExperiences = allText.match(/after wash|washed.*shrink|washed.*shrank|after washing|holds up.*wash|faded.*wash|pilled.*wash|maintained.*shape|kept.*shape|lost.*shape|stretched.*wash/gi) || [];
-    const brandSpecificWashExperiences = allText.match(new RegExp(`${brand.toLowerCase()}[^.]{0,150}(after wash|washed.*shrink|washed.*shrank|after washing|holds up.*wash|faded.*wash|pilled.*wash|maintained.*shape|kept.*shape|lost.*shape|stretched.*wash)`, 'gi')) || [];
-  
-    console.log(`🔍 ANALYSIS: Post-wash experience analysis for ${brand}:`, {
-      postWashExperiences: postWashExperiences.length,
-      brandSpecificWashExperiences: brandSpecificWashExperiences.length,
-      examples: postWashExperiences.slice(0, 2)
-    });
-  
-    // Only include wash care section if customers actually shared post-wash experiences
-    let recommendation = null;
-    let confidence: 'low' | 'medium' | 'high' = 'low';
-    
-    // Extract actual wash care evidence from ALL external reviews (Reddit, Substack, etc.)
-    const washCareEvidence = extractWashCareEvidence(results, brand);
-    
-    if (washCareEvidence.length > 0) {
-      const washQuote = washCareEvidence[0].substring(0, 140) + '...';
-      
-      // Get source information for wash care evidence
-      const washSources = extractSourcesFromEvidence(results, washCareEvidence);
-      const washSourceText = washSources.length > 0 ? ` (from ${washSources.join(', ')})` : '';
-      
-      // Determine if experiences are mostly positive or negative based on all text
-      const negativeWashWords = ['shrink', 'shrank', 'shrunk', 'faded', 'pilled', 'stretched', 'lost shape', 'fell apart'];
-      const positiveWashWords = ['holds up', 'maintained', 'kept shape', 'washes well', 'easy care'];
-      
-      const negativeCount = negativeWashWords.reduce((count, word) => 
-        count + (allText.match(new RegExp(word, 'gi')) || []).length, 0);
-      const positiveCount = positiveWashWords.reduce((count, word) => 
-        count + (allText.match(new RegExp(word, 'gi')) || []).length, 0);
-      
-      // Prioritize brand-specific experiences but include all relevant wash experiences
-      if (brandSpecificWashExperiences.length > 0) {
-        if (negativeCount > positiveCount) {
-          recommendation = `External customer reviews report post-wash issues${washSourceText}. One person shared: "${washQuote}" Take extra care when washing.`;
-          confidence = brandSpecificWashExperiences.length >= 2 ? 'medium' : 'low';
-        } else {
-          recommendation = `External reviews indicate items hold up well after washing${washSourceText}. A customer noted: "${washQuote}"`;
-          confidence = brandSpecificWashExperiences.length >= 2 ? 'medium' : 'low';
-        }
-      } else if (postWashExperiences.length >= 2) {
-        // Include wash experiences from external sources even if not brand-specific
-        if (negativeCount > positiveCount) {
-          recommendation = `Some external reviews mention wash-related concerns${washSourceText}. "${washQuote}" Consider care instructions carefully.`;
-          confidence = 'low';
-        } else {
-          recommendation = `Post-wash feedback from external sources is generally positive${washSourceText}. "${washQuote}"`;
-          confidence = 'low';
-        }
-      }
-    }
-    
-    // If no meaningful post-wash experiences found, skip wash care section entirely
-    console.log(`🔍 ANALYSIS: ${recommendation ? 'Including' : 'Skipping'} wash care section for ${brand}`);
-    
-    if (recommendation) {
-      console.log(`🔍 ANALYSIS: Wash recommendation for ${brand}:`, recommendation);
-      
-      analysis.washCare = {
-        recommendation,
-        confidence,
-        evidence: washCareEvidence
-      };
-    } else {
-      console.log(`🔍 ANALYSIS: No significant wash-specific data found for ${brand} - skipping washCare section`);
     }
   }
   

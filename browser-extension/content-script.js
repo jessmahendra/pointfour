@@ -282,18 +282,26 @@
           'localhost', '127.0.0.1', '0.0.0.0',
           'github.com', 'gitlab.com', 'bitbucket.org',
           'stackoverflow.com', 'stackexchange.com', 'reddit.com',
-          'google.com', 'google.co.uk', 'google.ca',
+          'google.com', 'google.co.uk', 'google.ca', 'google.de', 'google.fr', 'google.it', 'google.es', 'google.nl', 'google.be', 'google.ch', 'google.at', 'google.pl', 'google.ru', 'google.in', 'google.com.au', 'google.com.br', 'google.com.mx', 'google.co.jp', 'google.co.kr', 'google.com.sg', 'google.co.za', 'google.se', 'google.no', 'google.dk', 'google.fi', 'google.pt', 'google.gr', 'google.ie', 'google.hu', 'google.cz', 'google.sk', 'google.ro', 'google.bg', 'google.hr', 'google.si', 'google.lt', 'google.lv', 'google.ee',
+          'bing.com', 'yahoo.com', 'duckduckgo.com', 'baidu.com', 'yandex.com', 'ask.com',
           'cursor.sh', 'claude.ai', 'chatgpt.com', 'openai.com',
           'vercel.app', 'netlify.app', 'herokuapp.com',
           'twitter.com', 'facebook.com', 'instagram.com', 'linkedin.com',
           'youtube.com', 'twitch.tv', 'discord.com',
           'medium.com', 'dev.to', 'hashnode.dev',
           'notion.so', 'figma.com', 'canva.com',
-          'slack.com', 'zoom.us', 'teams.microsoft.com'
+          'slack.com', 'zoom.us', 'teams.microsoft.com',
+          'wikipedia.org', 'wikimedia.org'
       ];
       
       const hostname = window.location.hostname.toLowerCase();
-      if (excludedDomains.some(domain => hostname.includes(domain))) {
+      
+      // Strong exclusion check - exact match or ends with domain
+      const isExcluded = excludedDomains.some(domain => {
+          return hostname === domain || hostname.endsWith('.' + domain);
+      });
+      
+      if (isExcluded) {
           console.log(`[PointFour] Skipping: Excluded domain (${hostname})`);
           return false;
       }
@@ -903,9 +911,11 @@
         if (structuredData?.fit) {
             content += `
                 <div class="pointfour-fit-info">
-                    <h4>Fit:</h4>
-                    <p class="pointfour-description">${structuredData.fit.recommendation}</p>
-                    ${structuredData.fit.confidence ? `<div class="pointfour-confidence">Confidence: ${structuredData.fit.confidence.toUpperCase()}</div>` : ''}
+                    <h4>Fit Analysis:</h4>
+                    <ul class="pointfour-bullet-list">
+                        <li>${structuredData.fit.recommendation}</li>
+                        ${structuredData.fit.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.fit.confidence.toUpperCase()}</li>` : ''}
+                    </ul>
                 </div>
             `;
         } else if (recommendation !== 'Analyzing fit information...' && totalReviews > 0) {
@@ -916,8 +926,10 @@
             if (hasFitInfo) {
                 content += `
                     <div class="pointfour-fit-info">
-                        <h4>Fit:</h4>
-                        <p class="pointfour-description">${recommendation}</p>
+                        <h4>Fit Analysis:</h4>
+                        <ul class="pointfour-bullet-list">
+                            <li>${recommendation}</li>
+                        </ul>
                     </div>
                 `;
             } else {
@@ -925,7 +937,9 @@
                 content += `
                     <div class="pointfour-fit-info">
                         <h4>Analysis Summary:</h4>
-                        <p class="pointfour-description">${recommendation}</p>
+                        <ul class="pointfour-bullet-list">
+                            <li>${recommendation}</li>
+                        </ul>
                     </div>
                 `;
             }
@@ -934,7 +948,9 @@
             content += `
                 <div class="pointfour-fit-info">
                     <h4>Fit Analysis:</h4>
-                    <p class="pointfour-description">Analysis in progress. Found ${totalReviews} review${totalReviews === 1 ? '' : 's'} for ${brandName}.</p>
+                    <ul class="pointfour-bullet-list">
+                        <li>Analysis in progress. Found ${totalReviews} review${totalReviews === 1 ? '' : 's'} for ${brandName}.</li>
+                    </ul>
                 </div>
             `;
         }
@@ -947,8 +963,10 @@
             content += `
                 <div class="pointfour-quality-info">
                     <h4>${sectionHeader}</h4>
-                    <p>${qualityInsights.recommendation}</p>
-                    ${qualityInsights.confidence ? `<div class="pointfour-confidence">Confidence: ${qualityInsights.confidence.toUpperCase()}</div>` : ''}
+                    <ul class="pointfour-bullet-list">
+                        <li>${qualityInsights.recommendation}</li>
+                        ${qualityInsights.confidence ? `<li class="pointfour-source">Confidence: ${qualityInsights.confidence.toUpperCase()}</li>` : ''}
+                    </ul>
                 </div>
             `;
         } else if (structuredData?.quality) {
@@ -957,8 +975,36 @@
             content += `
                 <div class="pointfour-quality-info">
                     <h4>${sectionHeader}</h4>
-                    <p>${structuredData.quality.recommendation}</p>
-                    ${structuredData.quality.confidence ? `<div class="pointfour-confidence">Confidence: ${structuredData.quality.confidence.toUpperCase()}</div>` : ''}
+                    <ul class="pointfour-bullet-list">
+                        <li>${structuredData.quality.recommendation}</li>
+                        ${structuredData.quality.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.quality.confidence.toUpperCase()}</li>` : ''}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        // WASH/CARE SECTION - Show if we have wash/care data
+        if (structuredData?.washCare && structuredData.washCare.recommendation) {
+            content += `
+                <div class="pointfour-washcare-info">
+                    <h4>Wash & Care:</h4>
+                    <ul class="pointfour-bullet-list">
+                        <li>${structuredData.washCare.recommendation}</li>
+                        ${structuredData.washCare.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.washCare.confidence.toUpperCase()}</li>` : ''}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        // FABRIC SECTION - Show if we have fabric/material data
+        if (structuredData?.fabric && structuredData.fabric.recommendation) {
+            content += `
+                <div class="pointfour-fabric-info">
+                    <h4>Materials:</h4>
+                    <ul class="pointfour-bullet-list">
+                        <li>${structuredData.fabric.recommendation}</li>
+                        ${structuredData.fabric.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.fabric.confidence.toUpperCase()}</li>` : ''}
+                    </ul>
                 </div>
             `;
         }
@@ -1241,6 +1287,24 @@ function extractProductImageFromPage() {
   
   async function fetchBrandAnalysis(brand) {
     if (!brand || isProcessing) return;
+    
+    // Additional brand validation - don't even attempt to analyze non-fashion brands
+    const nonFashionBrands = [
+      'google', 'microsoft', 'apple', 'amazon', 'facebook', 'meta', 'twitter', 'x',
+      'youtube', 'linkedin', 'instagram', 'tiktok', 'snapchat', 'pinterest',
+      'netflix', 'spotify', 'uber', 'lyft', 'airbnb', 'tesla', 'boeing',
+      'ford', 'gm', 'toyota', 'honda', 'bmw', 'mercedes', 'audi',
+      'walmart', 'target', 'costco', 'home depot', 'lowes', 'cvs', 'walgreens',
+      'mcdonalds', 'burger king', 'kfc', 'subway', 'starbucks', 'dunkin',
+      'visa', 'mastercard', 'paypal', 'stripe', 'square',
+      'reddit', 'github', 'stackoverflow', 'wikipedia', 'twitch'
+    ];
+
+    if (nonFashionBrands.includes(brand.toLowerCase().trim())) {
+      console.log('[PointFour] Skipping: Non-fashion brand detected:', brand);
+      hideWidget();
+      return;
+    }
     
     console.log('[PointFour] Fetching analysis for brand:', brand);
     isProcessing = true;
