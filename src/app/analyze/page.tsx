@@ -19,7 +19,7 @@ interface AnalysisResult {
   totalBrands: number;
   hasDatabaseData?: boolean;
   hasExternalData?: boolean;
-  searchType?: "database" | "hybrid";
+  searchType?: "database" | "hybrid" | "external" | "fallback";
   externalSearchResults?: {
     brandFitSummary: {
       summary: string | null;
