@@ -828,156 +828,109 @@ Please provide a specific answer to this follow-up question.`;
             </p>
           </div>
 
-          {/* Customer Reviews Cards */}
-          <div style={{ borderTop: "1px solid #D8D6D5", paddingTop: "16px" }}>
-            <h4
-              style={{
-                fontSize: "14px",
-                fontWeight: "600",
-                marginBottom: "12px",
-                color: "#333",
-              }}
-            >
-              Reviews from Similar Users ({parsedData.reviewCount} relevant of{" "}
-              {parsedData.totalReviews} total)
-            </h4>
-
-            {parsedData.isLimitedData ? (
-              <div
+          {/* Real Customer Reviews from Web */}
+          {analysisResult?.externalSearchResults?.groupedReviews && 
+           Object.values(analysisResult.externalSearchResults.groupedReviews).some((reviews: any) => reviews.length > 0) && (
+            <div style={{ borderTop: "1px solid #D8D6D5", paddingTop: "16px" }}>
+              <h4
                 style={{
-                  padding: "16px",
-                  backgroundColor: "#F9F9F9",
-                  border: "1px solid #E5E5E5",
-                  borderRadius: "6px",
-                  textAlign: "center",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  marginBottom: "12px",
+                  color: "#333",
                 }}
               >
-                <p style={{ fontSize: "12px", color: "#666", margin: 0 }}>
-                  No customer review data available for {parsedData.brandName}{" "}
-                  yet.
-                  <br />
-                  Check retailer websites and review platforms for customer
-                  feedback.
-                </p>
-              </div>
-            ) : (
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "12px",
-                  }}
-                >
-                  {parsedData.relevantReviews
-                    .slice(
-                      0,
-                      showAllReviews ? parsedData.relevantReviews.length : 2
-                    )
-                    .map((review, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          padding: "12px",
-                          backgroundColor: "#F8F7F4",
-                          border: "1px solid #E9DED5",
-                          borderRadius: "6px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "flex-start",
-                            marginBottom: "6px",
-                          }}
-                        >
-                          <div style={{ fontSize: "11px", color: "#666" }}>
-                            Size {review.sizeBought} • {review.userBodyType} •
-                            Rating: {review.fitRating}/5
-                          </div>
-                          <span
-                            style={{
-                              fontSize: "9px",
-                              fontWeight: "500",
-                              padding: "2px 6px",
-                              borderRadius: "8px",
-                              backgroundColor:
-                                review.wouldRecommend === "Yes"
-                                  ? "#E8F5E8"
-                                  : review.wouldRecommend === "No"
-                                  ? "#FFE8E8"
-                                  : "#F3F4F6",
-                              color:
-                                review.wouldRecommend === "Yes"
-                                  ? "#166534"
-                                  : review.wouldRecommend === "No"
-                                  ? "#DC2626"
-                                  : "#6B7280",
-                            }}
-                          >
-                            {review.wouldRecommend === "Yes"
-                              ? "Recommends"
-                              : review.wouldRecommend === "No"
-                              ? "Doesn't recommend"
-                              : review.wouldRecommend === "Maybe"
-                              ? "Mixed"
-                              : "Unknown"}
-                          </span>
-                        </div>
-                        <p
-                          style={{
-                            fontSize: "12px",
-                            color: "#4E4B4B",
-                            margin: 0,
-                            lineHeight: "1.4",
-                            fontStyle: "italic",
-                          }}
-                        >
-                          &quot;{review.fitComments}&quot;
-                        </p>
-                      </div>
-                    ))}
-                </div>
+                Customer Reviews
+              </h4>
+              
+              {Object.entries(analysisResult.externalSearchResults.groupedReviews).map(([category, reviews]) => {
+                if (!reviews || reviews.length === 0) return null;
 
-                {/* View All / Show Less Button */}
-                {parsedData.relevantReviews.length > 2 && (
-                  <div style={{ marginTop: "12px", textAlign: "center" }}>
-                    <button
-                      onClick={() => setShowAllReviews(!showAllReviews)}
+                const categoryNames: Record<string, string> = {
+                  primary: "🔥 Primary Sources (Reddit & Substack)",
+                  community: "💬 Community Forums",
+                  blogs: "📝 Fashion Blogs",
+                  videos: "🎥 Video Reviews",
+                  social: "📱 Social Media",
+                  publications: "📰 Fashion Publications",
+                  other: "🌐 Other Sources",
+                };
+
+                return (
+                  <div key={category} style={{ marginBottom: "16px" }}>
+                    <h5
                       style={{
-                        padding: "8px 16px",
-                        fontSize: "12px",
-                        fontWeight: "500",
-                        backgroundColor: "transparent",
-                        color: "#6C6A68",
-                        border: "1px solid #D8D6D5",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                      }}
-                      onMouseOver={(e) => {
-                        (e.target as HTMLButtonElement).style.backgroundColor =
-                          "#F8F7F4";
-                      }}
-                      onMouseOut={(e) => {
-                        (e.target as HTMLButtonElement).style.backgroundColor =
-                          "transparent";
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        color: category === "primary" ? "#DC2626" : "#666",
+                        margin: "0 0 12px 0",
+                        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                       }}
                     >
-                      {showAllReviews
-                        ? `Show Less (${
-                            parsedData.relevantReviews.length - 2
-                          } hidden)`
-                        : `View All Reviews (${
-                            parsedData.relevantReviews.length - 2
-                          } more)`}
-                    </button>
+                      {categoryNames[category]}
+                    </h5>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {reviews.slice(0, 3).map((review: any, index: number) => (
+                        <a
+                          key={index}
+                          href={review.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "block",
+                            padding: "12px",
+                            backgroundColor: "#F8F7F4",
+                            border: "1px solid #E9DED5",
+                            borderRadius: "6px",
+                            textDecoration: "none",
+                            color: "inherit",
+                            transition: "all 0.2s ease",
+                          }}
+                          onMouseOver={(e) => {
+                            (e.target as HTMLElement).style.backgroundColor = "#F0EBE6";
+                          }}
+                          onMouseOut={(e) => {
+                            (e.target as HTMLElement).style.backgroundColor = "#F8F7F4";
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              color: "#333",
+                              marginBottom: "4px",
+                              lineHeight: "1.3",
+                            }}
+                          >
+                            {review.title}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "11px",
+                              color: "#888",
+                              marginBottom: "6px",
+                            }}
+                          >
+                            {review.source} • {review.confidence} confidence
+                          </div>
+                          <p
+                            style={{
+                              fontSize: "11px",
+                              color: "#555",
+                              margin: 0,
+                              lineHeight: "1.4",
+                            }}
+                          >
+                            {review.snippet}
+                          </p>
+                        </a>
+                      ))}
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       );
     }
@@ -1654,8 +1607,8 @@ Please provide a specific answer to this follow-up question.`;
           </div>
         )}
 
-        {/* External Search Results */}
-        {analysisResult?.externalSearchResults && (
+        {/* External Search Results - DISABLED */}
+        {false && analysisResult?.externalSearchResults && (
           <div
             style={{
               backgroundColor: "#FFFFFF",
