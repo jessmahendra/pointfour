@@ -133,21 +133,27 @@ export async function POST(request: NextRequest) {
         console.log('=== DEBUG: AUTOMATICALLY attempting external search (insufficient database data) ===');
         externalSearchAttempted = true;
         
-        const externalResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/external-search`, {
+        const externalResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/extension/search-reviews`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             brand: brandName, 
             itemName: '', // Could extract item name from query if needed
-            userId: 'anonymous' // In production, get from auth
+            userInfo: {
+              bodyType: query.includes('Body Shape:') ? query.match(/Body Shape:\s*([^\n]+)/)?.[1]?.trim() : '',
+              height: query.includes('Height:') ? query.match(/Height:\s*([^\n]+)/)?.[1]?.trim() : '',
+              ukClothingSize: query.includes('UK clothing size:') ? query.match(/UK clothing size:\s*([^\n]+)/)?.[1]?.trim() : '',
+              ukShoeSize: query.includes('UK shoe size:') ? query.match(/UK shoe size:\s*([^\n]+)/)?.[1]?.trim() : ''
+            }
           })
         });
         
         if (externalResponse.ok) {
           externalSearchResults = await externalResponse.json();
           console.log('=== DEBUG: External search successful ===');
-          console.log('External results count:', externalSearchResults.totalResults);
+          console.log('External results count:', externalSearchResults.totalResults || 0);
           console.log('Has brand fit summary:', !!externalSearchResults.brandFitSummary);
+          console.log('Reviews count:', externalSearchResults.reviews?.length || 0);
         } else {
           console.log('=== DEBUG: External search failed ===');
           console.log('Status:', externalResponse.status);
@@ -170,9 +176,10 @@ export async function POST(request: NextRequest) {
     console.log('Successful:', !!externalSearchResults);
     console.log('Error:', externalSearchError);
     console.log('Results:', externalSearchResults ? {
-      totalResults: externalSearchResults.totalResults,
+      totalResults: externalSearchResults.totalResults || 0,
       hasBrandFitSummary: !!externalSearchResults.brandFitSummary,
-      hasReviews: !!(externalSearchResults.reviews && externalSearchResults.reviews.length > 0)
+      hasReviews: !!(externalSearchResults.reviews && externalSearchResults.reviews.length > 0),
+      brandFitSummary: externalSearchResults.brandFitSummary?.summary?.substring(0, 100) + '...' || 'None'
     } : 'None');
     
     // Create enhanced context for AI
@@ -196,12 +203,26 @@ export async function POST(request: NextRequest) {
     // Add external search results to context if available
     if (externalSearchResults && externalSearchResults.brandFitSummary) {
       enhancedContext += `\nExternal Search Results:\n`;
-      enhancedContext += `Brand Fit Summary: ${externalSearchResults.brandFitSummary.summary}\n`;
-      enhancedContext += `Confidence: ${externalSearchResults.brandFitSummary.confidence}\n`;
-      enhancedContext += `Sources: ${externalSearchResults.brandFitSummary.sources.join(', ')}\n`;
+      
+      // Handle brand fit summary from search-reviews endpoint
+      if (externalSearchResults.brandFitSummary.summary) {
+        enhancedContext += `Brand Fit Summary: ${externalSearchResults.brandFitSummary.summary}\n`;
+        enhancedContext += `Confidence: ${externalSearchResults.brandFitSummary.confidence}\n`;
+        
+        // Add sections if available
+        if (externalSearchResults.brandFitSummary.sections) {
+          const sections = externalSearchResults.brandFitSummary.sections;
+          if (sections.fit) enhancedContext += `Fit Details: ${sections.fit}\n`;
+          if (sections.quality) enhancedContext += `Quality Details: ${sections.quality}\n`;
+          if (sections.fabric) enhancedContext += `Fabric Details: ${sections.fabric}\n`;
+          if (sections.sizing) enhancedContext += `Sizing Details: ${sections.sizing}\n`;
+        }
+      }
+      
+      // Add results count
       enhancedContext += `Total External Results: ${externalSearchResults.totalResults}\n`;
       
-      // Add some key external reviews
+      // Add some key external reviews if available
       if (externalSearchResults.reviews && externalSearchResults.reviews.length > 0) {
         enhancedContext += `\nKey External Reviews:\n`;
         externalSearchResults.reviews.slice(0, 3).forEach((review: { title: string, source: string, snippet: string }, index: number) => {

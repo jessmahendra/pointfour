@@ -49,3 +49,4 @@ export function createBgRemoveProvider(): BgRemoveProvider {
   
   return defaultBgRemoveProvider;
 }
+

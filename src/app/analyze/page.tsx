@@ -1638,10 +1638,13 @@ Please provide a specific answer to this follow-up question.`;
                       : "#1E40AF",
                 }}
               >
-                {analysisResult.searchType === "hybrid" ? "🔍" : "📊"}
+                {analysisResult.searchType === "hybrid" ? "🔍" : 
+                 analysisResult.searchType === "external" ? "🌐" : "📊"}
                 <span>
                   {analysisResult.searchType === "hybrid"
                     ? "Combined database + web search results"
+                    : analysisResult.searchType === "external"
+                    ? "Web search results only"
                     : "Database results only"}
                 </span>
               </div>
