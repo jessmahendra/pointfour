@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import { CollageItem } from "@/lib/layout";
+// import { CollageItem } from "@/lib/layout";
 
 export type Item = {
   id: string;

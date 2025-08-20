@@ -154,7 +154,7 @@ function BrandAnalysisContent() {
     null
   );
   const [loading, setLoading] = useState(false);
-  const [showAllReviews, setShowAllReviews] = useState(false);
+  // const [showAllReviews, setShowAllReviews] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [isSharedView, setIsSharedView] = useState(false);
   
@@ -830,7 +830,7 @@ Please provide a specific answer to this follow-up question.`;
 
           {/* Real Customer Reviews from Web */}
           {analysisResult?.externalSearchResults?.groupedReviews && 
-           Object.values(analysisResult.externalSearchResults.groupedReviews).some((reviews: any) => reviews.length > 0) && (
+           Object.values(analysisResult?.externalSearchResults?.groupedReviews || {}).some((reviews: unknown[]) => reviews.length > 0) && (
             <div style={{ borderTop: "1px solid #D8D6D5", paddingTop: "16px" }}>
               <h4
                 style={{
@@ -843,7 +843,7 @@ Please provide a specific answer to this follow-up question.`;
                 Customer Reviews
               </h4>
               
-              {Object.entries(analysisResult.externalSearchResults.groupedReviews).map(([category, reviews]) => {
+              {Object.entries(analysisResult?.externalSearchResults?.groupedReviews || {}).map(([category, reviews]) => {
                 if (!reviews || reviews.length === 0) return null;
 
                 const categoryNames: Record<string, string> = {
@@ -870,7 +870,13 @@ Please provide a specific answer to this follow-up question.`;
                       {categoryNames[category]}
                     </h5>
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {reviews.slice(0, 3).map((review: any, index: number) => (
+                      {reviews.slice(0, 3).map((review: {
+                        title: string;
+                        snippet: string;
+                        url: string;
+                        source: string;
+                        confidence: string;
+                      }, index: number) => (
                         <a
                           key={index}
                           href={review.url}
@@ -1641,13 +1647,13 @@ Please provide a specific answer to this follow-up question.`;
                     'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 }}
               >
-                Found {analysisResult.externalSearchResults.totalResults}{" "}
+                Found {analysisResult?.externalSearchResults?.totalResults || 0}{" "}
                 additional reviews from across the web
               </p>
             </div>
 
             {/* Brand Fit Summary from External Search */}
-            {analysisResult.externalSearchResults.brandFitSummary && (
+            {analysisResult?.externalSearchResults?.brandFitSummary && (
               <div
                 style={{
                   backgroundColor: "#F8F7F4",
@@ -1678,7 +1684,7 @@ Please provide a specific answer to this follow-up question.`;
                       'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                   }}
                 >
-                  {analysisResult.externalSearchResults.brandFitSummary.summary}
+                  {analysisResult?.externalSearchResults?.brandFitSummary?.summary}
                 </p>
                 <div
                   style={{
@@ -1691,15 +1697,15 @@ Please provide a specific answer to this follow-up question.`;
                   <span>
                     Confidence:{" "}
                     {
-                      analysisResult.externalSearchResults.brandFitSummary
-                        .confidence
+                      analysisResult?.externalSearchResults?.brandFitSummary
+                        ?.confidence
                     }
                   </span>
                   <span>
                     Sources:{" "}
-                    {analysisResult.externalSearchResults.brandFitSummary.sources.join(
+                    {analysisResult?.externalSearchResults?.brandFitSummary?.sources?.join(
                       ", "
-                    )}
+                    ) || ""}
                   </span>
                 </div>
               </div>
@@ -1707,7 +1713,7 @@ Please provide a specific answer to this follow-up question.`;
 
             {/* Grouped Reviews */}
             {Object.entries(
-              analysisResult.externalSearchResults.groupedReviews
+              analysisResult?.externalSearchResults?.groupedReviews || {}
             ).map(([category, reviews]) => {
               if (!reviews || reviews.length === 0) return null;
 

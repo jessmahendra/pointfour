@@ -153,7 +153,7 @@ export default function StylePageContent({
     return () => {
       isCancelled = true;
     };
-  }, [productInfo?.pageUrl, productInfo?.imageUrl]);
+  }, [productInfo?.pageUrl, productInfo?.imageUrl, productInfo]);
 
   // Reverted: remove collage helpers
 
@@ -202,6 +202,7 @@ export default function StylePageContent({
   }, {} as Record<string, UserItem[]>);
 
   // Generate outfit combinations
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const generateOutfitCombinations = () => {
     const combinations: Array<{
       id: number;
@@ -245,6 +246,7 @@ export default function StylePageContent({
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const generateOutfitVisualization = async () => {
     if (!productInfo || userItems.length === 0) return;
 
@@ -517,6 +519,7 @@ export default function StylePageContent({
         );
 
         // Convert to data URL and set
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const dataUrl = canvas.toDataURL();
         // Removed old collage logic
       }

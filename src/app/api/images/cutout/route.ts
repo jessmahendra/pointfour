@@ -55,9 +55,9 @@ export async function POST(request: Request) {
     });
     
     // Extend with transparent padding (24px on each side)
-    const metadata = await sharpInstance.metadata();
-    const extendedWidth = (metadata.width || targetMax) + 48;
-    const extendedHeight = (metadata.height || targetMax) + 48;
+    // const metadata = await sharpInstance.metadata();
+    // const extendedWidth = (metadata.width || targetMax) + 48;
+    // const extendedHeight = (metadata.height || targetMax) + 48;
     
     sharpInstance = sharpInstance.extend({
       top: 24,
