@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 
+// Types for shared analysis data
+interface SharedAnalysisData {
+  analysisResult: unknown;
+  userProfile: unknown;
+  brandQuery: string;
+  sharedAt: string;
+  createdAt: string;
+  viewCount: number;
+}
+
 // In-memory storage for shared analysis results
 // In production, you'd want to use a database or persistent storage
-const sharedAnalysis = new Map<string, any>();
+const sharedAnalysis = new Map<string, SharedAnalysisData>();
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -132,7 +132,7 @@ interface Review {
   userBodyType: string;
 }
 
-export default function BrandAnalysisPage() {
+function BrandAnalysisContent() {
   const [currentStep, setCurrentStep] = useState<"form" | "analysis" | "chat">(
     "form"
   );
@@ -155,7 +155,6 @@ export default function BrandAnalysisPage() {
   );
   const [loading, setLoading] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string>("");
   const [shareLoading, setShareLoading] = useState(false);
   const [isSharedView, setIsSharedView] = useState(false);
   
@@ -216,7 +215,6 @@ export default function BrandAnalysisPage() {
       const data = await response.json();
       
       if (data.success) {
-        setShareUrl(data.shareUrl);
         // Copy to clipboard
         await navigator.clipboard.writeText(data.shareUrl);
         alert('Share link copied to clipboard!');
@@ -2336,5 +2334,13 @@ Please provide a specific answer to this follow-up question.`;
       {currentStep === "analysis" && renderAnalysis()}
       {currentStep === "chat" && renderChat()}
     </div>
+  );
+}
+
+export default function BrandAnalysisPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <BrandAnalysisContent />
+    </Suspense>
   );
 }

@@ -604,7 +604,7 @@ function analyzeResults(results: SerperResult[], brand: string, category: 'cloth
       
       if (dominantWash[1] > 0) {
         // Extract actual wash-related quotes from reviews
-        const washEvidence = extractWashCareEvidence(results, brand);
+        const washEvidence = extractWashCareEvidence(results);
         
         // Get source information for wash evidence
         const washSources = extractSourcesFromEvidence(results, washEvidence);
@@ -654,8 +654,8 @@ function analyzeResults(results: SerperResult[], brand: string, category: 'cloth
     };
     
     const mentionedMaterials = Object.entries(materialMentions)
-      .filter(([_, count]) => count > 0)
-      .sort(([, a], [, b]) => b - a)
+      .filter(([, count]) => count > 0)
+      .sort(([, countA], [, countB]) => countB - countA)
       .map(([material]) => material);
     
     if (mentionedMaterials.length > 0 || Object.values(fabricQuality).some(count => count > 0)) {
@@ -716,8 +716,8 @@ function analyzeResults(results: SerperResult[], brand: string, category: 'cloth
     };
     
     const mentionedMaterials = Object.entries(bagMaterials)
-      .filter(([_, count]) => count > 0)
-      .sort(([, a], [, b]) => b - a)
+      .filter(([, count]) => count > 0)
+      .sort(([, countA], [, countB]) => countB - countA)
       .map(([material]) => material);
     
     if (mentionedMaterials.length > 0 || Object.values(bagQuality).some(count => count > 0)) {
@@ -812,7 +812,7 @@ function extractQualityEvidence(results: SerperResult[], isPositive: boolean): s
   return evidence;
 }
 
-function extractWashCareEvidence(results: SerperResult[], brand: string): string[] {
+function extractWashCareEvidence(results: SerperResult[]): string[] {
   const evidence: string[] = [];
   // Focus on actual post-wash experiences, not care instructions
   const postWashKeywords = [
