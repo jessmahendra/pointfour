@@ -66,7 +66,7 @@
       
       // Scoring thresholds
       DETECTION_THRESHOLDS: {
-          MIN_SCORE: 4,           // Increased minimum score to reduce false positives
+          MIN_SCORE: 4,           // Minimum score to detect fashion sites
           HIGH_CONFIDENCE: 8,     // High confidence it's a fashion site
           PRODUCT_PAGE_BONUS: 3   // Extra points if it looks like a product page
       },
@@ -170,8 +170,8 @@
           score += CONFIG.DETECTION_THRESHOLDS.PRODUCT_PAGE_BONUS;
           signals.push(`Found product page elements (${productElementsCount})`);
       } else if (productElementsCount === 0) {
-          // Penalize sites with no product indicators
-          score -= 2;
+          // Lightly penalize sites with no product indicators
+          score -= 1;
           signals.push('No product page indicators found');
       }
       
@@ -226,8 +226,8 @@
       const priceElements = document.querySelectorAll('[class*="price"], [class*="Price"], [itemprop="price"], [data-price], .price, .Price');
       const hasPriceElements = priceElements.length > 0;
       if (!hasPriceElements) {
-          // Penalize sites with no price elements
-          score -= 2;
+          // Lightly penalize sites with no price elements
+          score -= 1;
           signals.push('No price elements found');
       } else {
           score += 1;
@@ -279,25 +279,82 @@
       
       // DOMAIN EXCLUSION LIST - Completely exclude these domains
       const excludedDomains = [
+          // Development and local
           'localhost', '127.0.0.1', '0.0.0.0',
-          'github.com', 'gitlab.com', 'bitbucket.org',
-          'stackoverflow.com', 'stackexchange.com', 'reddit.com',
+          
+          // Code repositories and development
+          'github.com', 'gitlab.com', 'bitbucket.org', 'codepen.io', 'jsfiddle.net',
+          
+          // Forums and Q&A sites
+          'stackoverflow.com', 'stackexchange.com', 'reddit.com', 'quora.com',
+          
+          // Search engines - comprehensive global list
           'google.com', 'google.co.uk', 'google.ca', 'google.de', 'google.fr', 'google.it', 'google.es', 'google.nl', 'google.be', 'google.ch', 'google.at', 'google.pl', 'google.ru', 'google.in', 'google.com.au', 'google.com.br', 'google.com.mx', 'google.co.jp', 'google.co.kr', 'google.com.sg', 'google.co.za', 'google.se', 'google.no', 'google.dk', 'google.fi', 'google.pt', 'google.gr', 'google.ie', 'google.hu', 'google.cz', 'google.sk', 'google.ro', 'google.bg', 'google.hr', 'google.si', 'google.lt', 'google.lv', 'google.ee',
-          'bing.com', 'yahoo.com', 'duckduckgo.com', 'baidu.com', 'yandex.com', 'ask.com',
-          'cursor.sh', 'claude.ai', 'chatgpt.com', 'openai.com',
-          'vercel.app', 'netlify.app', 'herokuapp.com',
-          'twitter.com', 'facebook.com', 'instagram.com', 'linkedin.com',
-          'youtube.com', 'twitch.tv', 'discord.com',
-          'medium.com', 'dev.to', 'hashnode.dev',
-          'notion.so', 'figma.com', 'canva.com',
-          'slack.com', 'zoom.us', 'teams.microsoft.com',
-          'wikipedia.org', 'wikimedia.org'
+          'bing.com', 'yahoo.com', 'duckduckgo.com', 'baidu.com', 'yandex.com', 'ask.com', 'ecosia.org', 'startpage.com',
+          
+          // AI and productivity tools
+          'cursor.sh', 'claude.ai', 'chatgpt.com', 'openai.com', 'anthropic.com', 'perplexity.ai',
+          'copilot.microsoft.com', 'bard.google.com', 'chat.openai.com',
+          
+          // Hosting and development platforms
+          'vercel.app', 'netlify.app', 'herokuapp.com', 'replit.com', 'glitch.com',
+          'codesandbox.io', 'stackblitz.com',
+          
+          // Social media platforms
+          'twitter.com', 'x.com', 'facebook.com', 'instagram.com', 'linkedin.com',
+          'tiktok.com', 'snapchat.com', 'pinterest.com', 'tumblr.com',
+          
+          // Video and streaming
+          'youtube.com', 'twitch.tv', 'vimeo.com', 'dailymotion.com',
+          
+          // Communication and collaboration
+          'discord.com', 'slack.com', 'zoom.us', 'teams.microsoft.com', 'meet.google.com',
+          'telegram.org', 'whatsapp.com', 'signal.org',
+          
+          // Publishing and blogging platforms
+          'medium.com', 'substack.com', 'dev.to', 'hashnode.dev', 'ghost.org',
+          'wordpress.com', 'blogger.com', 'wix.com', 'squarespace.com',
+          
+          // Design and creative tools
+          'notion.so', 'figma.com', 'canva.com', 'adobe.com', 'sketch.com',
+          'invision.com', 'dribbble.com', 'behance.net',
+          
+          // Educational and reference
+          'wikipedia.org', 'wikimedia.org', 'coursera.org', 'udemy.com', 'edx.org',
+          'khanacademy.org', 'duolingo.com',
+          
+          // News and media sites
+          'cnn.com', 'bbc.com', 'nytimes.com', 'guardian.com', 'wsj.com',
+          'reuters.com', 'ap.org', 'npr.org', 'bloomberg.com',
+          
+          // Financial and business
+          'paypal.com', 'stripe.com', 'square.com', 'mint.com', 'robinhood.com',
+          'coinbase.com', 'binance.com', 'kraken.com',
+          
+          // Email and cloud services
+          'gmail.com', 'outlook.com', 'yahoo.com', 'protonmail.com',
+          'dropbox.com', 'onedrive.com', 'icloud.com', 'box.com',
+          
+          // Maps and navigation
+          'maps.google.com', 'maps.apple.com', 'waze.com', 'mapquest.com',
+          
+          // Home goods and interior design
+          'nordicnest.com', 'ikea.com', 'westelm.com', 'potterybarn.com', 'crateandbarrel.com',
+          'cb2.com', 'williams-sonoma.com', 'restorationhardware.com', 'wayfair.com',
+          'overstock.com', 'bedbathandbeyond.com', 'homegoods.com', 'worldmarket.com',
+          
+          // Government and official sites
+          '.gov', '.edu', '.mil', '.int'
       ];
       
       const hostname = window.location.hostname.toLowerCase();
       
-      // Strong exclusion check - exact match or ends with domain
+      // Strong exclusion check - exact match, ends with domain, or TLD match
       const isExcluded = excludedDomains.some(domain => {
+          if (domain.startsWith('.')) {
+              // Handle TLD exclusions like .gov, .edu
+              return hostname.endsWith(domain);
+          }
           return hostname === domain || hostname.endsWith('.' + domain);
       });
       
@@ -306,9 +363,33 @@
           return false;
       }
       
+      // CONTENT-BASED EXCLUSION - Check for non-fashion site indicators in page content
+      const pageTitle = document.title.toLowerCase();
+      const pageContent = document.body?.textContent?.toLowerCase() || '';
+      const metaDescription = document.querySelector('meta[name="description"]')?.content?.toLowerCase() || '';
+      const combinedContent = `${pageTitle} ${pageContent.substring(0, 2000)} ${metaDescription}`;
+      
+      // Strong indicators this is NOT a fashion site - only very specific non-fashion terms
+      const strongNonFashionIndicators = [
+          'search results for', 'google search', 'bing search',
+          'ai assistant', 'chatbot', 'language model',
+          'stack overflow', 'github repository',
+          'documentation site', 'api reference'
+      ];
+      
+      const foundStrongNonFashionIndicators = strongNonFashionIndicators.filter(indicator => 
+          combinedContent.includes(indicator)
+      );
+      
+      if (foundStrongNonFashionIndicators.length > 0) {
+          console.log(`[PointFour] Skipping: Strong non-fashion content detected (${foundStrongNonFashionIndicators.slice(0, 2).join(', ')})`);
+          return false;
+      }
+      
       // DOMAIN WHITELIST - Always allow known fashion sites
       const whitelistDomains = [
           'deijistudios.com',
+          'on-running.com', 'on.com',
           'aritzia.com',
           'zara.com',
           'roheframes.com',
@@ -355,7 +436,7 @@
       
       // Accept if:
       // - Domain is whitelisted
-      // - OR we meet hostname e-commerce indicators
+      // - OR we meet hostname e-commerce indicators 
       // - OR we have high confidence
       // - OR we have strong product signals (product indicators + price elements)
       const hasStrongProductSignals = (detection.productElementsCount >= 3 && detection.hasPriceElements);

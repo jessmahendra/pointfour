@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 interface UserProfile {
@@ -154,6 +155,82 @@ export default function BrandAnalysisPage() {
   );
   const [loading, setLoading] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string>("");
+  const [shareLoading, setShareLoading] = useState(false);
+  const [isSharedView, setIsSharedView] = useState(false);
+  
+  const searchParams = useSearchParams();
+
+  // Handle loading shared analysis from URL parameters
+  useEffect(() => {
+    const shareId = searchParams.get('share');
+    if (shareId) {
+      loadSharedAnalysis(shareId);
+    }
+  }, [searchParams]);
+
+  const loadSharedAnalysis = async (shareId: string) => {
+    try {
+      setLoading(true);
+      setIsSharedView(true);
+      
+      const response = await fetch(`/api/share?id=${shareId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setAnalysisResult(data.data.analysisResult);
+        setUserProfile(data.data.userProfile);
+        setBrandQuery(data.data.brandQuery);
+        setCurrentStep("analysis");
+      } else {
+        console.error('Failed to load shared analysis:', data.error);
+        alert('Share link not found or expired');
+      }
+    } catch (error) {
+      console.error('Error loading shared analysis:', error);
+      alert('Error loading shared analysis');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!analysisResult) return;
+    
+    try {
+      setShareLoading(true);
+      
+      const shareData = {
+        analysisResult,
+        userProfile,
+        brandQuery,
+        sharedAt: new Date().toISOString()
+      };
+      
+      const response = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shareData)
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setShareUrl(data.shareUrl);
+        // Copy to clipboard
+        await navigator.clipboard.writeText(data.shareUrl);
+        alert('Share link copied to clipboard!');
+      } else {
+        console.error('Failed to create share link:', data.error);
+        alert('Failed to create share link');
+      }
+    } catch (error) {
+      console.error('Error creating share link:', error);
+      alert('Error creating share link');
+    } finally {
+      setShareLoading(false);
+    }
+  };
 
   const handleFormSubmit = async () => {
     const isFootwear = userProfile.category === "footwear";
@@ -1408,6 +1485,42 @@ Please provide a specific answer to this follow-up question.`;
             >
               🔍 Browse directory
             </a>
+            
+            {/* Share Button - Only show in analysis results */}
+            {currentStep === "analysis" && analysisResult && (
+              <button
+                onClick={handleShare}
+                disabled={shareLoading || isSharedView}
+                style={{
+                  backgroundColor: isSharedView ? "#D1D5DB" : "#4F46E5",
+                  color: "white",
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: "500",
+                  cursor: isSharedView ? "not-allowed" : "pointer",
+                  transition: "all 0.2s ease",
+                  marginTop: "8px",
+                  width: "100%",
+                  opacity: shareLoading ? 0.7 : 1
+                }}
+                onMouseOver={(e) => {
+                  if (!isSharedView && !shareLoading) {
+                    (e.target as HTMLButtonElement).style.backgroundColor = "#4338CA";
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!isSharedView && !shareLoading) {
+                    (e.target as HTMLButtonElement).style.backgroundColor = "#4F46E5";
+                  }
+                }}
+              >
+                {shareLoading ? "Creating share link..." : 
+                 isSharedView ? "🔗 Shared View" : 
+                 "📤 Share Analysis"}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1861,6 +1974,32 @@ Please provide a specific answer to this follow-up question.`;
           >
             🔍 Browse directory
           </a>
+          
+          {/* Share Button - Only show in analysis results */}
+          {currentStep === "analysis" && analysisResult && (
+            <button
+              onClick={handleShare}
+              disabled={shareLoading || isSharedView}
+              style={{
+                backgroundColor: isSharedView ? "#D1D5DB" : "#4F46E5",
+                color: "white",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: "500",
+                cursor: isSharedView ? "not-allowed" : "pointer",
+                transition: "all 0.2s ease",
+                marginTop: "8px",
+                width: "100%",
+                opacity: shareLoading ? 0.7 : 1
+              }}
+            >
+              {shareLoading ? "Creating share link..." : 
+               isSharedView ? "🔗 Shared View" : 
+               "📤 Share Analysis"}
+            </button>
+          )}
         </div>
       </div>
     </div>
