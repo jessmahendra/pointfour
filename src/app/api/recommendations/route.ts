@@ -140,7 +140,14 @@ export async function POST(request: NextRequest) {
           : '=== DEBUG: AUTOMATICALLY attempting external search (insufficient database data) ===');
         externalSearchAttempted = true;
         
-        const externalResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/extension/search-reviews`, {
+        const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                       process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        console.log('=== DEBUG: API fetch details ===');
+        console.log('Base URL:', baseUrl);
+        console.log('VERCEL_URL:', process.env.VERCEL_URL || 'Not set');
+        console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL || 'Not set');
+        
+        const externalResponse = await fetch(`${baseUrl}/api/extension/search-reviews`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
