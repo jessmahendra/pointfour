@@ -140,12 +140,21 @@ export async function POST(request: NextRequest) {
           : '=== DEBUG: AUTOMATICALLY attempting external search (insufficient database data) ===');
         externalSearchAttempted = true;
         
-        const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                       process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        // More robust URL construction for Vercel
+        let baseUrl = 'http://localhost:3000';
+        if (process.env.VERCEL_URL) {
+          baseUrl = `https://${process.env.VERCEL_URL}`;
+        } else if (process.env.NEXTAUTH_URL) {
+          baseUrl = process.env.NEXTAUTH_URL;
+        } else if (typeof window !== 'undefined') {
+          baseUrl = window.location.origin;
+        }
+        
         console.log('=== DEBUG: API fetch details ===');
         console.log('Base URL:', baseUrl);
         console.log('VERCEL_URL:', process.env.VERCEL_URL || 'Not set');
         console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL || 'Not set');
+        console.log('NODE_ENV:', process.env.NODE_ENV);
         
         const externalResponse = await fetch(`${baseUrl}/api/extension/search-reviews`, {
           method: 'POST',
