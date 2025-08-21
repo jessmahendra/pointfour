@@ -168,6 +168,27 @@ function BrandAnalysisContent() {
     }
   }, [searchParams]);
 
+  // Console logging for search type debugging
+  useEffect(() => {
+    if (analysisResult) {
+      const searchTypeLabels = {
+        hybrid: "🔍 Hybrid: Database + Web Search",
+        external: "🌐 External: Web Search Only", 
+        database: "📊 Database: Database Only",
+        fallback: "⚠️ Fallback: No Data Available"
+      };
+      
+      console.log('🔍 PointFour Search Debug Info:');
+      console.log(`Search Type: ${searchTypeLabels[analysisResult.searchType as keyof typeof searchTypeLabels] || analysisResult.searchType}`);
+      console.log(`Has Database Data: ${analysisResult.hasDatabaseData ? 'Yes' : 'No'}`);
+      console.log(`Has External Data: ${analysisResult.hasExternalData ? 'Yes' : 'No'}`);
+      
+      if (analysisResult.hasExternalData && analysisResult.externalSearchResults) {
+        console.log(`External Reviews Found: ${analysisResult.externalSearchResults.brandFitSummary?.totalResults || 0}`);
+      }
+    }
+  }, [analysisResult]);
+
   const loadSharedAnalysis = async (shareId: string) => {
     try {
       setLoading(true);
@@ -1576,38 +1597,6 @@ Please provide a specific answer to this follow-up question.`;
               marginBottom: "32px",
             }}
           >
-            {/* Search Type Indicator */}
-            {analysisResult.searchType && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginBottom: "16px",
-                  padding: "8px 12px",
-                  backgroundColor:
-                    analysisResult.searchType === "hybrid"
-                      ? "#FEF3C7"
-                      : "#DBEAFE",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                  color:
-                    analysisResult.searchType === "hybrid"
-                      ? "#92400E"
-                      : "#1E40AF",
-                }}
-              >
-                {analysisResult.searchType === "hybrid" ? "🔍" : 
-                 analysisResult.searchType === "external" ? "🌐" : "📊"}
-                <span>
-                  {analysisResult.searchType === "hybrid"
-                    ? "Combined database + web search results"
-                    : analysisResult.searchType === "external"
-                    ? "Web search results only"
-                    : "Database results only"}
-                </span>
-              </div>
-            )}
 
             {formatRecommendation(analysisResult.recommendation)}
           </div>

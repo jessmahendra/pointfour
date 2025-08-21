@@ -118,19 +118,26 @@ export async function POST(request: NextRequest) {
       matchingBrand.fitSummary.length > 20 && // Has meaningful fit summary
       (matchingBrand.reviews || matchingBrand.userQuotes); // Has some review data
     
+    // Check test flag for external search behavior
+    const enableExternalForAll = process.env.ENABLE_EXTERNAL_SEARCH_FOR_ALL_BRANDS === 'true';
+    const shouldUseExternal = enableExternalForAll ? !!brandName : (!hasSufficientData && !!brandName);
+    
     console.log('=== DEBUG: Data sufficiency check ===');
     console.log('Has sufficient database data:', hasSufficientData);
-    console.log('Will use external search:', !hasSufficientData && !!brandName);
+    console.log('External search for all brands enabled:', enableExternalForAll);
+    console.log('Will use external search:', shouldUseExternal);
     
-    // AUTOMATICALLY use external search when database data is insufficient
+    // AUTOMATICALLY use external search when database data is insufficient OR test flag is enabled
     let externalSearchResults = null;
     let externalSearchAttempted = false;
     let externalSearchError = null;
     
-    // Only search externally if we don't have good database data
-    if (!hasSufficientData && brandName) {
+    // Search externally based on test flag or data sufficiency
+    if (shouldUseExternal) {
       try {
-        console.log('=== DEBUG: AUTOMATICALLY attempting external search (insufficient database data) ===');
+        console.log(enableExternalForAll 
+          ? '=== DEBUG: AUTOMATICALLY attempting external search (test flag enabled) ===' 
+          : '=== DEBUG: AUTOMATICALLY attempting external search (insufficient database data) ===');
         externalSearchAttempted = true;
         
         const externalResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/extension/search-reviews`, {
@@ -300,11 +307,15 @@ Make your response helpful, specific, and actionable. Use bullet points where ap
       totalBrands: brands.length,
       hasDatabaseData: !!matchingBrand && hasSufficientData,
       hasExternalData: !!externalSearchResults,
-      searchType: hasSufficientData ? 'database' : (externalSearchResults ? 'external' : 'fallback'),
+      searchType: (hasSufficientData && externalSearchResults) ? 'hybrid' : 
+                 hasSufficientData ? 'database' : 
+                 (externalSearchResults ? 'external' : 'fallback'),
       externalSearchResults: externalSearchResults || null,
       externalSearchAttempted: externalSearchAttempted,
       externalSearchError: externalSearchError,
-      dataSource: hasSufficientData ? 'database' : (externalSearchResults ? 'web_search' : 'no_data')
+      dataSource: (hasSufficientData && externalSearchResults) ? 'hybrid_data' :
+                  hasSufficientData ? 'database' : 
+                  (externalSearchResults ? 'web_search' : 'no_data')
     };
     
     console.log('=== DEBUG: Final result created ===');
