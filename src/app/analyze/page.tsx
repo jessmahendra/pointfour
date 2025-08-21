@@ -1021,7 +1021,7 @@ Please provide a specific answer to this follow-up question.`;
       !loading &&
       brandQuery.trim() &&
       userProfile.category &&
-      userProfile.fitPreference &&
+      (isFootwear || userProfile.fitPreference) && // Don't require fitPreference for footwear
       ((isFootwear && userProfile.footType) ||
         (!isFootwear && userProfile.bodyShape));
 
@@ -1217,58 +1217,47 @@ Please provide a specific answer to this follow-up question.`;
                 </select>
               </div>
 
-              {/* Fit Preference */}
-              <div style={{ marginBottom: "24px" }}>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    color: "#333",
-                    marginBottom: "8px",
-                  }}
-                >
-                  Fit preference *
-                </label>
-                <select
-                  value={userProfile.fitPreference}
-                  onChange={(e) =>
-                    setUserProfile((prev) => ({
-                      ...prev,
-                      fitPreference: e.target.value,
-                    }))
-                  }
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    fontSize: "14px",
-                    backgroundColor: "#F8F7F4",
-                    border: "1px solid #D8D6D5",
-                    borderRadius: "8px",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  <option value="">How do you prefer things to fit?</option>
-                  {isFootwear ? (
-                    <>
-                      <option value="Snug fit">Snug fit</option>
-                      <option value="True to size">True to size</option>
-                      <option value="Roomy">Roomy/with space</option>
-                      <option value="Depends on activity">
-                        Depends on activity
-                      </option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="Fitted/tailored">Fitted/tailored</option>
-                      <option value="True to size">True to size</option>
-                      <option value="Relaxed">Relaxed fit</option>
-                      <option value="Loose/oversized">Loose/oversized</option>
-                    </>
-                  )}
-                </select>
-              </div>
+              {/* Fit Preference - Only show for clothing */}
+              {!isFootwear && (
+                <div style={{ marginBottom: "24px" }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      color: "#333",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Fit preference *
+                  </label>
+                  <select
+                    value={userProfile.fitPreference}
+                    onChange={(e) =>
+                      setUserProfile((prev) => ({
+                        ...prev,
+                        fitPreference: e.target.value,
+                      }))
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px",
+                      fontSize: "14px",
+                      backgroundColor: "#F8F7F4",
+                      border: "1px solid #D8D6D5",
+                      borderRadius: "8px",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <option value="">How do you prefer things to fit?</option>
+                    <option value="Fitted/tailored">Fitted/tailored</option>
+                    <option value="True to size">True to size</option>
+                    <option value="Relaxed">Relaxed fit</option>
+                    <option value="Loose/oversized">Loose/oversized</option>
+                  </select>
+                </div>
+              )}
 
               {/* Size Fields */}
               <div style={{ marginBottom: "24px" }}>
