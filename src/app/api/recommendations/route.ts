@@ -17,6 +17,17 @@ export async function POST(request: NextRequest) {
     console.log('Query received:', query);
     console.log('OpenAI API Key exists:', !!process.env.OPENAI_API_KEY);
     
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('❌ OPENAI_API_KEY is missing!');
+      return NextResponse.json(
+        { 
+          error: 'OpenAI API key not configured',
+          recommendation: "OpenAI API key is missing. Please check your environment configuration."
+        },
+        { status: 500 }
+      );
+    }
+    
     const AIRTABLE_BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
     const AIRTABLE_API_KEY = process.env.NEXT_PUBLIC_AIRTABLE_API_KEY || process.env.AIRTABLE_API_KEY;
     
@@ -29,12 +40,19 @@ export async function POST(request: NextRequest) {
       throw new Error(`Missing Airtable configuration. BASE_ID: ${!!AIRTABLE_BASE_ID}, API_KEY: ${!!AIRTABLE_API_KEY}`);
     }
     
-    // Extract brand name from query for external search
+    // Extract brand name and item name from query for external search
     const brandMatch = query.match(/Brand\/Item:\s*([^\n]+)/);
-    const brandName = brandMatch ? brandMatch[1].trim() : '';
+    const brandItemText = brandMatch ? brandMatch[1].trim() : '';
     
-    console.log('=== DEBUG: Extracted brand name ===');
+    // Parse brand and item name - assume first word is brand, rest is item
+    const parts = brandItemText.split(' ');
+    const brandName = parts[0] || '';
+    const itemName = parts.length > 1 ? parts.slice(1).join(' ') : '';
+    
+    console.log('=== DEBUG: Extracted brand and item ===');
     console.log('Brand name:', brandName);
+    console.log('Item name:', itemName);
+    console.log('Full Brand/Item text:', brandItemText);
     
     // Fetch your real brand data
     console.log('=== DEBUG: Fetching Airtable data ===');
@@ -161,7 +179,7 @@ export async function POST(request: NextRequest) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             brand: brandName, 
-            itemName: '', // Could extract item name from query if needed
+            itemName: itemName,
             userInfo: {
               bodyType: query.includes('Body Shape:') ? query.match(/Body Shape:\s*([^\n]+)/)?.[1]?.trim() : '',
               height: query.includes('Height:') ? query.match(/Height:\s*([^\n]+)/)?.[1]?.trim() : '',
@@ -276,27 +294,43 @@ User Query: ${query}
 
 Please provide a comprehensive analysis including:
 
-**Recommendation**: Clear sizing advice and fit recommendations based on the user's profile
-**Summary**: Brief overview of the brand's fit characteristics
-**Sizing**: Specific sizing guidance (runs small/large, true to size, etc.)
+**Summary**: Structure this section exactly as follows with these exact headings:
+[Brand name] is a [1-2 sentence concise brand description]. [NO user-specific information]
+
+**Fit summary**
+[1-2 sentences about fit for this specific user]
+
+**Quality**  
+[1-2 sentences about brand quality and materials]
+
+IMPORTANT: Use "Fit summary" not "Your Fit" as the heading.
+**Sizing**: Include all sizing advice, fit considerations, and specific guidance (runs small/large, true to size, etc.) based on customer reviews. This should contain all the detailed sizing information and fit considerations.
+**Recommendations**: Provide 3-4 specific, actionable recommendations based on the available customer review data and user profile. Include:
+- A summary of what customers say about this brand (comfort, fit, quality)
+- Specific advice for the user's measurements and preferences
+- Any important considerations or tips based on review patterns
+- Action items (e.g., "Order your usual size", "Size up/down", "Check return policy")
 **Warnings**: Any important fit or quality considerations
 **Price**: Price range information if available
 **Customer Reviews**: Include relevant user feedback and quotes
 
 **IMPORTANT INSTRUCTIONS:**
+- Keep all sections concise (1-2 sentences each)
+- Make recommendations DATA-DRIVEN based on the customer reviews provided
 - If we have good database data, use that as the primary source
 - If database data is limited but we have web search results, focus on the web data
-- If we have no data at all, be honest about this and suggest checking the brand's official size guide
+- Base recommendations on actual customer feedback patterns, not generic advice
+- Include specific insights from the review data (e.g., "85% of customers found them comfortable", "Most reviews mention they run small")
+- Provide actionable next steps based on the available data
 - Always be encouraging but transparent about data availability
-- When data is limited, provide general sizing advice based on the category
 
-Make your response helpful, specific, and actionable. Use bullet points where appropriate.`;
+Make your response helpful, specific, and actionable. Be concise and avoid verbose descriptions.`;
     
     console.log('=== DEBUG: AI prompt created ===');
     console.log('Prompt length:', aiPrompt.length);
     
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -315,6 +349,8 @@ Make your response helpful, specific, and actionable. Use bullet points where ap
     
     console.log('=== DEBUG: AI response received ===');
     console.log('Response length:', aiResponse.length);
+    console.log('=== DEBUG: AI response content (first 500 chars) ===');
+    console.log(aiResponse.substring(0, 500));
     
     // Create enhanced result with external search data
     const enhancedResult = {

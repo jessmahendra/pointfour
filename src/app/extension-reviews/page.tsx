@@ -58,6 +58,7 @@ function ExtensionReviewsContent() {
 
   const brandName = searchParams.get("brand") || "";
   const itemName = searchParams.get("item") || "";
+  const materials = searchParams.get("materials") || "";
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -327,6 +328,8 @@ function ExtensionReviewsContent() {
               </span>
             )}
           </h1>
+          
+          
           <p style={{ color: "#666", fontSize: "14px" }}>
             Found {reviewData.totalResults} reviews from web sources
           </p>

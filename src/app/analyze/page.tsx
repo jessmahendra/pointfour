@@ -26,6 +26,14 @@ interface AnalysisResult {
       confidence: "high" | "medium" | "low";
       sources: string[];
       totalResults: number;
+      sections?: {
+        [key: string]: {
+          title: string;
+          recommendation: string;
+          confidence: "high" | "medium" | "low";
+          evidence: string[];
+        };
+      };
     } | null;
     reviews: Array<{
       title: string;
@@ -131,6 +139,69 @@ interface Review {
   wouldRecommend: string;
   userBodyType: string;
 }
+
+// Enhanced markdown formatting function for better text rendering
+const formatMarkdownText = (text: string): JSX.Element => {
+  if (!text || !text.trim()) {
+    return <span>{text}</span>;
+  }
+
+  // Split the text into lines, preserving empty lines for spacing
+  const lines = text.split('\n');
+  
+  return (
+    <div>
+      {lines.map((line, lineIndex) => {
+        const trimmedLine = line.trim();
+        
+        // Handle empty lines as spacing
+        if (!trimmedLine) {
+          return <div key={lineIndex} style={{ marginBottom: "16px" }} />;
+        }
+
+        // Check if this line is a heading (starts with **)
+        const isHeading = trimmedLine.match(/^\*\*.*?\*\*/);
+        
+        // Process bold text and quoted text
+        const parts = trimmedLine.split(/(\*\*.*?\*\*|".*?")/g);
+        const processedParts = parts.map((part, partIndex) => {
+          if (part.startsWith("**") && part.endsWith("**")) {
+            return <strong key={partIndex}>{part.slice(2, -2)}</strong>;
+          }
+          if (part.startsWith('"') && part.endsWith('"')) {
+            return (
+              <span
+                key={partIndex}
+                style={{
+                  fontStyle: "italic",
+                  backgroundColor: "#F8F7F4",
+                  padding: "2px 4px",
+                  borderRadius: "3px",
+                }}
+              >
+                {part}
+              </span>
+            );
+          }
+          return part;
+        });
+
+        return (
+          <div 
+            key={lineIndex} 
+            style={{ 
+              marginBottom: isHeading ? "8px" : "8px",
+              marginTop: isHeading && lineIndex > 0 ? "8px" : "0px",
+              lineHeight: "1.2"
+            }}
+          >
+            {processedParts}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 function BrandAnalysisContent() {
   const [currentStep, setCurrentStep] = useState<"form" | "analysis" | "chat">(
@@ -257,7 +328,7 @@ function BrandAnalysisContent() {
     const requiredFieldsMissing =
       !brandQuery.trim() ||
       !userProfile.category ||
-      !userProfile.fitPreference ||
+      (!isFootwear && !userProfile.fitPreference) ||
       (isFootwear && !userProfile.footType) ||
       (!isFootwear && !userProfile.bodyShape);
 
@@ -267,23 +338,15 @@ function BrandAnalysisContent() {
 
     try {
       // Create a detailed query that includes user profile information
-      const detailedQuery = `Brand/Item: ${brandQuery}
-Category: ${userProfile.category}
-${
-  isFootwear
-    ? `Foot type: ${userProfile.footType}`
-    : `Body shape: ${userProfile.bodyShape}`
-}
-Fit preference: ${userProfile.fitPreference}
-${
-  userProfile.ukClothingSize
-    ? `UK clothing size: ${userProfile.ukClothingSize}`
-    : ""
-}
-${userProfile.ukShoeSize ? `UK shoe size: ${userProfile.ukShoeSize}` : ""}
-${userProfile.height ? `Height: ${userProfile.height}` : ""}
-
-Please provide a detailed analysis including sizing advice, fit recommendations, user reviews, and any warnings for someone with this profile.`;
+      const detailedQuery = `Brand/Item: ${brandQuery}\nCategory: ${userProfile.category}\n${
+        isFootwear
+          ? `Foot type: ${userProfile.footType}`
+          : `Body shape: ${userProfile.bodyShape}`
+      }\nFit preference: ${userProfile.fitPreference}\n${
+        userProfile.ukClothingSize
+          ? `UK clothing size: ${userProfile.ukClothingSize}\n`
+          : ""
+      }${userProfile.ukShoeSize ? `UK shoe size: ${userProfile.ukShoeSize}\n` : ""}${userProfile.height ? `Height: ${userProfile.height}\n` : ""}\nPlease provide a detailed analysis including sizing advice, fit recommendations, user reviews, and any warnings for someone with this profile.`;
 
       const response = await fetch("/api/recommendations", {
         method: "POST",
@@ -388,6 +451,12 @@ Please provide a specific answer to this follow-up question.`;
     const isFootwear = userProfile.category === "footwear";
     const brandName = brandQuery.split(" ")[0] || "Brand";
     const text = apiResponse.recommendation;
+    
+    // Debug logging
+    console.log("=== PARSING DEBUG ===");
+    console.log("Full AI response text:", text);
+    console.log("Text length:", text.length);
+    console.log("First 500 chars:", text.substring(0, 500));
 
     // Check if brand was not found in database
     const brandNotFound =
@@ -409,37 +478,43 @@ Please provide a specific answer to this follow-up question.`;
     const lines = text.split("\n");
     let currentSection = "";
 
-    lines.forEach((line) => {
+    lines.forEach((line, index) => {
       const trimmedLine = line.trim();
+      
+      // Skip empty lines but don't return - we might need to continue with current section
       if (!trimmedLine) return;
 
-      // Detect section headers
-      if (trimmedLine.match(/^\*\*(Recommendation|Summary)\*\*/i)) {
+      // Detect section headers (handle both **Header:** and ### Header formats)
+      if (trimmedLine.match(/^(###\s*(Summary|Recommendation)|^\*\*(Recommendation|Summary)\*\*:?)/i)) {
         currentSection = "summary";
-        const content = trimmedLine.replace(/^\*\*.*?\*\*:?\s*/, "");
-        if (content) sections.summary += content + " ";
-      } else if (trimmedLine.match(/^\*\*Sizing\*\*/i)) {
+        const content = trimmedLine.replace(/^(###\s*.*|^\*\*.*?\*\*:?\s*)/, "");
+        if (content.trim()) sections.summary += content + "\n";
+      } else if (trimmedLine.match(/^(###\s*Sizing|^\*\*Sizing\*\*:?)/i)) {
         currentSection = "sizing";
-        const content = trimmedLine.replace(/^\*\*.*?\*\*:?\s*/, "");
-        if (content) sections.sizing += content + " ";
-      } else if (trimmedLine.match(/^\*\*(⚠️?\s*Warning|Warning)\*\*/i)) {
+        const content = trimmedLine.replace(/^(###\s*.*|^\*\*.*?\*\*:?\s*)/, "");
+        if (content.trim()) sections.sizing += content + "\n";
+      } else if (trimmedLine.match(/^(###\s*(Warning|⚠️?\s*Warning)|^\*\*(⚠️?\s*Warning|Warning)\*\*:?)/i)) {
         currentSection = "warnings";
-        const content = trimmedLine.replace(/^\*\*.*?\*\*:?\s*/, "");
-        if (content) sections.warnings.push(content);
-      } else if (trimmedLine.match(/^\*\*Price\*\*/i)) {
+        const content = trimmedLine.replace(/^(###\s*.*|^\*\*.*?\*\*:?\s*)/, "");
+        if (content.trim()) sections.warnings.push(content);
+      } else if (trimmedLine.match(/^(###\s*Price|^\*\*Price\*\*:?)/i)) {
         currentSection = "price";
-        const content = trimmedLine.replace(/^\*\*.*?\*\*:?\s*/, "");
-        if (content) sections.priceRange += content + " ";
-      } else if (trimmedLine.match(/^\*\*Customer Reviews?\*\*/i)) {
+        const content = trimmedLine.replace(/^(###\s*.*|^\*\*.*?\*\*:?\s*)/, "");
+        if (content.trim()) sections.priceRange += content + " ";
+      } else if (trimmedLine.match(/^(###\s*Customer Reviews?|^\*\*Customer Reviews?\*\*:?)/i)) {
         currentSection = "reviews";
-      } else if (trimmedLine.match(/^\*\*Shop\*\*/i)) {
+      } else if (trimmedLine.match(/^(###\s*Shop|^\*\*Shop\*\*:?)/i)) {
         currentSection = "shop";
+      } else if (trimmedLine.match(/^(###\s*Recommendation[s]?|^\*\*Recommendation[s]?\*\*:?)/i)) {
+        currentSection = "recommendations";
+        const content = trimmedLine.replace(/^(###\s*.*|^\*\*.*?\*\*:?\s*)/, "");
+        if (content.trim()) sections.recommendations.push(content);
       } else {
         // Add content to current section
         if (currentSection === "summary") {
-          sections.summary += trimmedLine + " ";
+          sections.summary += trimmedLine + "\n";
         } else if (currentSection === "sizing") {
-          sections.sizing += trimmedLine + " ";
+          sections.sizing += trimmedLine + "\n";
         } else if (
           currentSection === "warnings" &&
           trimmedLine.startsWith("-")
@@ -453,9 +528,24 @@ Please provide a specific answer to this follow-up question.`;
           if (quoteMatch) {
             sections.customerReviews.push(quoteMatch[1]);
           }
+        } else if (currentSection === "recommendations") {
+          // Handle recommendation items (bullet points or regular text)
+          if (trimmedLine.startsWith("-") || trimmedLine.startsWith("•")) {
+            sections.recommendations.push(trimmedLine.substring(1).trim());
+          } else if (trimmedLine.length > 0) {
+            sections.recommendations.push(trimmedLine);
+          }
         }
       }
     });
+
+    // Debug the parsed sections
+    console.log("=== PARSED SECTIONS ===");
+    console.log("Summary:", sections.summary);
+    console.log("Summary length:", sections.summary.length);
+    console.log("Sizing:", sections.sizing);
+    console.log("Recommendations count:", sections.recommendations.length);
+    console.log("Warnings count:", sections.warnings.length);
 
     // Extract recommendations (look for bullet points or numbered items in the text)
     const recMatches = text.match(/[-•]\s*([^\n]+)/g) || [];
@@ -683,14 +773,7 @@ Please provide a specific answer to this follow-up question.`;
           )}
 
           {/* Personal Summary */}
-          <div
-            style={{
-              backgroundColor: "#E9DED5",
-              padding: "16px",
-              borderRadius: "8px",
-              marginBottom: "24px",
-            }}
-          >
+          <div style={{ marginBottom: "24px" }}>
             <h4
               style={{
                 fontSize: "14px",
@@ -699,21 +782,20 @@ Please provide a specific answer to this follow-up question.`;
                 color: "#333",
               }}
             >
-              Personal Summary
+              Personal summary
             </h4>
-            <p style={{ fontSize: "14px", margin: 0, color: "#333" }}>
-              {parsedData.summary.includes("**")
-                ? parsedData.summary
-                    .split(/(\*\*.*?\*\*)/)
-                    .map((part, index) =>
-                      part.startsWith("**") && part.endsWith("**") ? (
-                        <strong key={index}>{part.slice(2, -2)}</strong>
-                      ) : (
-                        part
-                      )
-                    )
-                : parsedData.summary}
-            </p>
+            <div
+              style={{
+                backgroundColor: "#E9DED5",
+                padding: "16px",
+                borderRadius: "8px",
+                fontSize: "14px",
+                color: "#333",
+                lineHeight: "1.2",
+              }}
+            >
+              {formatMarkdownText(parsedData.summary)}
+            </div>
           </div>
 
           {/* Sizing Advice */}
@@ -726,21 +808,58 @@ Please provide a specific answer to this follow-up question.`;
                 color: "#333",
               }}
             >
-              Sizing Advice
+              Sizing advice
             </h4>
-            <p
+            <div
               style={{
                 fontSize: "12px",
                 backgroundColor: "#F8F7F4",
-                padding: "12px",
-                borderRadius: "6px",
+                padding: "16px",
+                borderRadius: "8px",
                 margin: 0,
                 color: "#4E4B4B",
+                lineHeight: "1.2",
               }}
             >
-              {parsedData.sizing}
-            </p>
+              {formatMarkdownText(parsedData.sizing)}
+            </div>
           </div>
+
+          {/* Material Composition - Only show if we have material data from specific item search */}
+          {analysisResult?.externalSearchResults?.brandFitSummary?.sections?.materials && (
+            <div style={{ marginBottom: "24px" }}>
+              <h4
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  marginBottom: "8px",
+                  color: "#333",
+                }}
+              >
+                🧵 Material Composition
+              </h4>
+              <div
+                style={{
+                  fontSize: "12px",
+                  backgroundColor: "#F0F7FF",
+                  padding: "12px",
+                  borderRadius: "6px",
+                  margin: 0,
+                  color: "#2C5282",
+                  border: "1px solid #BEE3F8",
+                }}
+              >
+                <p style={{ margin: "0 0 8px 0", fontWeight: "500" }}>
+                  {analysisResult.externalSearchResults.brandFitSummary.sections.materials.recommendation}
+                </p>
+                {analysisResult.externalSearchResults.brandFitSummary.sections.materials.evidence.length > 0 && (
+                  <p style={{ margin: 0, fontSize: "11px", fontStyle: "italic", opacity: 0.8 }}>
+                    Source: {analysisResult.externalSearchResults.brandFitSummary.sections.materials.evidence[0].substring(0, 100)}...
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Recommendations */}
           <div style={{ marginBottom: "24px" }}>
@@ -752,22 +871,32 @@ Please provide a specific answer to this follow-up question.`;
                 color: "#333",
               }}
             >
-              ✅ Recommendations
+              Recommendations
             </h4>
-            <ul style={{ margin: 0, paddingLeft: "16px" }}>
-              {parsedData.recommendations.map((rec, index) => (
-                <li
-                  key={index}
-                  style={{
-                    fontSize: "12px",
-                    marginBottom: "4px",
-                    color: "#4E4B4B",
-                  }}
-                >
-                  {rec}
-                </li>
-              ))}
-            </ul>
+            <div
+              style={{
+                backgroundColor: "#F8F7F4",
+                padding: "16px",
+                borderRadius: "8px",
+                margin: 0,
+              }}
+            >
+              <ul style={{ margin: 0, paddingLeft: "16px" }}>
+                {parsedData.recommendations.map((rec, index) => (
+                  <li
+                    key={index}
+                    style={{
+                      fontSize: "12px",
+                      marginBottom: "8px",
+                      color: "#4E4B4B",
+                      lineHeight: "1.2",
+                    }}
+                  >
+                    {formatMarkdownText(rec)}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           {/* Warnings */}
@@ -796,7 +925,7 @@ Please provide a specific answer to this follow-up question.`;
                       color: "#4E4B4B",
                     }}
                   >
-                    {warning}
+                    {formatMarkdownText(warning)}
                   </li>
                 ))}
               </ul>

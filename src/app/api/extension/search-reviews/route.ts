@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 interface SerperResult {
   title?: string;
@@ -36,6 +41,11 @@ interface AnalysisResult {
   };
   washCare?: {
     recommendation: string;
+    confidence: 'low' | 'medium' | 'high';
+    evidence: string[];
+  };
+  materials?: {
+    composition: string[];
     confidence: 'low' | 'medium' | 'high';
     evidence: string[];
   };
@@ -101,37 +111,105 @@ function detectProductCategory(brand: string, itemName: string = ''): 'clothing'
   return 'general';
 }
 
-function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general'): string[] {
-  switch (category) {
-    case 'bags':
-      return [
-        `${brand} bag review quality "well made" OR "poorly made" OR "durable"`,
-        `${brand} handbag quality leather material construction review`,
-        `${brand} bag "holds up" OR "falling apart" OR "worth it" review`
-      ];
+// Detect if user is searching for a specific item rather than just a brand
+function detectSpecificItemSearch(brand: string, itemName: string = ''): boolean {
+  const text = `${brand} ${itemName}`.toLowerCase();
+  
+  // Look for specific item descriptors that suggest the user is looking for a particular product
+  const specificItemIndicators = [
+    // Material descriptors
+    'wool', 'cotton', 'silk', 'linen', 'cashmere', 'merino', 'organic cotton',
+    'polyester', 'nylon', 'spandex', 'modal', 'tencel', 'bamboo',
     
-    case 'shoes':
-      return [
-        `${brand} shoes fit review "runs small" OR "runs large" OR "true to size"`,
-        `${brand} shoe quality comfort "uncomfortable" OR "comfortable" review`,
-        `${brand} footwear durability "lasted" OR "wore out" review`
-      ];
+    // Specific garment types with descriptors
+    't-shirt', 'tshirt', 'tee shirt', 'button down', 'button-down',
+    'crew neck', 'v-neck', 'tank top', 'long sleeve', 'short sleeve',
+    'midi dress', 'maxi dress', 'mini dress', 'wrap dress',
+    'skinny jeans', 'straight leg', 'wide leg', 'high waist',
+    'cropped pants', 'straight pants', 'palazzo pants',
+    'cardigan', 'pullover', 'hoodie', 'zip-up',
+    'blazer', 'trench coat', 'puffer jacket', 'bomber jacket',
     
-    case 'accessories':
-      return [
-        `${brand} accessory quality review "well made" OR "cheap" OR "durable"`,
-        `${brand} jewelry watch quality "tarnish" OR "scratches" OR "holds up"`,
-        `${brand} accessory "worth it" OR "overpriced" review`
-      ];
+    // Colors and patterns
+    'black', 'white', 'navy', 'striped', 'polka dot', 'floral',
+    'plaid', 'checkered', 'solid color',
     
-    case 'clothing':
-    default:
-      return [
-        `${brand} clothing fit review "runs small" OR "runs large" OR "true to size"`,
-        `${brand} fashion quality fabric review`,
-        `${brand} washing shrink care instructions`
-      ];
+    // Style descriptors
+    'oversized', 'fitted', 'loose', 'tight', 'relaxed', 'tailored',
+    'vintage', 'classic', 'modern', 'minimalist',
+    
+    // Specific product names or collections
+    'frames', 'perfect tee', 'essential', 'basic', 'staple'
+  ];
+  
+  // Check if the search contains specific item descriptors
+  const hasSpecificDescriptors = specificItemIndicators.some(indicator => 
+    text.includes(indicator)
+  );
+  
+  // Also check if itemName has substantial content (more than just the brand name)
+  const hasSubstantialItemName = itemName.length > 0 && 
+    itemName.toLowerCase() !== brand.toLowerCase() &&
+    itemName.split(' ').length > 1;
+  
+  return hasSpecificDescriptors || hasSubstantialItemName;
+}
+
+function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general', itemName: string = '', isSpecificItem: boolean = false): string[] {
+  // Base queries for each category
+  const baseQueries = (() => {
+    switch (category) {
+      case 'bags':
+        return [
+          `${brand} bag review quality "well made" OR "poorly made" OR "durable"`,
+          `${brand} handbag quality leather material construction review`,
+          `${brand} bag "holds up" OR "falling apart" OR "worth it" review`
+        ];
+      
+      case 'shoes':
+        return [
+          `${brand} shoes fit review "runs small" OR "runs large" OR "true to size"`,
+          `${brand} shoe quality comfort "uncomfortable" OR "comfortable" review`,
+          `${brand} footwear durability "lasted" OR "wore out" review`
+        ];
+      
+      case 'accessories':
+        return [
+          `${brand} accessory quality review "well made" OR "cheap" OR "durable"`,
+          `${brand} jewelry watch quality "tarnish" OR "scratches" OR "holds up"`,
+          `${brand} accessory "worth it" OR "overpriced" review`
+        ];
+      
+      case 'clothing':
+      default:
+        return [
+          `${brand} clothing fit review "runs small" OR "runs large" OR "true to size"`,
+          `${brand} fashion quality fabric review`,
+          `${brand} washing shrink care instructions`
+        ];
+    }
+  })();
+
+  // If this is a specific item search, add material-focused queries
+  if (isSpecificItem && itemName) {
+    const materialQueries = [
+      `"${brand} ${itemName}" material fabric composition`,
+      `"${brand} ${itemName}" "100%" OR "cotton" OR "wool" OR "silk" OR "polyester" OR "blend"`,
+      `"${brand} ${itemName}" review material quality fabric feel`
+    ];
+    
+    // For clothing items, add more specific material queries
+    if (category === 'clothing') {
+      materialQueries.push(
+        `"${brand} ${itemName}" "merino wool" OR "organic cotton" OR "cashmere" OR "linen"`,
+        `"${brand} ${itemName}" care instructions washing fabric content`
+      );
+    }
+    
+    return [...materialQueries, ...baseQueries];
   }
+  
+  return baseQueries;
 }
 
 export async function POST(request: NextRequest) {
@@ -222,11 +300,45 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Detect product category to tailor search queries
-    const productCategory = detectProductCategory(brand, body.productName || body.itemName || body.productType || '');
+    // Detect product category and check if this is a specific item search
+    const itemName = body.productName || body.itemName || body.productType || '';
+    const productCategory = detectProductCategory(brand, itemName);
+    const isSpecificItemSearch = detectSpecificItemSearch(brand, itemName);
     
-    // Search for reviews with category-appropriate queries
-    const searchQueries = generateSearchQueries(brand, productCategory);
+    // Handle URL extraction data from browser extension
+    const urlExtraction = body.urlExtraction;
+    console.log('🔗 API: URL extraction data received:', urlExtraction);
+    
+    // If we have URL extraction data, use it to enhance our search
+    let enhancedBrand = brand;
+    let enhancedItemName = itemName;
+    let extractionConfidence = 'low';
+    
+    if (urlExtraction) {
+      if (urlExtraction.brand && urlExtraction.confidence === 'high') {
+        enhancedBrand = urlExtraction.brand;
+        console.log('🔗 API: Using URL-extracted brand:', enhancedBrand);
+      }
+      
+      if (urlExtraction.itemName) {
+        enhancedItemName = urlExtraction.itemName;
+        extractionConfidence = urlExtraction.confidence || 'medium';
+        console.log('🔗 API: Using URL-extracted item name:', enhancedItemName);
+      }
+    }
+    
+    // Search for reviews with category-appropriate queries using enhanced data
+    const finalIsSpecificItem = isSpecificItemSearch || (urlExtraction && urlExtraction.itemName);
+    const searchQueries = generateSearchQueries(enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem);
+    
+    console.log('🔍 API: Enhanced search parameters:', {
+      originalBrand: brand,
+      enhancedBrand,
+      originalItemName: itemName,
+      enhancedItemName,
+      isSpecificItem: finalIsSpecificItem,
+      extractionConfidence
+    });
     
     let allResults: SerperResult[] = [];
     
@@ -272,8 +384,8 @@ export async function POST(request: NextRequest) {
     
     console.log('📊 SERPER: Total results collected:', allResults.length);
     
-    // Analyze results for patterns based on product category
-    const analysis = analyzeResults(allResults, brand, productCategory);
+    // Analyze results for patterns based on product category using enhanced data
+    const analysis = await analyzeResultsWithGPT5(allResults, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem);
     
     // Create structured sections
     const sections: Record<string, {
@@ -292,21 +404,55 @@ export async function POST(request: NextRequest) {
       };
     }
     
-    if (analysis.quality) {
-      sections.quality = {
-        title: 'Quality',
-        recommendation: analysis.quality.recommendation,
-        confidence: analysis.quality.confidence,
-        evidence: analysis.quality.evidence
-      };
-    }
-    
-    if (analysis.fabric) {
-      sections.fabric = {
-        title: 'Fabric & Material',
-        recommendation: analysis.fabric.recommendation,
-        confidence: analysis.fabric.confidence,
-        evidence: analysis.fabric.evidence
+    // Combine quality, fabric, and materials into a single "Quality & Materials" section
+    if (analysis.quality || analysis.fabric || analysis.materials) {
+      let qualityMaterialsRecommendation = '';
+      // eslint-disable-next-line prefer-const
+      let qualityMaterialsEvidence: string[] = [];
+      let qualityMaterialsConfidence: 'low' | 'medium' | 'high' = 'low';
+      
+      // Start with materials if available
+      if (analysis.materials && analysis.materials.composition.length > 0) {
+        const cleanMaterials = analysis.materials.composition.join(', ');
+        qualityMaterialsRecommendation = `Materials: ${cleanMaterials}\n\n`;
+        qualityMaterialsEvidence.push(...analysis.materials.evidence);
+        qualityMaterialsConfidence = analysis.materials.confidence;
+      }
+      
+      // Add quality information
+      if (analysis.quality) {
+        if (qualityMaterialsRecommendation) {
+          qualityMaterialsRecommendation += `Quality: ${analysis.quality.recommendation}`;
+        } else {
+          qualityMaterialsRecommendation = analysis.quality.recommendation;
+        }
+        qualityMaterialsEvidence.push(...analysis.quality.evidence);
+        
+        // Use highest confidence
+        if (analysis.quality.confidence === 'high' || qualityMaterialsConfidence !== 'high') {
+          qualityMaterialsConfidence = analysis.quality.confidence;
+        }
+      }
+      
+      // Add fabric information if no quality info
+      if (analysis.fabric && !analysis.quality) {
+        if (qualityMaterialsRecommendation) {
+          qualityMaterialsRecommendation += `Fabric: ${analysis.fabric.recommendation}`;
+        } else {
+          qualityMaterialsRecommendation = analysis.fabric.recommendation;
+        }
+        qualityMaterialsEvidence.push(...analysis.fabric.evidence);
+        
+        if (analysis.fabric.confidence === 'high' || qualityMaterialsConfidence !== 'high') {
+          qualityMaterialsConfidence = analysis.fabric.confidence;
+        }
+      }
+      
+      sections.qualityMaterials = {
+        title: 'Quality & Materials',
+        recommendation: qualityMaterialsRecommendation,
+        confidence: qualityMaterialsConfidence,
+        evidence: [...new Set(qualityMaterialsEvidence)].slice(0, 3) // Remove duplicates, limit to 3
       };
     }
     
@@ -472,7 +618,126 @@ function calculateConfidence(result: SerperResult): "high" | "medium" | "low" {
   return 'low';
 }
 
-function analyzeResults(results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general'): AnalysisResult {
+// GPT-5 powered analysis function
+async function analyzeResultsWithGPT5(results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general', itemName: string = '', isSpecificItem: boolean = false): Promise<AnalysisResult> {
+  console.log(`🤖 GPT-5 ANALYSIS: Starting AI analysis for ${brand} with ${results.length} results`);
+  
+  if (results.length === 0) {
+    return {};
+  }
+  
+  // Prepare review data for GPT-5
+  const reviewTexts = results.map((result, index) => {
+    const source = extractSourceName(result.link || '');
+    return `Review ${index + 1} (${source}): ${result.title || ''} - ${result.snippet || ''}`;
+  }).join('\n\n');
+  
+  const itemContext = isSpecificItem && itemName ? 
+    `\nFocus specifically on reviews about the "${itemName}" item from ${brand}.` : 
+    `\nAnalyze reviews about ${brand} products in general.`;
+  
+  const categoryContext = category !== 'general' ? 
+    `\nThis is a ${category} brand, so focus on ${category}-specific aspects.` : '';
+  
+  const prompt = `You are a fashion expert analyzing customer reviews to provide structured insights. Analyze the following reviews and provide a JSON response with specific sections.
+
+Brand: ${brand}
+Category: ${category}${itemContext}${categoryContext}
+
+Reviews to analyze:
+${reviewTexts}
+
+Please analyze these reviews and return a JSON object with the following structure:
+{
+  "fit": {
+    "recommendation": "Clear, specific fit advice based on the reviews (e.g., 'runs small, size up' or 'true to size')",
+    "confidence": "low|medium|high",
+    "evidence": ["Direct quotes from reviews supporting this assessment"]
+  },
+  "quality": {
+    "recommendation": "Quality assessment based on customer feedback",
+    "confidence": "low|medium|high", 
+    "evidence": ["Direct quotes about quality"]
+  },
+  "materials": {
+    "composition": ["List of materials mentioned (e.g., '100% cotton', 'merino wool')"],
+    "confidence": "low|medium|high",
+    "evidence": ["Quotes mentioning materials or fabric"]
+  },
+  "washCare": {
+    "recommendation": "Washing and care advice based on customer experiences",
+    "confidence": "low|medium|high",
+    "evidence": ["Quotes about washing, care, durability"]
+  },
+  "overallConfidence": "low|medium|high"
+}
+
+IMPORTANT GUIDELINES:
+- Only include sections where you have actual evidence from the reviews
+- Use direct quotes from reviews as evidence 
+- Be specific and actionable in recommendations
+- Set confidence based on amount and consistency of evidence
+- For materials, extract specific compositions like "100% cotton" or "merino wool"
+- Focus on customer experiences, not brand descriptions
+- If analyzing a specific item, filter out reviews about other products from the same brand
+- Return valid JSON only, no other text`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a fashion expert who analyzes customer reviews to provide structured insights. Always return valid JSON and be specific and actionable in your analysis."
+        },
+        {
+          role: "user", 
+          content: prompt
+        }
+      ],
+      max_tokens: 1500,
+      temperature: 0.3,
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content;
+    if (!aiResponse) {
+      console.log('🤖 GPT-5 ANALYSIS: No response from GPT-5');
+      return {};
+    }
+
+    // Parse JSON response - strip markdown code blocks if present
+    try {
+      let cleanResponse = aiResponse.trim();
+      
+      // Remove markdown code blocks if present
+      if (cleanResponse.startsWith('```json')) {
+        cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanResponse.startsWith('```')) {
+        cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const analysisResult = JSON.parse(cleanResponse);
+      console.log('🤖 GPT-5 ANALYSIS: Successfully parsed AI analysis');
+      console.log('🤖 GPT-5 ANALYSIS: Sections found:', Object.keys(analysisResult));
+      return analysisResult;
+    } catch (parseError) {
+      console.error('🤖 GPT-5 ANALYSIS: Failed to parse JSON response:', parseError);
+      console.log('🤖 GPT-5 ANALYSIS: Raw response:', aiResponse.substring(0, 500));
+      
+      // Fallback to rule-based analysis
+      console.log('🤖 GPT-5 ANALYSIS: Falling back to rule-based analysis');
+      return analyzeResultsRuleBased(results, brand, category, itemName, isSpecificItem);
+    }
+  } catch (error) {
+    console.error('🤖 GPT-5 ANALYSIS: Error calling GPT-5:', error);
+    // Fallback to rule-based analysis
+    console.log('🤖 GPT-5 ANALYSIS: Falling back to rule-based analysis');
+    return analyzeResultsRuleBased(results, brand, category, itemName, isSpecificItem);
+  }
+}
+
+// Renamed original function as fallback
+function analyzeResultsRuleBased(results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general', itemName: string = '', isSpecificItem: boolean = false): AnalysisResult {
   const analysis: AnalysisResult = {};
   const allText = results.map(r => `${r.title} ${r.snippet}`).join(' ').toLowerCase();
   
@@ -741,6 +1006,21 @@ function analyzeResults(results: SerperResult[], brand: string, category: 'cloth
     }
   }
   
+  // Material analysis for specific item searches
+  if (isSpecificItem && itemName && category === 'clothing') {
+    const materialEvidence = extractMaterialComposition(results, brand, itemName);
+    
+    if (materialEvidence.composition.length > 0) {
+      analysis.materials = {
+        composition: materialEvidence.composition,
+        confidence: materialEvidence.confidence,
+        evidence: materialEvidence.evidence
+      };
+      
+      console.log('🔍 ANALYSIS: Material composition found:', materialEvidence.composition);
+    }
+  }
+  
   // Calculate overall confidence
   const confidences = Object.values(analysis)
     .map((a) => a.confidence)
@@ -858,6 +1138,95 @@ function extractFabricEvidence(results: SerperResult[], materials: string[], qua
   }
   
   return evidence;
+}
+
+function extractMaterialComposition(results: SerperResult[], brand: string, itemName: string): {
+  composition: string[];
+  confidence: 'low' | 'medium' | 'high';
+  evidence: string[];
+} {
+  const composition: string[] = [];
+  const evidence: string[] = [];
+  
+  // Common material patterns to look for
+  const materialPatterns = [
+    // Percentage-based compositions
+    /(\d+%\s*(?:organic\s+)?(?:pima\s+)?(?:supima\s+)?cotton)/gi,
+    /(\d+%\s*(?:merino\s+)?wool)/gi,
+    /(\d+%\s*silk)/gi,
+    /(\d+%\s*linen)/gi,
+    /(\d+%\s*cashmere)/gi,
+    /(\d+%\s*polyester)/gi,
+    /(\d+%\s*nylon)/gi,
+    /(\d+%\s*spandex)/gi,
+    /(\d+%\s*elastane)/gi,
+    /(\d+%\s*modal)/gi,
+    /(\d+%\s*tencel)/gi,
+    /(\d+%\s*lyocell)/gi,
+    /(\d+%\s*viscose)/gi,
+    
+    // Full material descriptions
+    /(100% organic cotton)/gi,
+    /(100% cotton)/gi,
+    /(100% merino wool)/gi,
+    /(100% wool)/gi,
+    /(100% silk)/gi,
+    /(100% linen)/gi,
+    /(100% cashmere)/gi,
+    
+    // Blends
+    /(cotton blend)/gi,
+    /(wool blend)/gi,
+    /(silk blend)/gi,
+    /(cotton\/polyester blend)/gi,
+    /(wool\/cashmere blend)/gi,
+  ];
+  
+  for (const result of results) {
+    const text = `${result.title} ${result.snippet}`;
+    
+    // Check if this result is specifically about our brand and item
+    const brandItemMatch = text.toLowerCase().includes(brand.toLowerCase()) && 
+                          text.toLowerCase().includes(itemName.toLowerCase());
+    
+    if (brandItemMatch) {
+      // Look for material patterns
+      for (const pattern of materialPatterns) {
+        const matches = text.match(pattern);
+        if (matches) {
+          for (const match of matches) {
+            const cleanMatch = match.trim().toLowerCase();
+            // Avoid duplicates and ensure quality
+            if (!composition.some(c => c.toLowerCase() === cleanMatch)) {
+              composition.push(match.trim());
+            }
+          }
+          
+          // Add evidence if we found material info
+          if (matches.length > 0 && result.snippet) {
+            const snippet = result.snippet.trim();
+            if (!evidence.some(e => e.includes(snippet.substring(0, 50)))) {
+              evidence.push(snippet);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // Determine confidence based on amount of evidence found
+  let confidence: 'low' | 'medium' | 'high' = 'low';
+  if (composition.length >= 3 && evidence.length >= 2) {
+    confidence = 'high';
+  } else if (composition.length >= 2 && evidence.length >= 1) {
+    confidence = 'medium';
+  }
+  
+  return {
+    composition: composition.slice(0, 5), // Limit to top 5 compositions
+    confidence,
+    evidence: evidence.slice(0, 3) // Limit to top 3 evidence pieces
+  };
 }
 
 function extractSourcesFromEvidence(results: SerperResult[], evidence: string[]): string[] {
