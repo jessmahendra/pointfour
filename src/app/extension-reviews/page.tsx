@@ -58,7 +58,6 @@ function ExtensionReviewsContent() {
 
   const brandName = searchParams.get("brand") || "";
   const itemName = searchParams.get("item") || "";
-  const materials = searchParams.get("materials") || "";
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -328,8 +327,7 @@ function ExtensionReviewsContent() {
               </span>
             )}
           </h1>
-          
-          
+
           <p style={{ color: "#666", fontSize: "14px" }}>
             Found {reviewData.totalResults} reviews from web sources
           </p>
@@ -405,11 +403,14 @@ function ExtensionReviewsContent() {
               onClick={() => {
                 const params = new URLSearchParams({
                   brand: reviewData.brand,
-                  itemName: reviewData.itemName || '',
-                  imageUrl: reviewData.productImage?.src || '',
-                  pageUrl: reviewData.pageUrl || window.location.href
+                  itemName: reviewData.itemName || "",
+                  imageUrl: reviewData.productImage?.src || "",
+                  pageUrl: reviewData.pageUrl || window.location.href,
                 });
-                window.open(`https://www.pointfour.in/style?${params.toString()}`, '_blank');
+                window.open(
+                  `https://www.pointfour.in/style?${params.toString()}`,
+                  "_blank"
+                );
               }}
               style={{
                 width: "100%",
@@ -425,13 +426,15 @@ function ExtensionReviewsContent() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: "8px"
+                gap: "8px",
               }}
               onMouseOver={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#1A1A1A";
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                  "#1A1A1A";
               }}
               onMouseOut={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#2D2D2D";
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                  "#2D2D2D";
               }}
             >
               ✨ Style with your pieces

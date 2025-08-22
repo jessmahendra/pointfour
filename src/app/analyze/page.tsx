@@ -141,19 +141,19 @@ interface Review {
 }
 
 // Enhanced markdown formatting function for better text rendering
-const formatMarkdownText = (text: string): JSX.Element => {
+const formatMarkdownText = (text: string) => {
   if (!text || !text.trim()) {
     return <span>{text}</span>;
   }
 
   // Split the text into lines, preserving empty lines for spacing
-  const lines = text.split('\n');
-  
+  const lines = text.split("\n");
+
   return (
     <div>
       {lines.map((line, lineIndex) => {
         const trimmedLine = line.trim();
-        
+
         // Handle empty lines as spacing
         if (!trimmedLine) {
           return <div key={lineIndex} style={{ marginBottom: "16px" }} />;
@@ -161,7 +161,7 @@ const formatMarkdownText = (text: string): JSX.Element => {
 
         // Check if this line is a heading (starts with **)
         const isHeading = trimmedLine.match(/^\*\*.*?\*\*/);
-        
+
         // Process bold text and quoted text
         const parts = trimmedLine.split(/(\*\*.*?\*\*|".*?")/g);
         const processedParts = parts.map((part, partIndex) => {
@@ -187,12 +187,12 @@ const formatMarkdownText = (text: string): JSX.Element => {
         });
 
         return (
-          <div 
-            key={lineIndex} 
-            style={{ 
+          <div
+            key={lineIndex}
+            style={{
               marginBottom: isHeading ? "8px" : "8px",
               marginTop: isHeading && lineIndex > 0 ? "8px" : "0px",
-              lineHeight: "1.2"
+              lineHeight: "1.2",
             }}
           >
             {processedParts}
@@ -228,12 +228,12 @@ function BrandAnalysisContent() {
   // const [showAllReviews, setShowAllReviews] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [isSharedView, setIsSharedView] = useState(false);
-  
+
   const searchParams = useSearchParams();
 
   // Handle loading shared analysis from URL parameters
   useEffect(() => {
-    const shareId = searchParams.get('share');
+    const shareId = searchParams.get("share");
     if (shareId) {
       loadSharedAnalysis(shareId);
     }
@@ -244,18 +244,36 @@ function BrandAnalysisContent() {
     if (analysisResult) {
       const searchTypeLabels = {
         hybrid: "🔍 Hybrid: Database + Web Search",
-        external: "🌐 External: Web Search Only", 
+        external: "🌐 External: Web Search Only",
         database: "📊 Database: Database Only",
-        fallback: "⚠️ Fallback: No Data Available"
+        fallback: "⚠️ Fallback: No Data Available",
       };
-      
-      console.log('🔍 PointFour Search Debug Info:');
-      console.log(`Search Type: ${searchTypeLabels[analysisResult.searchType as keyof typeof searchTypeLabels] || analysisResult.searchType}`);
-      console.log(`Has Database Data: ${analysisResult.hasDatabaseData ? 'Yes' : 'No'}`);
-      console.log(`Has External Data: ${analysisResult.hasExternalData ? 'Yes' : 'No'}`);
-      
-      if (analysisResult.hasExternalData && analysisResult.externalSearchResults) {
-        console.log(`External Reviews Found: ${analysisResult.externalSearchResults.brandFitSummary?.totalResults || 0}`);
+
+      console.log("🔍 PointFour Search Debug Info:");
+      console.log(
+        `Search Type: ${
+          searchTypeLabels[
+            analysisResult.searchType as keyof typeof searchTypeLabels
+          ] || analysisResult.searchType
+        }`
+      );
+      console.log(
+        `Has Database Data: ${analysisResult.hasDatabaseData ? "Yes" : "No"}`
+      );
+      console.log(
+        `Has External Data: ${analysisResult.hasExternalData ? "Yes" : "No"}`
+      );
+
+      if (
+        analysisResult.hasExternalData &&
+        analysisResult.externalSearchResults
+      ) {
+        console.log(
+          `External Reviews Found: ${
+            analysisResult.externalSearchResults.brandFitSummary
+              ?.totalResults || 0
+          }`
+        );
       }
     }
   }, [analysisResult]);
@@ -264,22 +282,22 @@ function BrandAnalysisContent() {
     try {
       setLoading(true);
       setIsSharedView(true);
-      
+
       const response = await fetch(`/api/share?id=${shareId}`);
       const data = await response.json();
-      
+
       if (data.success) {
         setAnalysisResult(data.data.analysisResult);
         setUserProfile(data.data.userProfile);
         setBrandQuery(data.data.brandQuery);
         setCurrentStep("analysis");
       } else {
-        console.error('Failed to load shared analysis:', data.error);
-        alert('Share link not found or expired');
+        console.error("Failed to load shared analysis:", data.error);
+        alert("Share link not found or expired");
       }
     } catch (error) {
-      console.error('Error loading shared analysis:', error);
-      alert('Error loading shared analysis');
+      console.error("Error loading shared analysis:", error);
+      alert("Error loading shared analysis");
     } finally {
       setLoading(false);
     }
@@ -287,36 +305,36 @@ function BrandAnalysisContent() {
 
   const handleShare = async () => {
     if (!analysisResult) return;
-    
+
     try {
       setShareLoading(true);
-      
+
       const shareData = {
         analysisResult,
         userProfile,
         brandQuery,
-        sharedAt: new Date().toISOString()
+        sharedAt: new Date().toISOString(),
       };
-      
-      const response = await fetch('/api/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(shareData)
+
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(shareData),
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         // Copy to clipboard
         await navigator.clipboard.writeText(data.shareUrl);
-        alert('Share link copied to clipboard!');
+        alert("Share link copied to clipboard!");
       } else {
-        console.error('Failed to create share link:', data.error);
-        alert('Failed to create share link');
+        console.error("Failed to create share link:", data.error);
+        alert("Failed to create share link");
       }
     } catch (error) {
-      console.error('Error creating share link:', error);
-      alert('Error creating share link');
+      console.error("Error creating share link:", error);
+      alert("Error creating share link");
     } finally {
       setShareLoading(false);
     }
@@ -338,7 +356,9 @@ function BrandAnalysisContent() {
 
     try {
       // Create a detailed query that includes user profile information
-      const detailedQuery = `Brand/Item: ${brandQuery}\nCategory: ${userProfile.category}\n${
+      const detailedQuery = `Brand/Item: ${brandQuery}\nCategory: ${
+        userProfile.category
+      }\n${
         isFootwear
           ? `Foot type: ${userProfile.footType}`
           : `Body shape: ${userProfile.bodyShape}`
@@ -346,7 +366,13 @@ function BrandAnalysisContent() {
         userProfile.ukClothingSize
           ? `UK clothing size: ${userProfile.ukClothingSize}\n`
           : ""
-      }${userProfile.ukShoeSize ? `UK shoe size: ${userProfile.ukShoeSize}\n` : ""}${userProfile.height ? `Height: ${userProfile.height}\n` : ""}\nPlease provide a detailed analysis including sizing advice, fit recommendations, user reviews, and any warnings for someone with this profile.`;
+      }${
+        userProfile.ukShoeSize
+          ? `UK shoe size: ${userProfile.ukShoeSize}\n`
+          : ""
+      }${
+        userProfile.height ? `Height: ${userProfile.height}\n` : ""
+      }\nPlease provide a detailed analysis including sizing advice, fit recommendations, user reviews, and any warnings for someone with this profile.`;
 
       const response = await fetch("/api/recommendations", {
         method: "POST",
@@ -451,7 +477,7 @@ Please provide a specific answer to this follow-up question.`;
     const isFootwear = userProfile.category === "footwear";
     const brandName = brandQuery.split(" ")[0] || "Brand";
     const text = apiResponse.recommendation;
-    
+
     // Debug logging
     console.log("=== PARSING DEBUG ===");
     console.log("Full AI response text:", text);
@@ -478,36 +504,67 @@ Please provide a specific answer to this follow-up question.`;
     const lines = text.split("\n");
     let currentSection = "";
 
-    lines.forEach((line, index) => {
+    lines.forEach((line) => {
       const trimmedLine = line.trim();
-      
+
       // Skip empty lines but don't return - we might need to continue with current section
       if (!trimmedLine) return;
 
       // Detect section headers (handle both **Header:** and ### Header formats)
-      if (trimmedLine.match(/^(###\s*(Summary|Recommendation)|^\*\*(Recommendation|Summary)\*\*:?)/i)) {
+      if (
+        trimmedLine.match(
+          /^(###\s*(Summary|Recommendation)|^\*\*(Recommendation|Summary)\*\*:?)/i
+        )
+      ) {
         currentSection = "summary";
-        const content = trimmedLine.replace(/^(###\s*.*|^\*\*.*?\*\*:?\s*)/, "");
+        const content = trimmedLine.replace(
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          ""
+        );
         if (content.trim()) sections.summary += content + "\n";
       } else if (trimmedLine.match(/^(###\s*Sizing|^\*\*Sizing\*\*:?)/i)) {
         currentSection = "sizing";
-        const content = trimmedLine.replace(/^(###\s*.*|^\*\*.*?\*\*:?\s*)/, "");
+        const content = trimmedLine.replace(
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          ""
+        );
         if (content.trim()) sections.sizing += content + "\n";
-      } else if (trimmedLine.match(/^(###\s*(Warning|⚠️?\s*Warning)|^\*\*(⚠️?\s*Warning|Warning)\*\*:?)/i)) {
+      } else if (
+        trimmedLine.match(
+          /^(###\s*(Warning|⚠️?\s*Warning)|^\*\*(⚠️?\s*Warning|Warning)\*\*:?)/i
+        )
+      ) {
         currentSection = "warnings";
-        const content = trimmedLine.replace(/^(###\s*.*|^\*\*.*?\*\*:?\s*)/, "");
+        const content = trimmedLine.replace(
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          ""
+        );
         if (content.trim()) sections.warnings.push(content);
       } else if (trimmedLine.match(/^(###\s*Price|^\*\*Price\*\*:?)/i)) {
         currentSection = "price";
-        const content = trimmedLine.replace(/^(###\s*.*|^\*\*.*?\*\*:?\s*)/, "");
+        const content = trimmedLine.replace(
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          ""
+        );
         if (content.trim()) sections.priceRange += content + " ";
-      } else if (trimmedLine.match(/^(###\s*Customer Reviews?|^\*\*Customer Reviews?\*\*:?)/i)) {
+      } else if (
+        trimmedLine.match(
+          /^(###\s*Customer Reviews?|^\*\*Customer Reviews?\*\*:?)/i
+        )
+      ) {
         currentSection = "reviews";
       } else if (trimmedLine.match(/^(###\s*Shop|^\*\*Shop\*\*:?)/i)) {
         currentSection = "shop";
-      } else if (trimmedLine.match(/^(###\s*Recommendation[s]?|^\*\*Recommendation[s]?\*\*:?)/i)) {
+      } else if (
+        trimmedLine.match(
+          /^(###\s*Recommendation[s]?|^\*\*Recommendation[s]?\*\*:?)/i
+        )
+      ) {
         currentSection = "recommendations";
-        const content = trimmedLine.replace(/^(###\s*.*|^\*\*.*?\*\*:?\s*)/, "");
+        const content = trimmedLine.replace(
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          ""
+        );
         if (content.trim()) sections.recommendations.push(content);
       } else {
         // Add content to current section
@@ -826,7 +883,8 @@ Please provide a specific answer to this follow-up question.`;
           </div>
 
           {/* Material Composition - Only show if we have material data from specific item search */}
-          {analysisResult?.externalSearchResults?.brandFitSummary?.sections?.materials && (
+          {analysisResult?.externalSearchResults?.brandFitSummary?.sections
+            ?.materials && (
             <div style={{ marginBottom: "24px" }}>
               <h4
                 style={{
@@ -850,11 +908,27 @@ Please provide a specific answer to this follow-up question.`;
                 }}
               >
                 <p style={{ margin: "0 0 8px 0", fontWeight: "500" }}>
-                  {analysisResult.externalSearchResults.brandFitSummary.sections.materials.recommendation}
+                  {
+                    analysisResult.externalSearchResults.brandFitSummary
+                      .sections.materials.recommendation
+                  }
                 </p>
-                {analysisResult.externalSearchResults.brandFitSummary.sections.materials.evidence.length > 0 && (
-                  <p style={{ margin: 0, fontSize: "11px", fontStyle: "italic", opacity: 0.8 }}>
-                    Source: {analysisResult.externalSearchResults.brandFitSummary.sections.materials.evidence[0].substring(0, 100)}...
+                {analysisResult.externalSearchResults.brandFitSummary.sections
+                  .materials.evidence.length > 0 && (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "11px",
+                      fontStyle: "italic",
+                      opacity: 0.8,
+                    }}
+                  >
+                    Source:{" "}
+                    {analysisResult.externalSearchResults.brandFitSummary.sections.materials.evidence[0].substring(
+                      0,
+                      100
+                    )}
+                    ...
                   </p>
                 )}
               </div>
@@ -979,114 +1053,136 @@ Please provide a specific answer to this follow-up question.`;
           </div>
 
           {/* Real Customer Reviews from Web */}
-          {analysisResult?.externalSearchResults?.groupedReviews && 
-           Object.values(analysisResult?.externalSearchResults?.groupedReviews || {}).some((reviews: unknown[]) => reviews.length > 0) && (
-            <div style={{ borderTop: "1px solid #D8D6D5", paddingTop: "16px" }}>
-              <h4
-                style={{
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  marginBottom: "12px",
-                  color: "#333",
-                }}
+          {analysisResult?.externalSearchResults?.groupedReviews &&
+            Object.values(
+              analysisResult?.externalSearchResults?.groupedReviews || {}
+            ).some((reviews: unknown[]) => reviews.length > 0) && (
+              <div
+                style={{ borderTop: "1px solid #D8D6D5", paddingTop: "16px" }}
               >
-                Customer Reviews
-              </h4>
-              
-              {Object.entries(analysisResult?.externalSearchResults?.groupedReviews || {}).map(([category, reviews]) => {
-                if (!reviews || reviews.length === 0) return null;
+                <h4
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    marginBottom: "12px",
+                    color: "#333",
+                  }}
+                >
+                  Customer Reviews
+                </h4>
 
-                const categoryNames: Record<string, string> = {
-                  primary: "🔥 Primary Sources (Reddit & Substack)",
-                  community: "💬 Community Forums",
-                  blogs: "📝 Fashion Blogs",
-                  videos: "🎥 Video Reviews",
-                  social: "📱 Social Media",
-                  publications: "📰 Fashion Publications",
-                  other: "🌐 Other Sources",
-                };
+                {Object.entries(
+                  analysisResult?.externalSearchResults?.groupedReviews || {}
+                ).map(([category, reviews]) => {
+                  if (!reviews || reviews.length === 0) return null;
 
-                return (
-                  <div key={category} style={{ marginBottom: "16px" }}>
-                    <h5
-                      style={{
-                        fontSize: "13px",
-                        fontWeight: "600",
-                        color: category === "primary" ? "#DC2626" : "#666",
-                        margin: "0 0 12px 0",
-                        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                      }}
-                    >
-                      {categoryNames[category]}
-                    </h5>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {reviews.slice(0, 3).map((review: {
-                        title: string;
-                        snippet: string;
-                        url: string;
-                        source: string;
-                        confidence: string;
-                      }, index: number) => (
-                        <a
-                          key={index}
-                          href={review.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: "block",
-                            padding: "12px",
-                            backgroundColor: "#F8F7F4",
-                            border: "1px solid #E9DED5",
-                            borderRadius: "6px",
-                            textDecoration: "none",
-                            color: "inherit",
-                            transition: "all 0.2s ease",
-                          }}
-                          onMouseOver={(e) => {
-                            (e.target as HTMLElement).style.backgroundColor = "#F0EBE6";
-                          }}
-                          onMouseOut={(e) => {
-                            (e.target as HTMLElement).style.backgroundColor = "#F8F7F4";
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: "12px",
-                              fontWeight: "600",
-                              color: "#333",
-                              marginBottom: "4px",
-                              lineHeight: "1.3",
-                            }}
-                          >
-                            {review.title}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "11px",
-                              color: "#888",
-                              marginBottom: "6px",
-                            }}
-                          >
-                            {review.source} • {review.confidence} confidence
-                          </div>
-                          <p
-                            style={{
-                              fontSize: "11px",
-                              color: "#555",
-                              margin: 0,
-                              lineHeight: "1.4",
-                            }}
-                          >
-                            {review.snippet}
-                          </p>
-                        </a>
-                      ))}
+                  const categoryNames: Record<string, string> = {
+                    primary: "🔥 Primary Sources (Reddit & Substack)",
+                    community: "💬 Community Forums",
+                    blogs: "📝 Fashion Blogs",
+                    videos: "🎥 Video Reviews",
+                    social: "📱 Social Media",
+                    publications: "📰 Fashion Publications",
+                    other: "🌐 Other Sources",
+                  };
+
+                  return (
+                    <div key={category} style={{ marginBottom: "16px" }}>
+                      <h5
+                        style={{
+                          fontSize: "13px",
+                          fontWeight: "600",
+                          color: category === "primary" ? "#DC2626" : "#666",
+                          margin: "0 0 12px 0",
+                          fontFamily:
+                            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        }}
+                      >
+                        {categoryNames[category]}
+                      </h5>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "12px",
+                        }}
+                      >
+                        {reviews.slice(0, 3).map(
+                          (
+                            review: {
+                              title: string;
+                              snippet: string;
+                              url: string;
+                              source: string;
+                              confidence: string;
+                            },
+                            index: number
+                          ) => (
+                            <a
+                              key={index}
+                              href={review.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: "block",
+                                padding: "12px",
+                                backgroundColor: "#F8F7F4",
+                                border: "1px solid #E9DED5",
+                                borderRadius: "6px",
+                                textDecoration: "none",
+                                color: "inherit",
+                                transition: "all 0.2s ease",
+                              }}
+                              onMouseOver={(e) => {
+                                (
+                                  e.target as HTMLElement
+                                ).style.backgroundColor = "#F0EBE6";
+                              }}
+                              onMouseOut={(e) => {
+                                (
+                                  e.target as HTMLElement
+                                ).style.backgroundColor = "#F8F7F4";
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: "12px",
+                                  fontWeight: "600",
+                                  color: "#333",
+                                  marginBottom: "4px",
+                                  lineHeight: "1.3",
+                                }}
+                              >
+                                {review.title}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "11px",
+                                  color: "#888",
+                                  marginBottom: "6px",
+                                }}
+                              >
+                                {review.source} • {review.confidence} confidence
+                              </div>
+                              <p
+                                style={{
+                                  fontSize: "11px",
+                                  color: "#555",
+                                  margin: 0,
+                                  lineHeight: "1.4",
+                                }}
+                              >
+                                {review.snippet}
+                              </p>
+                            </a>
+                          )
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
         </div>
       );
     }
@@ -1581,7 +1677,7 @@ Please provide a specific answer to this follow-up question.`;
             >
               🔍 Browse directory
             </a>
-            
+
             {/* Share Button - Only show in analysis results */}
             {currentStep === "analysis" && analysisResult && (
               <button
@@ -1599,22 +1695,26 @@ Please provide a specific answer to this follow-up question.`;
                   transition: "all 0.2s ease",
                   marginTop: "8px",
                   width: "100%",
-                  opacity: shareLoading ? 0.7 : 1
+                  opacity: shareLoading ? 0.7 : 1,
                 }}
                 onMouseOver={(e) => {
                   if (!isSharedView && !shareLoading) {
-                    (e.target as HTMLButtonElement).style.backgroundColor = "#4338CA";
+                    (e.target as HTMLButtonElement).style.backgroundColor =
+                      "#4338CA";
                   }
                 }}
                 onMouseOut={(e) => {
                   if (!isSharedView && !shareLoading) {
-                    (e.target as HTMLButtonElement).style.backgroundColor = "#4F46E5";
+                    (e.target as HTMLButtonElement).style.backgroundColor =
+                      "#4F46E5";
                   }
                 }}
               >
-                {shareLoading ? "Creating share link..." : 
-                 isSharedView ? "🔗 Shared View" : 
-                 "📤 Share Analysis"}
+                {shareLoading
+                  ? "Creating share link..."
+                  : isSharedView
+                  ? "🔗 Shared View"
+                  : "📤 Share Analysis"}
               </button>
             )}
           </div>
@@ -1715,7 +1815,6 @@ Please provide a specific answer to this follow-up question.`;
               marginBottom: "32px",
             }}
           >
-
             {formatRecommendation(analysisResult.recommendation)}
           </div>
         )}
@@ -1791,7 +1890,10 @@ Please provide a specific answer to this follow-up question.`;
                       'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                   }}
                 >
-                  {analysisResult?.externalSearchResults?.brandFitSummary?.summary}
+                  {
+                    analysisResult?.externalSearchResults?.brandFitSummary
+                      ?.summary
+                  }
                 </p>
                 <div
                   style={{
@@ -2041,7 +2143,7 @@ Please provide a specific answer to this follow-up question.`;
           >
             🔍 Browse directory
           </a>
-          
+
           {/* Share Button - Only show in analysis results */}
           {currentStep === "analysis" && analysisResult && (
             <button
@@ -2059,12 +2161,14 @@ Please provide a specific answer to this follow-up question.`;
                 transition: "all 0.2s ease",
                 marginTop: "8px",
                 width: "100%",
-                opacity: shareLoading ? 0.7 : 1
+                opacity: shareLoading ? 0.7 : 1,
               }}
             >
-              {shareLoading ? "Creating share link..." : 
-               isSharedView ? "🔗 Shared View" : 
-               "📤 Share Analysis"}
+              {shareLoading
+                ? "Creating share link..."
+                : isSharedView
+                ? "🔗 Shared View"
+                : "📤 Share Analysis"}
             </button>
           )}
         </div>
