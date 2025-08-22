@@ -227,6 +227,24 @@
     font-size: 12px;
 }
 
+/* User quote styling */
+.pointfour-bullet-list li.pointfour-quote {
+    font-style: italic;
+    color: #5d4e37; /* Stone text color */
+    background: rgba(232, 224, 213, 0.3); /* Very subtle stone background */
+    padding: 6px 8px 6px 18px;
+    margin: 4px 0;
+    border-radius: 8px;
+    border-left: 3px solid #C19A5B; /* Warm beige accent bar */
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.pointfour-bullet-list li.pointfour-quote:before {
+    content: "";
+    display: none; /* Remove bullet point for quotes */
+}
+
 /* Section headers */
 .pointfour-fit-info h4,
 .pointfour-quality-info h4,
@@ -282,6 +300,8 @@
   font-size: 12px;
   line-height: 1.4;
 }
+
+
 
 /* Quality badges with simple stoney beige pill design */
 .pointfour-quality-badge {

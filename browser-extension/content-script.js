@@ -880,6 +880,226 @@
     } : null;
   }
 
+  function extractRelevantQuotes(data, section = null, sectionClaim = null) {
+    if (!data.externalSearchResults?.reviews || !section || !sectionClaim) {
+        return [];
+    }
+    
+    const reviews = data.externalSearchResults.reviews;
+    const quotes = [];
+    
+    // Helper function to detect if text sounds like a genuine user review
+    const isUserReview = (text) => {
+        const userReviewIndicators = [
+            // Personal pronouns and opinions
+            /\bi\s/i, /\bmy\s/i, /\bme\s/i, /\bwould\s/i, /\blove\s/i, /\bhate\s/i, /\bthink\s/i, /\bfeel\s/i,
+            // Purchase/experience language
+            /\bbought\s/i, /\bpurchased\s/i, /\bordered\s/i, /\breceived\s/i, /\bwearing\s/i, /\bwore\s/i,
+            // Review-specific language
+            /\brecommend\s/i, /\bwould buy\s/i, /\bso happy\s/i, /\bdisappointed\s/i, /\bexpected\s/i,
+            // Quality assessments
+            /\bgreat quality\s/i, /\bpoor quality\s/i, /\bworth it\s/i, /\bnot worth\s/i
+        ];
+        
+        // Must contain at least one user review indicator
+        const hasUserIndicator = userReviewIndicators.some(pattern => pattern.test(text));
+        
+        // Exclude obvious product descriptions/marketing copy
+        const marketingIndicators = [
+            /^[A-Z][a-z]+ - /i, // "Brand - product name" format
+            /\b(classic|iconic|premium|luxury|collection|designed|crafted|features|composition|model is wearing|drop shoulder|crew neck)\b/i,
+            /\bmade (in|from|with)\b/i,
+            /\b(uk|us|eu) size\b/i,
+            /\bwomen's clothing\b/i,
+            /\btall women's fashion\b/i,
+            /\bfinely knitted\b/i,
+            /100% (organic )?cotton/i,
+            /100% (soft )?merino wool/i
+        ];
+        
+        const hasMarketingIndicator = marketingIndicators.some(pattern => pattern.test(text));
+        
+        return hasUserIndicator && !hasMarketingIndicator;
+    };
+    
+    // Define claim-specific patterns that must match the exact section claim
+    const getClaimPatterns = (section, claim) => {
+        const claimLower = claim.toLowerCase();
+        
+        if (section === 'fit') {
+            if (claimLower.includes('true to size')) {
+                return [
+                    /true to size/i,
+                    /fits (true to|as expected|perfectly)/i,
+                    /(ordered|bought|got) my (usual|normal|regular) size/i,
+                    /size (s|m|l|xl|\d+) (fits|is) (perfect|great)/i,
+                    /no need to size (up|down)/i
+                ];
+            } else if (claimLower.includes('runs small')) {
+                return [
+                    /runs small/i,
+                    /size up/i,
+                    /ordered (a )?size (up|larger)/i,
+                    /too (small|tight)/i,
+                    /smaller than expected/i
+                ];
+            } else if (claimLower.includes('runs large')) {
+                return [
+                    /runs large/i,
+                    /size down/i,
+                    /ordered (a )?size (down|smaller)/i,
+                    /too (big|loose)/i,
+                    /larger than expected/i
+                ];
+            } else if (claimLower.includes('oversized') || claimLower.includes('relaxed')) {
+                return [
+                    /oversized/i,
+                    /relaxed fit/i,
+                    /loose/i,
+                    /roomy/i,
+                    /baggy/i
+                ];
+            }
+        } else if (section === 'quality') {
+            if (claimLower.includes('high quality') || claimLower.includes('excellent') || claimLower.includes('premium')) {
+                return [
+                    /high quality/i,
+                    /(excellent|amazing|great|premium|superior) quality/i,
+                    /(very )?well made/i,
+                    /feels (premium|luxurious|expensive)/i,
+                    /worth (the money|every penny)/i,
+                    /quality is (amazing|excellent|great)/i
+                ];
+            } else if (claimLower.includes('good quality') || claimLower.includes('decent')) {
+                return [
+                    /good quality/i,
+                    /decent quality/i,
+                    /quality is (good|decent|okay)/i,
+                    /well constructed/i
+                ];
+            } else if (claimLower.includes('poor quality') || claimLower.includes('cheap')) {
+                return [
+                    /poor quality/i,
+                    /cheap (feeling|quality)/i,
+                    /not worth/i,
+                    /disappointing quality/i,
+                    /feels cheap/i
+                ];
+            } else if (claimLower.includes('soft') || claimLower.includes('comfortable')) {
+                return [
+                    /(very |so )?soft/i,
+                    /(really |very )?comfortable/i,
+                    /feels (great|amazing|soft)/i,
+                    /comfortable to wear/i
+                ];
+            }
+        } else if (section === 'washCare') {
+            if (claimLower.includes('shrink')) {
+                return [
+                    /shrink/i,
+                    /shrunk/i,
+                    /got smaller/i,
+                    /after wash/i
+                ];
+            } else if (claimLower.includes('wash') || claimLower.includes('care')) {
+                return [
+                    /wash(ed|ing)/i,
+                    /(after|post) wash/i,
+                    /easy to care for/i,
+                    /holds up well/i,
+                    /maintained/i,
+                    /care instructions/i
+                ];
+            }
+        }
+        
+        return []; // No patterns match - no quotes should be shown
+    };
+    
+    const claimPatterns = getClaimPatterns(section, sectionClaim);
+    
+    // If no specific patterns for this claim, don't show quotes
+    if (claimPatterns.length === 0) {
+        return [];
+    }
+    
+    for (const review of reviews.slice(0, 15)) { // Check more reviews for better matching
+        // Only use actual review content fields
+        const reviewFields = [
+            review.fullContent,
+            review.reviewText,
+            review.content,
+            review.text
+        ].filter(Boolean);
+        
+        if (reviewFields.length === 0) continue;
+        
+        const fullText = reviewFields.join(' ').toLowerCase();
+        
+        // Look for sentences containing relevant keywords
+        const sentences = fullText.split(/[.!?]+/).filter(s => s.trim().length > 15);
+        
+        for (const sentence of sentences) {
+            const trimmedSentence = sentence.trim();
+            
+            // Check if sentence matches the specific claim patterns
+            const matchesClaim = claimPatterns.some(pattern => pattern.test(trimmedSentence));
+            
+            if (matchesClaim && trimmedSentence.length >= 30 && trimmedSentence.length <= 150) {
+                // Check if this sounds like a genuine user review
+                if (!isUserReview(trimmedSentence)) {
+                    continue;
+                }
+                
+                // Clean up the sentence
+                let cleanSentence = trimmedSentence
+                    .replace(/^[^a-zA-Z]*/, '') // Remove leading non-letters
+                    .replace(/[^a-zA-Z\s'!,.]*$/, '') // Remove trailing non-letters but keep basic punctuation
+                    .trim();
+                
+                if (cleanSentence.length >= 25) {
+                    // Capitalize first letter
+                    cleanSentence = cleanSentence.charAt(0).toUpperCase() + cleanSentence.slice(1);
+                    
+                    // Add period if missing
+                    if (!/[.!?]$/.test(cleanSentence)) {
+                        cleanSentence += '.';
+                    }
+                    
+                    // Calculate relevance based on how many claim patterns it matches
+                    const relevanceScore = claimPatterns.filter(pattern => pattern.test(trimmedSentence)).length;
+                    
+                    console.log('✅ QUOTE EXTRACTED:', {
+                        section: section,
+                        claim: sectionClaim,
+                        extractedQuote: cleanSentence,
+                        originalSentence: trimmedSentence.substring(0, 100),
+                        reviewSource: review.source,
+                        matchedPatterns: claimPatterns.filter(pattern => pattern.test(trimmedSentence)).length
+                    });
+                    
+                    quotes.push({
+                        text: cleanSentence,
+                        source: review.source || 'Review',
+                        relevance: relevanceScore,
+                        originalText: trimmedSentence // Keep original for debugging
+                    });
+                }
+            }
+        }
+    }
+    
+    // Sort by relevance and remove duplicates
+    const uniqueQuotes = quotes
+        .filter((quote, index, self) => 
+            index === self.findIndex(q => q.text.toLowerCase() === quote.text.toLowerCase())
+        )
+        .sort((a, b) => b.relevance - a.relevance)
+        .slice(0, 1); // Max 1 highly relevant quote per section
+    
+    return uniqueQuotes;
+  }
+
   // ========================================
   // WIDGET CREATION & MANAGEMENT
   // ========================================
@@ -1008,6 +1228,16 @@
         // Handle the actual data structure from background script
         console.log('🔍 DEBUGGING: Complete data object received from background:', JSON.stringify(data, null, 2));
         
+        // Debug the actual review content to verify quotes are real
+        if (data.externalSearchResults?.reviews) {
+            console.log('🔍 DEBUGGING: Sample review content:', data.externalSearchResults.reviews.slice(0, 3).map(review => ({
+                snippet: review.snippet?.substring(0, 100) + '...',
+                fullContent: review.fullContent?.substring(0, 100) + '...',
+                title: review.title,
+                source: review.source
+            })));
+        }
+        
         const brandName = data.brandName || currentBrand || 'Unknown Brand';
         const fitTips = data.fitTips || [];
         const hasData = data.hasData;
@@ -1047,9 +1277,33 @@
             
             for (const location of summaryLocations) {
                 if (location.value && location.value.trim().length > 50) {
-                    // Accept any substantial summary, not just ones starting with "Based on"
-                    console.log('✅ DEBUGGING: Found summary in:', location.name, 'Preview:', location.value.substring(0, 100) + '...');
-                    return location.value;
+                    const summaryLower = location.value.toLowerCase();
+                    
+                    // Check if this looks like a brand fit summary vs product description
+                    const brandFitIndicators = [
+                        'true to size', 'runs small', 'runs large', 'based on', 'reviews', 
+                        'customers', 'users say', 'fit analysis', 'sizing', 'recommend',
+                        'most reviewers', 'generally', 'tends to', 'typically'
+                    ];
+                    
+                    const productDescIndicators = [
+                        'described as', 'features', 'composition', 'model is wearing',
+                        'drop shoulder', 'crew neck', 'elbow-length', 'relaxed fit with',
+                        'made from', 'crafted', 'designed', 'collection'
+                    ];
+                    
+                    const hasBrandFitIndicators = brandFitIndicators.some(indicator => 
+                        summaryLower.includes(indicator));
+                    const hasProductDescIndicators = productDescIndicators.some(indicator => 
+                        summaryLower.includes(indicator));
+                    
+                    // Only accept if it has brand fit indicators and doesn't look like product description
+                    if (hasBrandFitIndicators && !hasProductDescIndicators) {
+                        console.log('✅ DEBUGGING: Found brand fit summary in:', location.name, 'Preview:', location.value.substring(0, 100) + '...');
+                        return location.value;
+                    } else {
+                        console.log('⚠️ DEBUGGING: Rejecting non-brand-fit summary in:', location.name, 'Reason:', hasProductDescIndicators ? 'Product description' : 'No brand fit indicators');
+                    }
                 }
             }
             
@@ -1061,8 +1315,32 @@
             });
             
             if (data.recommendation && data.recommendation.trim().length > 50 && data.recommendation !== 'Analyzing fit information...') {
-                console.log('✅ DEBUGGING: Using recommendation field');
-                return data.recommendation;
+                const recommendationLower = data.recommendation.toLowerCase();
+                
+                // Apply same filtering as above
+                const brandFitIndicators = [
+                    'true to size', 'runs small', 'runs large', 'based on', 'reviews', 
+                    'customers', 'users say', 'fit analysis', 'sizing', 'recommend',
+                    'most reviewers', 'generally', 'tends to', 'typically'
+                ];
+                
+                const productDescIndicators = [
+                    'described as', 'features', 'composition', 'model is wearing',
+                    'drop shoulder', 'crew neck', 'elbow-length', 'relaxed fit with',
+                    'made from', 'crafted', 'designed', 'collection'
+                ];
+                
+                const hasBrandFitIndicators = brandFitIndicators.some(indicator => 
+                    recommendationLower.includes(indicator));
+                const hasProductDescIndicators = productDescIndicators.some(indicator => 
+                    recommendationLower.includes(indicator));
+                
+                if (hasBrandFitIndicators && !hasProductDescIndicators) {
+                    console.log('✅ DEBUGGING: Using recommendation field as brand fit summary');
+                    return data.recommendation;
+                } else {
+                    console.log('⚠️ DEBUGGING: Rejecting recommendation field - appears to be product description');
+                }
             }
             
             // Priority 3: Try to find ANY summary content in the API response
@@ -1106,7 +1384,36 @@
                 return basicSummary;
             }
             
-            // Priority 5: Default loading message
+            // Priority 5: Generate basic brand fit summary from structured sections if available
+            const searchData = data.externalSearchResults?.brandFitSummary || 
+                              data.richSummaryData?.brandFitSummary || 
+                              data.brandFitSummary;
+            
+            if (searchData?.sections && Object.keys(searchData.sections).length > 0) {
+                console.log('🔍 DEBUGGING: Trying to generate summary from sections');
+                const sectionSummaries = [];
+                
+                if (searchData.sections.fit?.recommendation) {
+                    sectionSummaries.push(searchData.sections.fit.recommendation);
+                }
+                if (searchData.sections.quality?.recommendation) {
+                    sectionSummaries.push(searchData.sections.quality.recommendation);
+                }
+                
+                if (sectionSummaries.length > 0) {
+                    const generatedSummary = sectionSummaries.join('. ');
+                    console.log('✅ DEBUGGING: Generated summary from sections:', generatedSummary.substring(0, 100) + '...');
+                    return generatedSummary;
+                }
+            }
+            
+            // Priority 6: Show placeholder for brand analysis if we have reviews but no structured data
+            if (totalReviews > 0) {
+                console.log('🔍 DEBUGGING: Using placeholder message with review count');
+                return `Based on ${totalReviews} reviews - Brand fit analysis available. Detailed insights shown below.`;
+            }
+            
+            // Priority 7: Default loading message
             console.log('❌ DEBUGGING: No valid summary found, using loading message');
             return 'Analyzing fit information...';
         };
@@ -1144,20 +1451,119 @@
         
         // Extract structured fit and quality data from search results
         const extractStructuredAnalysis = () => {
+            // Debug the data structure we're working with
+            console.log('🔍 DEBUGGING: extractStructuredAnalysis data sources:', {
+                externalSearchResults: !!data.externalSearchResults,
+                hasBrandFitSummary: !!data.externalSearchResults?.brandFitSummary,
+                hasRichSummaryData: !!data.richSummaryData,
+                hasBrandFitSummary2: !!data.brandFitSummary,
+                externalSections: data.externalSearchResults?.brandFitSummary?.sections ? Object.keys(data.externalSearchResults.brandFitSummary.sections) : 'none',
+                richSections: data.richSummaryData?.brandFitSummary?.sections ? Object.keys(data.richSummaryData.brandFitSummary.sections) : 'none',
+                directSections: data.brandFitSummary?.sections ? Object.keys(data.brandFitSummary.sections) : 'none'
+            });
+            
             const searchData = data.externalSearchResults?.brandFitSummary || 
                               data.richSummaryData?.brandFitSummary || 
                               data.brandFitSummary;
             
-            if (!searchData) return null;
+            if (!searchData) {
+                console.log('❌ No searchData found for structured analysis');
+                return null;
+            }
             
-            return {
-                fit: searchData.sections?.fit,
-                quality: searchData.sections?.quality,
-                fabric: searchData.sections?.fabric,
-                washCare: searchData.sections?.washCare,
+            console.log('🔍 DEBUGGING: searchData structure:', {
+                hasSections: !!searchData.sections,
+                sectionKeys: searchData.sections ? Object.keys(searchData.sections) : 'none',
+                hasConfidence: !!searchData.confidence,
+                sampleSection: searchData.sections ? searchData.sections[Object.keys(searchData.sections)[0]] : 'none'
+            });
+            
+            // Check if we have any structured sections
+            if (!searchData.sections || Object.keys(searchData.sections).length === 0) {
+                console.log('❌ No sections found in searchData');
+                return null;
+            }
+            
+            // Filter sections to remove obvious product descriptions, but be less aggressive
+            const isValidSection = (section) => {
+                if (!section?.recommendation) return false;
+                
+                const text = section.recommendation.toLowerCase();
+                
+                // Only filter out obvious product marketing copy
+                const productDescIndicators = [
+                    'the composition is 100%',
+                    'crafted from fine knit',
+                    'made from 100%',
+                    'features a relaxed silhouette',
+                    'designed with a relaxed silhouette',
+                    'given the delicate nature of',
+                    'it is advisable to wash in cold water',
+                    'the model is wearing size',
+                    'model is 178cm and is wearing'
+                ];
+                
+                // If it contains obvious product marketing language, filter it out
+                const hasProductDescIndicators = productDescIndicators.some(indicator => text.includes(indicator));
+                
+                // Keep section unless it's clearly product marketing copy
+                if (hasProductDescIndicators) {
+                    console.log('🚫 FILTERING OUT product description:', text.substring(0, 100) + '...');
+                    return false;
+                }
+                
+                console.log('✅ KEEPING section (appears to be analysis):', text.substring(0, 100) + '...');
+                return true;
+            };
+            
+            const result = {
+                fit: isValidSection(searchData.sections?.fit) ? searchData.sections.fit : null,
+                quality: isValidSection(searchData.sections?.quality) ? searchData.sections.quality : null,
+                fabric: isValidSection(searchData.sections?.fabric) ? searchData.sections.fabric : null,
+                washCare: isValidSection(searchData.sections?.washCare) ? searchData.sections.washCare : null,
+                qualityMaterials: isValidSection(searchData.sections?.qualityMaterials) ? searchData.sections.qualityMaterials : null,
                 confidence: searchData.confidence,
                 totalResults: totalReviews
             };
+            
+            console.log('✅ DEBUGGING: Extracted structured data:', {
+                hasFit: !!result.fit,
+                hasQuality: !!result.quality,
+                hasFabric: !!result.fabric,
+                hasWashCare: !!result.washCare,
+                hasQualityMaterials: !!result.qualityMaterials,
+                confidence: result.confidence,
+                filteredOutSections: {
+                    fit: searchData.sections?.fit && !result.fit ? 'Filtered out (product description)' : 'OK',
+                    quality: searchData.sections?.quality && !result.quality ? 'Filtered out (product description)' : 'OK',
+                    washCare: searchData.sections?.washCare && !result.washCare ? 'Filtered out (product description)' : 'OK'
+                }
+            });
+            
+            // Debug the actual content of sections to verify they're from reviews
+            if (result.fit) {
+                console.log('🔍 FIT SECTION CONTENT:', {
+                    recommendation: result.fit.recommendation?.substring(0, 100) + '...',
+                    confidence: result.fit.confidence,
+                    isReviewBased: result.fit.recommendation?.toLowerCase().includes('reviews') || result.fit.recommendation?.toLowerCase().includes('customers')
+                });
+            }
+            if (result.quality) {
+                console.log('🔍 QUALITY SECTION CONTENT:', {
+                    recommendation: result.quality.recommendation?.substring(0, 100) + '...',
+                    confidence: result.quality.confidence,
+                    isReviewBased: result.quality.recommendation?.toLowerCase().includes('reviews') || result.quality.recommendation?.toLowerCase().includes('customers')
+                });
+            }
+            if (result.washCare) {
+                console.log('🔍 WASH CARE SECTION CONTENT:', {
+                    recommendation: result.washCare.recommendation?.substring(0, 100) + '...',
+                    confidence: result.washCare.confidence,
+                    isReviewBased: result.washCare.recommendation?.toLowerCase().includes('reviews') || result.washCare.recommendation?.toLowerCase().includes('customers')
+                });
+            }
+            
+            return result;
         };
 
         const structuredData = extractStructuredAnalysis();
@@ -1190,11 +1596,20 @@
         
         // FIT SECTION - Always show if we have fit data or general recommendation
         if (structuredData?.fit) {
+            const fitQuotes = extractRelevantQuotes(data, 'fit', structuredData.fit.recommendation);
+            let fitQuotesHTML = '';
+            if (fitQuotes.length > 0) {
+                fitQuotesHTML = fitQuotes.map(quote => 
+                    `<li class="pointfour-quote">"${quote.text}"</li>`
+                ).join('');
+            }
+            
             content += `
                 <div class="pointfour-fit-info">
                     <h4>Fit Analysis:</h4>
                     <ul class="pointfour-bullet-list">
                         <li>${structuredData.fit.recommendation}</li>
+                        ${fitQuotesHTML}
                         ${structuredData.fit.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.fit.confidence.toUpperCase()}</li>` : ''}
                     </ul>
                 </div>
@@ -1205,16 +1620,26 @@
             const hasFitInfo = fitKeywords.some(keyword => recommendation.toLowerCase().includes(keyword));
             
             if (hasFitInfo) {
+                const fitQuotes = extractRelevantQuotes(data, 'fit', recommendation);
+                let fitQuotesHTML = '';
+                if (fitQuotes.length > 0) {
+                    fitQuotesHTML = fitQuotes.map(quote => 
+                        `<li class="pointfour-quote">"${quote.text}"</li>`
+                    ).join('');
+                }
+                
                 content += `
                     <div class="pointfour-fit-info">
                         <h4>Fit Analysis:</h4>
                         <ul class="pointfour-bullet-list">
                             <li>${recommendation}</li>
+                            ${fitQuotesHTML}
                         </ul>
                     </div>
                 `;
             } else {
                 // Show general summary under brand name if no specific fit data
+                // Don't show quotes for general summaries unless they're very specific
                 content += `
                     <div class="pointfour-fit-info">
                         <h4>Analysis Summary:</h4>
@@ -1239,6 +1664,13 @@
         // QUALITY & MATERIALS SECTION - Show combined quality and materials info
         if (structuredData?.qualityMaterials) {
             const sectionHeader = isBagBrand ? 'Quality & Construction:' : 'Quality & Materials:';
+            const qualityQuotes = extractRelevantQuotes(data, 'quality', structuredData.qualityMaterials.recommendation);
+            let qualityQuotesHTML = '';
+            if (qualityQuotes.length > 0) {
+                qualityQuotesHTML = qualityQuotes.map(quote => 
+                    `<li class="pointfour-quote">"${quote.text}"</li>`
+                ).join('');
+            }
             
             // Split the recommendation by lines to handle "Materials: X\n\nQuality: Y" format
             const lines = structuredData.qualityMaterials.recommendation.split('\n').filter(line => line.trim());
@@ -1248,6 +1680,7 @@
                     <h4>${sectionHeader}</h4>
                     <ul class="pointfour-bullet-list">
                         ${lines.map(line => `<li>${line.trim()}</li>`).join('')}
+                        ${qualityQuotesHTML}
                         ${structuredData.qualityMaterials.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.qualityMaterials.confidence.toUpperCase()}</li>` : ''}
                     </ul>
                 </div>
@@ -1257,23 +1690,40 @@
             const qualityInsights = structuredData ? extractQualityInsights({ brandFitSummary: { sections: structuredData } }) : null;
             if (qualityInsights) {
                 const sectionHeader = isBagBrand ? 'Quality & Construction:' : 'Quality & Materials:';
+                const qualityQuotes = extractRelevantQuotes(data, 'quality', qualityInsights.recommendation);
+                let qualityQuotesHTML = '';
+                if (qualityQuotes.length > 0) {
+                    qualityQuotesHTML = qualityQuotes.map(quote => 
+                        `<li class="pointfour-quote">"${quote.text}"</li>`
+                    ).join('');
+                }
                 
                 content += `
                     <div class="pointfour-quality-info">
                         <h4>${sectionHeader}</h4>
                         <ul class="pointfour-bullet-list">
                             <li>${qualityInsights.recommendation}</li>
+                            ${qualityQuotesHTML}
                             ${qualityInsights.confidence ? `<li class="pointfour-source">Confidence: ${qualityInsights.confidence.toUpperCase()}</li>` : ''}
                         </ul>
                     </div>
                 `;
             } else if (structuredData?.quality) {
                 const sectionHeader = isBagBrand ? 'Quality & Construction:' : 'Quality & Materials:';
+                const qualityQuotes = extractRelevantQuotes(data, 'quality', structuredData.quality.recommendation);
+                let qualityQuotesHTML = '';
+                if (qualityQuotes.length > 0) {
+                    qualityQuotesHTML = qualityQuotes.map(quote => 
+                        `<li class="pointfour-quote">"${quote.text}"</li>`
+                    ).join('');
+                }
+                
                 content += `
                     <div class="pointfour-quality-info">
                         <h4>${sectionHeader}</h4>
                         <ul class="pointfour-bullet-list">
                             <li>${structuredData.quality.recommendation}</li>
+                            ${qualityQuotesHTML}
                             ${structuredData.quality.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.quality.confidence.toUpperCase()}</li>` : ''}
                         </ul>
                     </div>
@@ -1283,11 +1733,20 @@
         
         // WASH/CARE SECTION - Show if we have wash/care data
         if (structuredData?.washCare && structuredData.washCare.recommendation) {
+            const careQuotes = extractRelevantQuotes(data, 'washCare', structuredData.washCare.recommendation);
+            let careQuotesHTML = '';
+            if (careQuotes.length > 0) {
+                careQuotesHTML = careQuotes.map(quote => 
+                    `<li class="pointfour-quote">"${quote.text}"</li>`
+                ).join('');
+            }
+            
             content += `
                 <div class="pointfour-washcare-info">
                     <h4>Wash & Care:</h4>
                     <ul class="pointfour-bullet-list">
                         <li>${structuredData.washCare.recommendation}</li>
+                        ${careQuotesHTML}
                         ${structuredData.washCare.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.washCare.confidence.toUpperCase()}</li>` : ''}
                     </ul>
                 </div>
