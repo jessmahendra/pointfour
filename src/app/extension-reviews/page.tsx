@@ -59,6 +59,28 @@ function ExtensionReviewsContent() {
   const brandName = searchParams.get("brand") || "";
   const itemName = searchParams.get("item") || "";
 
+  // Get enhanced data from extension
+  const tldrParam = searchParams.get("tldr") || "";
+
+  // Parse review insights JSON (but prioritize fresh API data)
+  // Note: Currently not used - keeping for future implementation
+  // let reviewInsights: Array<{
+  //   id: number;
+  //   title: string;
+  //   source: string;
+  //   insight: string;
+  //   confidence: 'high' | 'medium' | 'low';
+  // }> = [];
+
+  // try {
+  //   const reviewInsightsParam = searchParams.get("reviewInsights") || "";
+  //   if (reviewInsightsParam) {
+  //     reviewInsights = JSON.parse(decodeURIComponent(reviewInsightsParam));
+  //   }
+  // } catch (e) {
+  //   console.warn('Failed to parse review insights:', e);
+  // }
+
   const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
@@ -127,13 +149,13 @@ function ExtensionReviewsContent() {
   };
 
   const categoryNames: Record<string, string> = {
-    primary: "🔥 Primary Sources (Reddit & Substack)",
-    community: "💬 Community Forums",
-    blogs: "📝 Fashion Blogs",
-    videos: "🎥 Video Reviews",
-    social: "📱 Social Media",
-    publications: "📰 Fashion Publications",
-    other: "🌐 Other Sources",
+    primary: "Primary sources (Reddit & Substack)",
+    community: "Community Forums",
+    blogs: "Fashion blogs",
+    videos: "Video reviews",
+    social: "Social Media",
+    publications: "Fashion Publications",
+    other: "Other Sources",
   };
 
   const categoryDescriptions: Record<string, string> = {
@@ -333,112 +355,62 @@ function ExtensionReviewsContent() {
           </p>
         </div>
 
-        {/* Brand Fit Summary */}
-        {reviewData.brandFitSummary && (
+        {/* Fit Review */}
+        {(tldrParam || reviewData.brandFitSummary) && (
           <div
             style={{
               backgroundColor: "#FFFFFF",
-              padding: "24px",
+              padding: "32px",
               borderRadius: "12px",
-              border: "1px solid #E9DED5",
+              border: "2px solid #D4B894",
               marginBottom: "32px",
             }}
           >
             <h2
               style={{
-                fontSize: "18px",
-                fontWeight: "600",
+                fontSize: "28px",
+                fontWeight: "400",
+                marginBottom: "16px",
                 color: "#333",
-                margin: "0 0 16px 0",
+                fontFamily: "system-ui, -apple-system, sans-serif",
               }}
             >
-              📏 Overall Fit Summary
+              Fit review
             </h2>
+
             <p
               style={{
-                fontSize: "15px",
-                color: "#333",
-                lineHeight: "1.6",
-                margin: "0 0 12px 0",
+                fontSize: "16px",
+                color: "#666",
+                marginBottom: "24px",
+                fontWeight: "400",
               }}
             >
-              {reviewData.brandFitSummary.summary}
+              {reviewData.totalResults}+ sources including{" "}
+              {reviewData.brandFitSummary?.sources?.slice(0, 3).join(", ") ||
+                "Reddit, fashion forums, reviews"}
             </p>
+
             <div
               style={{
-                display: "flex",
-                gap: "24px",
-                fontSize: "13px",
-                color: "#666",
-                paddingTop: "12px",
-                borderTop: "1px solid #F8F7F4",
+                fontSize: "18px",
+                color: "#333",
+                lineHeight: "1.5",
+                fontWeight: "400",
               }}
             >
-              <span>
-                Confidence:{" "}
-                <strong
-                  style={{
-                    color:
-                      reviewData.brandFitSummary.confidence === "high"
-                        ? "#16A34A"
-                        : reviewData.brandFitSummary.confidence === "medium"
-                        ? "#CA8A04"
-                        : "#DC2626",
-                  }}
-                >
-                  {reviewData.brandFitSummary.confidence}
-                </strong>
-              </span>
-              <span>
-                Based on {reviewData.brandFitSummary.totalResults} reviews
-              </span>
-            </div>
-          </div>
-        )}
+              {tldrParam && (
+                <p style={{ margin: "0 0 16px 0" }}>
+                  {decodeURIComponent(tldrParam)}
+                </p>
+              )}
 
-        {/* Style with your pieces button */}
-        {reviewData.brandFitSummary && (
-          <div style={{ margin: "24px 0" }}>
-            <button
-              onClick={() => {
-                const params = new URLSearchParams({
-                  brand: reviewData.brand,
-                  itemName: reviewData.itemName || "",
-                  imageUrl: reviewData.productImage?.src || "",
-                  pageUrl: reviewData.pageUrl || window.location.href,
-                });
-                window.open(
-                  `https://www.pointfour.in/style?${params.toString()}`,
-                  "_blank"
-                );
-              }}
-              style={{
-                width: "100%",
-                padding: "16px 24px",
-                backgroundColor: "#2D2D2D",
-                color: "#FFFFFF",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "15px",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "background-color 0.2s",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-              onMouseOver={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                  "#1A1A1A";
-              }}
-              onMouseOut={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                  "#2D2D2D";
-              }}
-            >
-              ✨ Style with your pieces
-            </button>
+              {reviewData.brandFitSummary?.summary && (
+                <p style={{ margin: "0" }}>
+                  {reviewData.brandFitSummary.summary}
+                </p>
+              )}
+            </div>
           </div>
         )}
 
@@ -465,8 +437,7 @@ function ExtensionReviewsContent() {
                     style={{
                       width: "100%",
                       padding: "20px 24px",
-                      backgroundColor:
-                        category === "primary" ? "#FEF3C7" : "#FFFFFF",
+                      backgroundColor: "#FFFFFF",
                       border: "none",
                       borderBottom: isExpanded ? "1px solid #E9DED5" : "none",
                       cursor: "pointer",
@@ -476,18 +447,14 @@ function ExtensionReviewsContent() {
                       transition: "background-color 0.2s",
                     }}
                     onMouseOver={(e) => {
-                      if (category !== "primary") {
-                        (
-                          e.currentTarget as HTMLButtonElement
-                        ).style.backgroundColor = "#F8F7F4";
-                      }
+                      (
+                        e.currentTarget as HTMLButtonElement
+                      ).style.backgroundColor = "#F8F7F4";
                     }}
                     onMouseOut={(e) => {
-                      if (category !== "primary") {
-                        (
-                          e.currentTarget as HTMLButtonElement
-                        ).style.backgroundColor = "#FFFFFF";
-                      }
+                      (
+                        e.currentTarget as HTMLButtonElement
+                      ).style.backgroundColor = "#FFFFFF";
                     }}
                   >
                     <div style={{ textAlign: "left" }}>
@@ -495,7 +462,7 @@ function ExtensionReviewsContent() {
                         style={{
                           fontSize: "16px",
                           fontWeight: "600",
-                          color: category === "primary" ? "#92400E" : "#333",
+                          color: "#333",
                           margin: "0 0 4px 0",
                         }}
                       >
@@ -539,221 +506,164 @@ function ExtensionReviewsContent() {
                           gap: "16px",
                         }}
                       >
-                        {reviews.map((review, index) => (
-                          <div
-                            key={index}
-                            style={{
-                              padding: "16px",
-                              backgroundColor: "#F8F7F4",
-                              borderRadius: "8px",
-                              border: "1px solid #E9DED5",
-                            }}
-                          >
-                            {/* Review Header with Source */}
+                        {reviews.map((review, index) => {
+                          // Skip URL parameter insights - use fresh API data only
+
+                          return (
                             <div
+                              key={index}
                               style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "flex-start",
-                                marginBottom: "12px",
-                                gap: "12px",
+                                padding: "16px",
+                                backgroundColor: "#F8F7F4",
+                                borderRadius: "8px",
+                                border: "1px solid #E9DED5",
                               }}
                             >
-                              <h4
+                              {/* Review Header with Source */}
+                              <div
                                 style={{
-                                  fontSize: "14px",
-                                  fontWeight: "600",
-                                  color: "#333",
-                                  margin: 0,
-                                  flex: 1,
-                                  lineHeight: "1.4",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "flex-start",
+                                  marginBottom: "12px",
+                                  gap: "12px",
                                 }}
                               >
-                                {review.title}
-                              </h4>
-                              <span
-                                style={{
-                                  fontSize: "11px",
-                                  color: "#666",
-                                  backgroundColor: "#FFFFFF",
-                                  padding: "4px 8px",
-                                  borderRadius: "4px",
-                                  flexShrink: 0,
-                                  fontWeight: "500",
-                                }}
-                              >
-                                {review.source}
-                              </span>
-                            </div>
-
-                            {/* Review Snippet */}
-                            <p
-                              style={{
-                                fontSize: "13px",
-                                color: "#4E4B4B",
-                                margin: "0 0 12px 0",
-                                lineHeight: "1.5",
-                              }}
-                            >
-                              {review.snippet}
-                            </p>
-
-                            {/* Extended Content (if available) */}
-                            {review.fullContent &&
-                              review.fullContent.length >
-                                review.snippet.length && (
-                                <details style={{ marginBottom: "12px" }}>
-                                  <summary
-                                    style={{
-                                      fontSize: "12px",
-                                      color: "#8B7355",
-                                      cursor: "pointer",
-                                      marginBottom: "8px",
-                                      fontWeight: "500",
-                                      listStyle: "none",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "4px",
-                                    }}
-                                  >
-                                    <svg
-                                      width="12"
-                                      height="12"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      style={{ flexShrink: 0 }}
-                                    >
-                                      <polyline points="6 9 12 15 18 9"></polyline>
-                                    </svg>
-                                    Show more content
-                                  </summary>
-                                  <div
-                                    style={{
-                                      fontSize: "12px",
-                                      color: "#666",
-                                      margin: "0 0 12px 0",
-                                      lineHeight: "1.5",
-                                      paddingTop: "8px",
-                                      borderTop: "1px solid #E9DED5",
-                                    }}
-                                  >
-                                    {review.fullContent}
-                                  </div>
-                                </details>
-                              )}
-
-                            {/* Tags and Confidence */}
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: "8px",
-                                flexWrap: "wrap",
-                                marginBottom: "12px",
-                              }}
-                            >
-                              {review.tags.slice(0, 4).map((tag, tagIndex) => (
-                                <span
-                                  key={tagIndex}
+                                <h4
                                   style={{
-                                    fontSize: "10px",
-                                    color: "#666",
-                                    backgroundColor: "#E9DED5",
-                                    padding: "3px 8px",
-                                    borderRadius: "4px",
+                                    fontSize: "14px",
+                                    fontWeight: "600",
+                                    color: "#333",
+                                    margin: 0,
+                                    flex: 1,
+                                    lineHeight: "1.4",
                                   }}
                                 >
-                                  {tag}
-                                </span>
-                              ))}
-                              {review.confidence && (
+                                  {review.title}
+                                </h4>
                                 <span
                                   style={{
-                                    fontSize: "10px",
-                                    color:
-                                      review.confidence === "high"
-                                        ? "#16A34A"
-                                        : review.confidence === "medium"
-                                        ? "#CA8A04"
-                                        : "#DC2626",
-                                    backgroundColor:
-                                      review.confidence === "high"
-                                        ? "#D4EDDA"
-                                        : review.confidence === "medium"
-                                        ? "#FEF3C7"
-                                        : "#FEE2E2",
-                                    padding: "3px 8px",
+                                    fontSize: "11px",
+                                    color: "#666",
+                                    backgroundColor: "#FFFFFF",
+                                    padding: "4px 8px",
                                     borderRadius: "4px",
+                                    flexShrink: 0,
                                     fontWeight: "500",
                                   }}
                                 >
-                                  {review.confidence} confidence
+                                  {review.source}
                                 </span>
-                              )}
-                            </div>
+                              </div>
 
-                            {/* View Original Source Link - PROMINENT */}
-                            <a
-                              href={review.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                padding: "8px 12px",
-                                backgroundColor: "#000000",
-                                color: "#FFFFFF",
-                                textDecoration: "none",
-                                borderRadius: "6px",
-                                fontSize: "12px",
-                                fontWeight: "500",
-                                transition: "all 0.2s ease",
-                                border: "1px solid #000000",
-                              }}
-                              onMouseOver={(e) => {
-                                (
-                                  e.currentTarget as HTMLAnchorElement
-                                ).style.backgroundColor = "#1a1a1a";
-                                (
-                                  e.currentTarget as HTMLAnchorElement
-                                ).style.borderColor = "#1a1a1a";
-                                (
-                                  e.currentTarget as HTMLAnchorElement
-                                ).style.transform = "translateY(-1px)";
-                              }}
-                              onMouseOut={(e) => {
-                                (
-                                  e.currentTarget as HTMLAnchorElement
-                                ).style.backgroundColor = "#000000";
-                                (
-                                  e.currentTarget as HTMLAnchorElement
-                                ).style.borderColor = "#000000";
-                                (
-                                  e.currentTarget as HTMLAnchorElement
-                                ).style.transform = "translateY(0)";
-                              }}
-                            >
-                              View Original on {review.source}
-                              <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+                              {/* Review Content */}
+                              <div
+                                style={{
+                                  fontSize: "14px",
+                                  color: "#333",
+                                  margin: "0 0 12px 0",
+                                  lineHeight: "1.5",
+                                }}
                               >
-                                <path d="M7 17L17 7"></path>
-                                <path d="M7 7h10v10"></path>
-                              </svg>
-                            </a>
-                          </div>
-                        ))}
+                                {(() => {
+                                  const content = review.snippet;
+
+                                  // Check if content contains bullet points
+                                  if (
+                                    content.includes("•") ||
+                                    content.includes("- ")
+                                  ) {
+                                    // Split by bullet points and render as list
+                                    const points = content
+                                      .split(/[•\-]\s/)
+                                      .filter((point) => point.trim());
+
+                                    if (points.length > 1) {
+                                      return (
+                                        <ul
+                                          style={{
+                                            margin: 0,
+                                            paddingLeft: "16px",
+                                          }}
+                                        >
+                                          {points.map((point, idx) => (
+                                            <li
+                                              key={idx}
+                                              style={{ marginBottom: "4px" }}
+                                            >
+                                              {point.trim()}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      );
+                                    }
+                                  }
+
+                                  // Fallback to regular paragraph
+                                  return <div>{content}</div>;
+                                })()}
+                              </div>
+
+                              {/* Tags */}
+                              <div
+                                style={{
+                                  display: "flex",
+                                  gap: "8px",
+                                  flexWrap: "wrap",
+                                  marginBottom: "12px",
+                                }}
+                              >
+                                {review.tags
+                                  .slice(0, 3)
+                                  .map((tag, tagIndex) => (
+                                    <span
+                                      key={tagIndex}
+                                      style={{
+                                        fontSize: "12px",
+                                        color: "#666",
+                                        backgroundColor: "#F5F5F5",
+                                        padding: "4px 8px",
+                                        borderRadius: "4px",
+                                      }}
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                              </div>
+
+                              {/* Read More Link */}
+                              <a
+                                href={review.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  color: "#333",
+                                  textDecoration: "none",
+                                  fontSize: "14px",
+                                  fontWeight: "400",
+                                }}
+                              >
+                                Read more
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M7 17L17 7"></path>
+                                  <path d="M7 7h10v10"></path>
+                                </svg>
+                              </a>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

@@ -64,6 +64,7 @@ const BRAND_PATTERNS = {
   'reformation.com': { name: 'Reformation', category: 'fashion-clothing', subcategory: 'contemporary' },
   'everlane.com': { name: 'Everlane', category: 'fashion-clothing', subcategory: 'contemporary' },
   'rohe.co': { name: 'Rohe', category: 'fashion-clothing', subcategory: 'contemporary' },
+  'evergoods.us': { name: 'Evergoods', category: 'bags-luggage', subcategory: 'technical-bags' },
   'cos.com': { name: 'COS', category: 'fashion-clothing', subcategory: 'contemporary' },
   'whistles.co.uk': { name: 'Whistles', category: 'fashion-clothing', subcategory: 'contemporary' },
   'reiss.com': { name: 'Reiss', category: 'fashion-clothing', subcategory: 'contemporary' },
@@ -204,7 +205,7 @@ function isFashionWebsite(domain) {
 function shouldShowFitAdvice(category) {
   // Categories that support fit advice
   const fitAdviceCategories = [
-    'fashion-clothing', 'footwear', 'lingerie-intimates', 'sportswear-activewear'
+    'fashion-clothing', 'footwear', 'lingerie-intimates', 'sportswear-activewear', 'bags-luggage'
   ];
   
   return fitAdviceCategories.includes(category);
@@ -218,11 +219,28 @@ function calculateRelevanceScore(text, brandName) {
   
   // Check for brand mention (required)
   if (!lowerText.includes(brandLower)) {
+    console.log('⚠️ RELEVANCE: No brand mention found for', brandName, 'in:', lowerText.substring(0, 100) + '...');
     return 0;
   }
   
-  // Base score for brand mention
-  score += 10;
+  // Check for contextual brand mention (not just passing reference)
+  const brandMentions = (lowerText.match(new RegExp(brandLower, 'g')) || []).length;
+  const hasContextualMention = lowerText.includes(`${brandLower} `) || 
+                             lowerText.includes(` ${brandLower}`) ||
+                             lowerText.includes(`${brandLower}.`) ||
+                             lowerText.includes(`${brandLower},`) ||
+                             lowerText.includes(`${brandLower}'s`) ||
+                             lowerText.includes(`${brandLower} brand`) ||
+                             lowerText.includes(`from ${brandLower}`);
+  
+  // Require meaningful brand discussion for longer reviews
+  if (lowerText.length > 200 && (!hasContextualMention || brandMentions < 1)) {
+    console.log('⚠️ RELEVANCE: Brand mention appears incidental in long review for', brandName);
+    return 0;
+  }
+  
+  // Base score for valid brand mention
+  score += 20;
   
   // Score based on category mentions
   let categoriesFound = 0;

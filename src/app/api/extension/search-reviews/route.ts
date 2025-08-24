@@ -56,10 +56,31 @@ interface AnalysisResult {
 function detectProductCategory(brand: string, itemName: string = ''): 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' {
   const text = `${brand} ${itemName}`.toLowerCase();
   
-  // Bag indicators
+  console.log('🏷️ CATEGORY DETECTION:', {
+    brand: brand,
+    itemName: itemName,
+    searchText: text
+  });
+  
+  // Known bag brands (brands that primarily make bags/backpacks)
+  const bagBrands = [
+    'evergoods', 'peak design', 'bellroy', 'away', 'rimowa', 'tumi',
+    'osprey', 'patagonia black hole', 'arc\'teryx', 'mystery ranch',
+    'goruck', 'fjallraven kanken', 'herschel', 'jansport', 'eastpak',
+    'thule', 'incase', 'chrome', 'timbuk2', 'manhattan portage'
+  ];
+  
+  // Check if brand is a known bag brand
+  if (bagBrands.some(bagBrand => text.includes(bagBrand))) {
+    console.log('🏷️ FINAL CATEGORY: bags (matched known bag brand) for:', brand);
+    return 'bags';
+  }
+  
+  // Bag indicators by keywords
   if (text.includes('bag') || text.includes('handbag') || text.includes('purse') || text.includes('wallet') || 
       text.includes('backpack') || text.includes('tote') || text.includes('clutch') || text.includes('crossbody') ||
-      text.includes('satchel') || text.includes('messenger') || text.includes('briefcase')) {
+      text.includes('satchel') || text.includes('messenger') || text.includes('briefcase') ||
+      text.includes('duffel') || text.includes('carry-on') || text.includes('luggage')) {
     return 'bags';
   }
   
@@ -97,7 +118,8 @@ function detectProductCategory(brand: string, itemName: string = ''): 'clothing'
   const clothingBrands = [
     'proche', 'celine', 'ganni', 'staud', 'reformation', 'nanushka', 'toteme',
     'arket', 'cos', 'acne', 'mansur gavriel', 'khaite', 'lemaire', 'jacquemus',
-    'marine serre', 'gauchere', 'cecilie bahnsen', 'simone rocha', 'rejina pyo'
+    'marine serre', 'gauchere', 'cecilie bahnsen', 'simone rocha', 'rejina pyo',
+    'me+em', 'me em', 'uniqlo', 'zara', 'h&m', 'mango', 'massimo dutti', 'everlane'
   ];
   
   const brandLower = brand.toLowerCase().trim();
@@ -468,15 +490,147 @@ export async function POST(request: NextRequest) {
     // Create detailed summary based on analysis
     const summary = generateDetailedSummary(analysis, allResults, brand, productCategory);
     
-    // Helper function to convert SerperResult to Review format
-    const convertToReview = (result: SerperResult): Review => {
+    // Helper function to use GPT for generating meaningful summaries
+    const generateMeaningfulSummary = async (title: string, snippet: string, brand: string): Promise<string | null> => {
+      try {
+        const prompt = `Based on this review title and snippet, extract 2-3 key points about the reviewer's actual experience with the ${brand} product. Focus on specific pros/cons, not just restating that it's a review.
+
+Title: ${title}
+Snippet: ${snippet}
+
+Format as bullet points like:
+• Durable construction, handles daily use well
+• Heavy for travel, shoulder straps uncomfortable
+• Great organization but too many pockets
+
+Focus on concrete experiences like comfort, durability, functionality, value, etc. If insufficient information, return just the title without "Review of" prefix.`;
+
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini", // Use faster, cheaper model for this task
+          messages: [{
+            role: "system",
+            content: "You are an expert at extracting specific pros/cons from product reviews. Provide concrete bullet points about user experiences."
+          }, {
+            role: "user", 
+            content: prompt
+          }],
+          max_tokens: 120,
+          temperature: 0.3
+        });
+
+        const summary = completion.choices[0]?.message?.content?.trim();
+        if (summary && summary.length > 10 && !summary.includes('insufficient')) {
+          return summary;
+        }
+      } catch (error) {
+        console.log('GPT summary generation failed:', error);
+      }
+      return null; // Fallback to original logic
+    };
+
+    // Helper function to convert SerperResult to Review format with enhanced snippets
+    const convertToReview = async (result: SerperResult): Promise<Review> => {
       const source = extractSourceName(result.link || '');
       const tags = extractTags(result.title, result.snippet);
       const confidence = calculateConfidence(result);
       
+      // Enhance snippet to be more meaningful
+      const enhanceSnippet = async (title: string, snippet: string, url: string = ''): Promise<string> => {
+        // First try GPT if we have enough context and it's a quality source
+        const isQualitySource = url.includes('blog') || url.includes('review') || 
+                               url.includes('reddit') || url.includes('youtube') ||
+                               url.includes('wired') || url.includes('medium');
+        
+        if ((title?.length > 25 || snippet?.length > 40) && isQualitySource) {
+          const gptSummary = await generateMeaningfulSummary(title, snippet, brand);
+          if (gptSummary) {
+            console.log(`🤖 GPT SUMMARY: ${title.substring(0, 50)}... → ${gptSummary}`);
+            return gptSummary;
+          }
+        }
+
+        if (!snippet || snippet.length < 20) {
+          // If no snippet, try to create a meaningful description from title
+          if (title && title.length > 10) {
+            return title.replace(/^(Review of|Review:|Review\s+)/i, '').trim();
+          }
+          return title || 'Review content available at source';
+        }
+        
+        // If snippet is generic or just says "discussion about...", try to extract from title
+        const genericIndicators = [
+          'discussion about',
+          'see full review for details',
+          'post about',
+          'thread about',
+          'review of',
+          'thoughts on',
+          'missing:',
+          'more details',
+          'check out the full',
+          'visit the website',
+          'click here',
+          'read the full',
+          'view more',
+          'learn more'
+        ];
+        
+        const isGeneric = genericIndicators.some(indicator => 
+          snippet.toLowerCase().includes(indicator)
+        );
+        
+        if (isGeneric && title) {
+          // Try to extract meaningful info from title instead
+          let meaningfulTitle = title
+            .replace(/^(r\/\w+\s*-\s*)?/i, '') // Remove r/subreddit prefix
+            .replace(/\s*-\s*Reddit$/i, '') // Remove "- Reddit" suffix
+            .replace(/\s*-\s*YouTube$/i, '') // Remove "- YouTube" suffix
+            .replace(/\s*\|\s*.*$/i, '') // Remove everything after | symbol
+            .replace(/\s*\.\.\.$/, '') // Remove trailing ellipsis
+            .trim();
+          
+          // For blog URLs, try to create a more descriptive summary
+          if (url && (url.includes('blog') || url.includes('review')) && meaningfulTitle.length > 15) {
+            // Create a summary based on what type of review this appears to be
+            if (meaningfulTitle.toLowerCase().includes('review')) {
+              return `In-depth review of ${meaningfulTitle.replace(/review of\s*/gi, '').trim()}`;
+            } else if (meaningfulTitle.toLowerCase().includes('vs') || meaningfulTitle.toLowerCase().includes('comparison')) {
+              return `Comparison review: ${meaningfulTitle}`;
+            } else {
+              return `Review analysis: ${meaningfulTitle}`;
+            }
+          }
+          
+          // If title is still too generic, try to create a better description
+          if (meaningfulTitle.length < 10 || meaningfulTitle.toLowerCase().includes('missing:')) {
+            meaningfulTitle = `Review about ${brand} products`;
+          }
+          
+          return meaningfulTitle;
+        }
+        
+        // Clean up snippet by removing generic phrases
+        const cleanedSnippet = snippet
+          .replace(/\s*-\s*see full review for details\s*/gi, '')
+          .replace(/\s*discussion about\s*/gi, '')
+          .replace(/\s*missing:\s*/gi, '')
+          .replace(/\s*more details\s*/gi, '')
+          .replace(/\s*\.\.\.\s*$/gi, '')
+          .trim();
+        
+        // If cleaned snippet is too short, use title or fallback
+        if (cleanedSnippet.length < 10) {
+          return title || 'Review content available at source';
+        }
+        
+        return cleanedSnippet;
+      };
+      
+      const enhancedSnippet = await enhanceSnippet(result.title || '', result.snippet || '', result.link || '');
+      
       return {
         title: result.title || 'Untitled Review',
-        snippet: result.snippet || '',
+        snippet: enhancedSnippet,
         url: result.link || '',
         source: source,
         tags: tags,
@@ -486,18 +640,136 @@ export async function POST(request: NextRequest) {
       };
     };
     
-    // Convert all results to Review format
-    const formattedReviews = allResults.map(convertToReview);
+    // Filter results to only include those that actually mention the brand
+    const brandFilteredResults = allResults.filter(result => {
+      const title = (result.title || '').toLowerCase();
+      const snippet = (result.snippet || '').toLowerCase();
+      const brandLower = brand.toLowerCase();
+      const url = (result.link || '').toLowerCase();
+      
+      // Check for exact brand mention
+      const hasBrandMention = title.includes(brandLower) || snippet.includes(brandLower);
+      
+      if (!hasBrandMention) {
+        console.log(`🚫 BRAND FILTER: Removing result without brand mention: "${result.title}"`);
+        return false;
+      }
+      
+      // Check if this is from a reliable source for fit content
+      const isReliableSource = url.includes('reddit') || 
+                              url.includes('substack') || 
+                              url.includes('blog') ||
+                              url.includes('medium') ||
+                              url.includes('fashionista') ||
+                              url.includes('vogue') ||
+                              url.includes('elle') ||
+                              url.includes('harpersbazaar') ||
+                              url.includes('refinery29') ||
+                              url.includes('who-what-wear') ||
+                              url.includes('coveteur') ||
+                              url.includes('fashionbeans');
+      
+      // Check if content contains fit-related terms
+      const text = `${title} ${snippet}`;
+      const fitRelatedTerms = [
+        'runs small', 'runs large', 'true to size', 'fits small', 'fits large',
+        'size up', 'size down', 'sized up', 'sized down', 'sizing',
+        'too small', 'too big', 'too large', 'too tight', 'too loose',
+        'fits perfectly', 'perfect fit', 'great fit', 'good fit', 'fits well',
+        'fit', 'size', 'measurements', 'dimensions'
+      ];
+      
+      const hasFitContent = fitRelatedTerms.some(term => text.includes(term));
+      
+      // Relaxed criteria for reliable sources with fit content
+      if (isReliableSource && hasFitContent) {
+        console.log(`✅ FIT SOURCE: Keeping fit-related content from reliable source: "${result.title}"`);
+        return true;
+      }
+      
+      // Standard substantial mention check for other content
+      const brandMentionCount = (text.match(new RegExp(brandLower, 'g')) || []).length;
+      
+      // If brand is mentioned multiple times or in context of review/quality terms, it's likely substantial
+      const hasSubstantialMention = brandMentionCount > 1 || 
+        text.includes(`${brandLower} review`) ||
+        text.includes(`${brandLower} quality`) ||
+        text.includes(`${brandLower} fit`) ||
+        text.includes(`${brandLower} brand`) ||
+        text.includes(`${brandLower} product`) ||
+        text.includes(`${brandLower} experience`) ||
+        text.includes(`${brandLower} recommend`) ||
+        text.includes(`${brandLower} opinion`) ||
+        text.includes(`${brandLower} versus`) ||
+        text.includes(`${brandLower} vs`) ||
+        text.includes(`${brandLower} comparison`) ||
+        text.includes(`from ${brandLower}`) ||
+        text.includes(`${brandLower}'s`) ||
+        text.includes(`the ${brandLower}`) ||
+        // Brand mentioned in title is usually substantial
+        title.includes(brandLower);
+      
+      if (!hasSubstantialMention) {
+        console.log(`🚫 SUBSTANCE FILTER: Removing result with only passing brand mention: "${result.title}"`);
+        return false;
+      }
+      
+      console.log(`✅ BRAND VALIDATION: Keeping result: "${result.title}"`);
+      return true;
+    });
     
-    // Group reviews by source type with proper Review structure
+    console.log(`🔍 BRAND FILTERING: Reduced from ${allResults.length} to ${brandFilteredResults.length} results`);
+
+    // Convert all results to Review format and deduplicate (with GPT enhancement)
+    console.log('🤖 Starting GPT-enhanced snippet processing...');
+    const formattedReviews = await Promise.all(brandFilteredResults.map(convertToReview));
+    
+    // Deduplicate reviews based on title and URL
+    const uniqueReviews = formattedReviews.filter((review, index, array) => {
+      // Check if this is the first occurrence of this title or URL
+      const firstIndex = array.findIndex(r => 
+        r.title === review.title || 
+        r.url === review.url ||
+        (r.title.length > 10 && review.title.length > 10 && 
+         r.title.toLowerCase().includes(review.title.toLowerCase().substring(0, 20)))
+      );
+      return firstIndex === index;
+    });
+    
+    console.log(`🔄 DEDUPLICATION: Reduced from ${formattedReviews.length} to ${uniqueReviews.length} reviews`);
+    
+    // Prioritize reviews by fit relevance
+    const prioritizedReviews = uniqueReviews.sort((a, b) => {
+      const scoreA = calculateFitRelevanceScore(a);
+      const scoreB = calculateFitRelevanceScore(b);
+      
+      // Sort by score descending (highest score first)
+      if (scoreA !== scoreB) {
+        return scoreB - scoreA;
+      }
+      
+      // If scores are equal, prioritize by confidence level
+      const confidenceOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+      return confidenceOrder[b.confidence] - confidenceOrder[a.confidence];
+    });
+    
+    console.log(`📊 FIT PRIORITIZATION: Sorted ${uniqueReviews.length} reviews by fit relevance`);
+    
+    // Log top fit-relevant reviews
+    prioritizedReviews.slice(0, 5).forEach((review, index) => {
+      const score = calculateFitRelevanceScore(review);
+      console.log(`🏆 #${index + 1} FIT RELEVANT: "${review.title.substring(0, 60)}..." (score: ${score})`);
+    });
+    
+    // Group reviews by source type with proper Review structure using prioritized reviews
     const groupedReviews = {
-      primary: formattedReviews.filter(r => r.url.includes('reddit') || r.url.includes('substack')),
-      community: formattedReviews.filter(r => r.url.includes('forum') || r.url.includes('community')),
-      blogs: formattedReviews.filter(r => r.url.includes('blog') || r.url.includes('medium')),
-      videos: formattedReviews.filter(r => r.url.includes('youtube') || r.url.includes('video')),
-      social: formattedReviews.filter(r => r.url.includes('instagram') || r.url.includes('twitter')),
-      publications: formattedReviews.filter(r => r.url.includes('magazine') || r.url.includes('vogue')),
-      other: formattedReviews.filter(r => 
+      primary: prioritizedReviews.filter(r => r.url.includes('reddit') || r.url.includes('substack')),
+      community: prioritizedReviews.filter(r => r.url.includes('forum') || r.url.includes('community')),
+      blogs: prioritizedReviews.filter(r => r.url.includes('blog') || r.url.includes('medium')),
+      videos: prioritizedReviews.filter(r => r.url.includes('youtube') || r.url.includes('video')),
+      social: prioritizedReviews.filter(r => r.url.includes('instagram') || r.url.includes('twitter')),
+      publications: prioritizedReviews.filter(r => r.url.includes('magazine') || r.url.includes('vogue')),
+      other: prioritizedReviews.filter(r => 
         !['reddit', 'substack', 'forum', 'community', 'blog', 'medium', 'youtube', 'video', 'instagram', 'twitter', 'magazine', 'vogue']
           .some(s => r.url.includes(s))
       )
@@ -509,12 +781,12 @@ export async function POST(request: NextRequest) {
         confidence: analysis.overallConfidence || 'low',
         sections,
         hasData: Object.keys(sections).length > 0,
-        totalResults: allResults.length,
+        totalResults: prioritizedReviews.length,
         sources: []
       },
-      reviews: formattedReviews.slice(0, 20),
+      reviews: prioritizedReviews.slice(0, 20),
       groupedReviews,
-      totalResults: allResults.length
+      totalResults: brandFilteredResults.length
     });
     
   } catch (error) {
@@ -592,6 +864,81 @@ function extractTags(title?: string, snippet?: string): string[] {
   return tags;
 }
 
+// Helper function to calculate fit relevance score for prioritizing reviews
+function calculateFitRelevanceScore(review: Review): number {
+  const text = `${review.title} ${review.snippet}`.toLowerCase();
+  let score = 0;
+  
+  // High priority fit terms (most valuable for fit analysis)
+  const highPriorityFitTerms = [
+    'runs small', 'runs large', 'true to size', 'fits small', 'fits large',
+    'size up', 'size down', 'sized up', 'sized down',
+    'too small', 'too big', 'too large', 'too tight', 'too loose',
+    'fits perfectly', 'perfect fit', 'great fit', 'good fit',
+    'fits well', 'fits true', 'sizing'
+  ];
+  
+  // Medium priority fit terms
+  const mediumPriorityFitTerms = [
+    'fit', 'size', 'length', 'width', 'measurements', 'dimensions',
+    'petite', 'regular', 'tall', 'plus size', 'xs', 'small', 'medium', 'large', 'xl',
+    'inches', 'cm', 'bust', 'waist', 'hips', 'chest',
+    'sleeve', 'hem', 'inseam', 'rise'
+  ];
+  
+  // Experience indicators (shows first-hand experience with fit)
+  const experienceTerms = [
+    'i bought', 'i ordered', 'i tried', 'i wear', 'i own', 'i have',
+    'my size', 'my usual', 'i\'m', 'i am', 'i purchased',
+    'fit me', 'on me', 'for me'
+  ];
+  
+  // Count high priority terms (worth 10 points each)
+  highPriorityFitTerms.forEach(term => {
+    if (text.includes(term)) {
+      score += 10;
+      console.log(`🎯 HIGH FIT: "${term}" found in "${review.title.substring(0, 40)}..." (+10 points)`);
+    }
+  });
+  
+  // Count medium priority terms (worth 3 points each, max 15 points)
+  let mediumTermCount = 0;
+  mediumPriorityFitTerms.forEach(term => {
+    if (text.includes(term)) {
+      mediumTermCount++;
+    }
+  });
+  score += Math.min(mediumTermCount * 3, 15);
+  
+  // Count experience terms (worth 5 points each, max 10 points)
+  let experienceCount = 0;
+  experienceTerms.forEach(term => {
+    if (text.includes(term)) {
+      experienceCount++;
+    }
+  });
+  score += Math.min(experienceCount * 5, 10);
+  
+  // Bonus for fit-related tags
+  if (review.tags.includes('true-to-size') || review.tags.includes('sizing')) {
+    score += 5;
+  }
+  
+  // Bonus for high confidence reviews
+  if (review.confidence === 'high') {
+    score += 3;
+  } else if (review.confidence === 'medium') {
+    score += 1;
+  }
+  
+  // Bonus for quality sources (Reddit discussions tend to have good fit info)
+  if (text.includes('reddit') || review.url.includes('reddit')) {
+    score += 2;
+  }
+  
+  return score;
+}
+
 // Helper function to calculate confidence based on result relevance
 function calculateConfidence(result: SerperResult): "high" | "medium" | "low" {
   const text = `${result.title || ''} ${result.snippet || ''}`.toLowerCase();
@@ -612,9 +959,21 @@ function calculateConfidence(result: SerperResult): "high" | "medium" | "low" {
     score += 1;
   }
   
+  // Check for first-hand experience indicators
+  if (text.includes('i bought') || text.includes('i tried') || text.includes('my experience') || 
+      text.includes('i ordered') || text.includes('i own') || text.includes('i have')) {
+    score += 2;
+  }
+  
+  // Check for specific measurements or detailed descriptions
+  if (text.includes('size') || text.includes('fit') || text.includes('length') || 
+      text.includes('width') || text.includes('measurements')) {
+    score += 1;
+  }
+  
   // Return confidence based on score
-  if (score >= 3) return 'high';
-  if (score >= 1) return 'medium';
+  if (score >= 4) return 'high';
+  if (score >= 2) return 'medium';
   return 'low';
 }
 
@@ -639,6 +998,48 @@ async function analyzeResultsWithGPT5(results: SerperResult[], brand: string, ca
   const categoryContext = category !== 'general' ? 
     `\nThis is a ${category} brand, so focus on ${category}-specific aspects.` : '';
   
+  // Create category-aware JSON structure
+  const getFitSection = () => {
+    if (category === 'bags' || category === 'accessories') {
+      // For bags/accessories, fit doesn't make sense - skip it entirely
+      return '';
+    }
+    return `  "fit": {
+    "recommendation": "Clear, specific fit advice based on the reviews (e.g., 'runs small, size up' or 'true to size')",
+    "confidence": "low|medium|high",
+    "evidence": ["Direct quotes from reviews supporting this assessment"]
+  },`;
+  };
+
+  const getQualityLabel = () => {
+    if (category === 'bags' || category === 'accessories') {
+      return 'construction and durability assessment';
+    }
+    return 'quality assessment based on customer feedback';
+  };
+
+  const getMaterialsLabel = () => {
+    if (category === 'bags') {
+      return 'List of materials mentioned (e.g., "ballistic nylon", "leather", "Cordura")';
+    }
+    return 'List of materials mentioned (e.g., "100% cotton", "merino wool")';
+  };
+
+  const getWashCareSection = () => {
+    if (category === 'bags' || category === 'accessories') {
+      return `  "durability": {
+    "recommendation": "Durability and longevity assessment based on customer experiences",
+    "confidence": "low|medium|high",
+    "evidence": ["Quotes about long-term use, wear patterns, durability"]
+  },`;
+    }
+    return `  "washCare": {
+    "recommendation": "Washing and care advice based on customer experiences",
+    "confidence": "low|medium|high",
+    "evidence": ["Quotes about washing, care, durability"]
+  },`;
+  };
+
   const prompt = `You are a fashion expert analyzing customer reviews to provide structured insights. Analyze the following reviews and provide a JSON response with specific sections.
 
 Brand: ${brand}
@@ -649,26 +1050,18 @@ ${reviewTexts}
 
 Please analyze these reviews and return a JSON object with the following structure:
 {
-  "fit": {
-    "recommendation": "Clear, specific fit advice based on the reviews (e.g., 'runs small, size up' or 'true to size')",
-    "confidence": "low|medium|high",
-    "evidence": ["Direct quotes from reviews supporting this assessment"]
-  },
+${getFitSection()}
   "quality": {
-    "recommendation": "Quality assessment based on customer feedback",
+    "recommendation": "${getQualityLabel()}",
     "confidence": "low|medium|high", 
     "evidence": ["Direct quotes about quality"]
   },
   "materials": {
-    "composition": ["List of materials mentioned (e.g., '100% cotton', 'merino wool')"],
+    "composition": ["${getMaterialsLabel()}"],
     "confidence": "low|medium|high",
     "evidence": ["Quotes mentioning materials or fabric"]
   },
-  "washCare": {
-    "recommendation": "Washing and care advice based on customer experiences",
-    "confidence": "low|medium|high",
-    "evidence": ["Quotes about washing, care, durability"]
-  },
+${getWashCareSection()}
   "overallConfidence": "low|medium|high"
 }
 
@@ -1302,7 +1695,6 @@ function extractReadableSourceName(url: string): string {
 
 // Generate a detailed, nuanced summary from the analysis
 function generateDetailedSummary(analysis: AnalysisResult, results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general'): string {
-  const summaryParts: string[] = [];
   const totalReviews = results.length;
   
   // Get unique sources for transparency
@@ -1314,101 +1706,95 @@ function generateDetailedSummary(analysis: AnalysisResult, results: SerperResult
     }
   }
   const sourcesList = Array.from(allSources).slice(0, 4);
-  const sourcesText = sourcesList.length > 0 ? ` from external sources including ${sourcesList.join(', ')}` : ' from external review sources';
   
-  // Start with actual review context and source attribution
+  // Generate conversational summary in personal summary style
+  const summaryParts: string[] = [];
+  
+  // Start with context about what we found
   if (totalReviews > 0) {
-    summaryParts.push(`Based on ${totalReviews} customer reviews${sourcesText}`);
+    const sourcesText = sourcesList.length > 0 ? ` from sources like ${sourcesList.join(', ')}` : ' from various review sources';
+    summaryParts.push(`Based on feedback from ${totalReviews} reviews${sourcesText}, here's what customers are saying about ${brand}:`);
+    summaryParts.push(''); // Add spacing
   }
   
-  // Add fit information based on evidence and confidence (only for clothing/shoes)
+  // Add fit analysis in conversational tone (only for clothing/shoes)
   if (analysis.fit && analysis.fit.evidence && analysis.fit.evidence.length > 0 && (category === 'clothing' || category === 'shoes')) {
-    const productType = category === 'shoes' ? 'shoes' : 'items';
-    let fitText = '';
+    const productType = category === 'shoes' ? 'shoes' : 'clothing';
     
-    // Determine fit tendency from the recommendation content
-    if (analysis.fit.recommendation.includes('run small')) {
-      fitText = analysis.fit.confidence === 'high' 
-        ? `${brand} ${productType} consistently run small`
-        : `${brand} ${productType} tend to run small`;
-    } else if (analysis.fit.recommendation.includes('run large')) {
-      fitText = analysis.fit.confidence === 'high' 
-        ? `${brand} ${productType} consistently run large`
-        : `${brand} ${productType} tend to run large`;
-    } else if (analysis.fit.recommendation.includes('true-to-size')) {
-      fitText = analysis.fit.confidence === 'high' 
-        ? `${brand} ${productType} consistently fit true to size`
-        : `${brand} ${productType} generally fit true to size`;
-    }
-    
-    if (fitText) {
-      summaryParts.push(fitText);
-    }
-  }
-  
-  // Add quality assessment based on evidence data, not text parsing
-  if (analysis.quality && analysis.quality.evidence && analysis.quality.evidence.length > 0) {
-    let qualityText = '';
-    
-    // Base the summary on the confidence and evidence we actually have
-    if (analysis.quality.confidence === 'high') {
-      qualityText = '. Customer reviews consistently highlight quality construction';
-    } else if (analysis.quality.confidence === 'medium') {
-      qualityText = '. Most quality mentions in reviews are positive';
+    if (analysis.fit.recommendation.toLowerCase().includes('run small') || analysis.fit.recommendation.toLowerCase().includes('runs small')) {
+      if (analysis.fit.confidence === 'high') {
+        summaryParts.push(`**Sizing**: Most reviewers agree that ${brand} ${productType} run small. You'll likely want to size up from your usual size.`);
+      } else {
+        summaryParts.push(`**Sizing**: Some customers find ${brand} ${productType} run small, though experiences vary. Consider sizing up if you prefer a looser fit.`);
+      }
+    } else if (analysis.fit.recommendation.toLowerCase().includes('run large') || analysis.fit.recommendation.toLowerCase().includes('runs large')) {
+      if (analysis.fit.confidence === 'high') {
+        summaryParts.push(`**Sizing**: Customer reviews consistently mention that ${brand} ${productType} run large. Most people recommend sizing down.`);
+      } else {
+        summaryParts.push(`**Sizing**: There's some indication that ${brand} ${productType} may run large, but experiences are mixed. Your usual size should work for most people.`);
+      }
+    } else if (analysis.fit.recommendation.toLowerCase().includes('true to size') || analysis.fit.recommendation.toLowerCase().includes('true-to-size')) {
+      if (analysis.fit.confidence === 'high') {
+        summaryParts.push(`**Sizing**: Great news - ${brand} ${productType} are consistently described as true to size. Your usual size should work perfectly.`);
+      } else {
+        summaryParts.push(`**Sizing**: ${brand} ${productType} generally fit as expected. Most customers stick with their usual size.`);
+      }
     } else {
-      qualityText = '. Some quality feedback found in reviews';
+      // Catch-all for other fit feedback
+      if (analysis.fit.confidence === 'medium' || analysis.fit.confidence === 'high') {
+        summaryParts.push(`**Sizing**: Customer experiences with ${brand} ${productType} sizing are mixed. Check individual reviews for specific items you're considering.`);
+      }
     }
-    
-    if (qualityText && summaryParts.length > 0) {
-      summaryParts[summaryParts.length - 1] += qualityText;
-    } else if (qualityText) {
-      summaryParts.push(qualityText.replace('. ', ''));
+    summaryParts.push(''); // Add spacing
+  }
+  
+  // Add quality insights in personal tone
+  if (analysis.quality && analysis.quality.evidence && analysis.quality.evidence.length > 0) {
+    if (analysis.quality.confidence === 'high') {
+      summaryParts.push(`**Quality**: Customers consistently praise ${brand}'s construction quality. Reviews highlight attention to detail and durable materials.`);
+    } else if (analysis.quality.confidence === 'medium') {
+      summaryParts.push(`**Quality**: Most customers seem satisfied with ${brand}'s quality, though some mention inconsistencies.`);
+    } else {
+      summaryParts.push(`**Quality**: There's mixed feedback on quality - some love it, others have concerns. Worth reading individual reviews for specific items.`);
+    }
+    summaryParts.push(''); // Add spacing
+  }
+  
+  // Add material insights for bags/accessories
+  if (category === 'bags' || category === 'accessories') {
+    if (analysis.fabric && analysis.fabric.recommendation) {
+      const materialInfo = analysis.fabric.recommendation;
+      if (materialInfo.includes('mention materials:')) {
+        const materials = materialInfo.split('mention materials:')[1].split('.')[0].trim();
+        summaryParts.push(`**Materials**: Reviews mention materials like ${materials}. Customers appreciate the material choices.`);
+        summaryParts.push(''); // Add spacing
+      }
     }
   }
   
-  // Add fabric/material insights if available
-  if (analysis.fabric && analysis.fabric.recommendation) {
-    const fabricInfo = analysis.fabric.recommendation.split('.')[0]; // Get material info without quotes
-    if (fabricInfo.includes('mention materials:')) {
-      const materials = fabricInfo.split('mention materials:')[1].trim();
-      const materialType = category === 'bags' ? 'materials' : 'fabric materials';
-      summaryParts[summaryParts.length - 1] += `, with commonly mentioned ${materialType} being ${materials}`;
-    } else if (fabricInfo.includes('describe fabric as') && category === 'clothing') {
-      const qualities = fabricInfo.split('describe fabric as')[1].trim();
-      summaryParts[summaryParts.length - 1] += `, with fabric described as ${qualities}`;
+  // Add care instructions insights if available
+  if (analysis.washCare && analysis.washCare.recommendation) {
+    if (analysis.washCare.recommendation.includes('gentle') || analysis.washCare.recommendation.includes('cold')) {
+      summaryParts.push(`**Care**: Customers recommend gentle care - cold wash and air dry seem to work best for maintaining quality.`);
+      summaryParts.push(''); // Add spacing
+    } else if (analysis.washCare.recommendation.includes('shrink')) {
+      summaryParts.push(`**Care**: Some customers mention sizing changes after washing. Follow care instructions carefully to maintain fit.`);
+      summaryParts.push(''); // Add spacing
     }
   }
   
-  // Add wash experiences only if customers shared actual post-wash results
-  if (analysis.washCare) {
-    if (analysis.washCare.recommendation.includes('wash-related issues')) {
-      summaryParts[summaryParts.length - 1] += '. Some customers experienced issues after washing';
-    } else if (analysis.washCare.recommendation.includes('hold up well after washing')) {
-      summaryParts[summaryParts.length - 1] += '. Customer reviews indicate items maintain quality after washing';
-    } else if (analysis.washCare.recommendation.includes('post-wash feedback')) {
-      summaryParts[summaryParts.length - 1] += '. Limited post-wash feedback available from customers';
-    }
-  }
-  
-  // Add confidence context
+  // Add confidence note in personal tone
   if (analysis.overallConfidence === 'low' && totalReviews < 5) {
-    summaryParts.push(' Note: Limited review data available - individual experiences may vary significantly.');
+    summaryParts.push(`Keep in mind there's limited review data for ${brand}, so individual experiences might vary more than usual.`);
   } else if (analysis.overallConfidence === 'medium' && totalReviews >= 5) {
-    summaryParts.push(' These patterns emerge from customer feedback, though individual product experiences can vary.');
+    summaryParts.push(`These insights come from real customer experiences, though everyone's preferences and body types are different.`);
   }
   
   // Fallback for no analysis
-  if (summaryParts.length === 0) {
-    return `Found ${totalReviews} results for ${brand}. Review content includes varying experiences with fit. ${analysis.quality ? 'Quality feedback available.' : 'Limited quality information found in reviews.'} Individual product reviews provide more specific insights.`;
+  if (summaryParts.length <= 2) { // Only intro and spacing
+    return `Found ${totalReviews} reviews for ${brand}, but the feedback varies quite a bit. Individual product reviews will give you the most specific insights for what you're considering.`;
   }
   
-  // Join parts and ensure proper sentence structure
-  let summary = summaryParts.join('');
-  
-  // Ensure it ends with a period
-  if (!summary.endsWith('.')) {
-    summary += '.';
-  }
-  
-  return summary;
+  // Join parts with proper line breaks
+  return summaryParts.join('\n').trim();
 }

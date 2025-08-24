@@ -1036,6 +1036,29 @@
         
         const fullText = reviewFields.join(' ').toLowerCase();
         
+        // Double-check brand relevance - ensure the review actually discusses the brand meaningfully
+        const brandName = data.brandName?.toLowerCase() || '';
+        if (brandName && !fullText.includes(brandName)) {
+            console.log('⚠️ SKIPPING REVIEW: Does not contain brand name', brandName, 'Review:', fullText.substring(0, 100) + '...');
+            continue;
+        }
+        
+        // Additional check: ensure it's not just a passing mention
+        if (brandName) {
+            const brandMentions = (fullText.match(new RegExp(brandName, 'gi')) || []).length;
+            const hasContextualMention = fullText.includes(`${brandName} `) || 
+                                       fullText.includes(` ${brandName}`) ||
+                                       fullText.includes(`${brandName}.`) ||
+                                       fullText.includes(`${brandName},`) ||
+                                       fullText.includes(`${brandName}!`) ||
+                                       fullText.includes(`${brandName}?`);
+                                       
+            if (brandMentions === 0 || (!hasContextualMention && fullText.length > 200)) {
+                console.log('⚠️ SKIPPING REVIEW: Brand mention appears incidental. Brand:', brandName, 'Mentions:', brandMentions, 'Has context:', hasContextualMention);
+                continue;
+            }
+        }
+        
         // Look for sentences containing relevant keywords
         const sentences = fullText.split(/[.!?]+/).filter(s => s.trim().length > 15);
         
@@ -1230,11 +1253,21 @@
         
         // Debug the actual review content to verify quotes are real
         if (data.externalSearchResults?.reviews) {
-            console.log('🔍 DEBUGGING: Sample review content:', data.externalSearchResults.reviews.slice(0, 3).map(review => ({
+            console.log('🔍 DEBUGGING: Review search details:', {
+                brandSearched: data.brandName,
+                currentURL: window.location.href,
+                totalReviewsFound: data.externalSearchResults.totalResults,
+                reviewSources: [...new Set(data.externalSearchResults.reviews.map(r => r.source))],
+                searchType: data.searchType
+            });
+            
+            console.log('🔍 DEBUGGING: Sample review content:', data.externalSearchResults.reviews.slice(0, 3).map((review, index) => ({
+                reviewIndex: index,
                 snippet: review.snippet?.substring(0, 100) + '...',
                 fullContent: review.fullContent?.substring(0, 100) + '...',
                 title: review.title,
-                source: review.source
+                source: review.source,
+                containsBrand: (review.snippet || review.fullContent || '').toLowerCase().includes((data.brandName || '').toLowerCase())
             })));
         }
         
@@ -1516,8 +1549,27 @@
                 return true;
             };
             
+            // Determine product category for section filtering
+            const isBagBrand = brandName.toLowerCase().includes('bag') || 
+                              brandName.toLowerCase().includes('backpack') ||
+                              brandName.toLowerCase().includes('handbag') ||
+                              window.location.href.toLowerCase().includes('bag') ||
+                              document.title.toLowerCase().includes('bag') ||
+                              document.title.toLowerCase().includes('backpack') ||
+                              brandName.toLowerCase().includes('evergoods') ||
+                              brandName.toLowerCase().includes('peak design') ||
+                              brandName.toLowerCase().includes('bellroy');
+
+            console.log('🎒 DEBUGGING: Product category detection:', {
+                brandName: brandName,
+                isBagBrand: isBagBrand,
+                urlContainsBag: window.location.href.toLowerCase().includes('bag'),
+                titleContainsBag: document.title.toLowerCase().includes('bag') || document.title.toLowerCase().includes('backpack')
+            });
+
+            // Filter sections based on product category
             const result = {
-                fit: isValidSection(searchData.sections?.fit) ? searchData.sections.fit : null,
+                fit: (!isBagBrand && isValidSection(searchData.sections?.fit)) ? searchData.sections.fit : null, // Skip fit for bags
                 quality: isValidSection(searchData.sections?.quality) ? searchData.sections.quality : null,
                 fabric: isValidSection(searchData.sections?.fabric) ? searchData.sections.fabric : null,
                 washCare: isValidSection(searchData.sections?.washCare) ? searchData.sections.washCare : null,
@@ -1587,6 +1639,56 @@
                 qualityBadge = `<div class="pointfour-quality-badge medium-quality">${badgeText}</div>`;
             }
         }
+        
+        // Create TLDR summary at the top
+        const createTLDRSummary = () => {
+            const tldrPoints = [];
+            
+            // Add fit info if available (only for non-bag products)
+            if (structuredData?.fit && !isBagBrand) {
+                tldrPoints.push(`Fit: ${structuredData.fit.recommendation}`);
+            }
+            
+            // Add quality info if available  
+            if (structuredData?.quality) {
+                tldrPoints.push(`Quality: ${structuredData.quality.recommendation}`);
+            } else if (structuredData?.qualityMaterials) {
+                // Extract just the key quality point, not materials list
+                const qualityText = structuredData.qualityMaterials.recommendation.split('\n')[0];
+                if (qualityText && !qualityText.toLowerCase().includes('materials:')) {
+                    tldrPoints.push(`Quality: ${qualityText}`);
+                }
+            }
+            
+            // Add wash care if significant
+            if (structuredData?.washCare && structuredData.washCare.confidence !== 'low') {
+                tldrPoints.push(`Care: ${structuredData.washCare.recommendation}`);
+            }
+            
+            // If no structured data but we have reviews, create basic TLDR
+            if (tldrPoints.length === 0 && totalReviews > 0) {
+                if (recommendation && recommendation !== 'Analyzing fit information...' && !recommendation.includes('Based on') && recommendation.length < 150) {
+                    tldrPoints.push(recommendation);
+                } else {
+                    tldrPoints.push(`${totalReviews} customer reviews analyzed - detailed insights below`);
+                }
+            }
+            
+            return tldrPoints;
+        };
+        
+        const tldrPoints = createTLDRSummary();
+        console.log('🔍 DEBUGGING: TLDR generation:', {
+            tldrPointsFound: tldrPoints.length,
+            tldrPoints: tldrPoints,
+            hasStructuredData: !!structuredData,
+            structuredDataKeys: structuredData ? Object.keys(structuredData) : [],
+            totalReviews: totalReviews,
+            recommendation: recommendation?.substring(0, 100) + '...'
+        });
+        
+        // TLDR will be shown on the reviews page, not in the widget
+        // Keep the TLDR generation for passing to the reviews page
         
         let content = `
             <div class="pointfour-results">
@@ -1895,7 +1997,133 @@
                 });
             }
             
-            const analyzeUrl = `https://www.pointfour.in/extension-reviews?${params.toString()}`;
+            // Add TLDR summary for the reviews page
+            if (tldrPoints.length > 0) {
+                params.set('tldr', tldrPoints.join(' | '));
+                console.log('🔗 [PointFour] Added TLDR to URL:', tldrPoints.join(' | '));
+            } else if (totalReviews > 0) {
+                // Fallback TLDR when no structured data available
+                const fallbackTLDR = `${totalReviews} customer reviews analyzed from Reddit and other sources`;
+                params.set('tldr', fallbackTLDR);
+                console.log('🔗 [PointFour] Added fallback TLDR to URL:', fallbackTLDR);
+            }
+            
+            // Add structured insights for better display on reviews page
+            const insights = [];
+            if (structuredData?.fit && !isBagBrand) {
+                insights.push(`Fit: ${structuredData.fit.recommendation} (${structuredData.fit.confidence || 'medium'} confidence)`);
+            }
+            if (structuredData?.quality) {
+                insights.push(`Quality: ${structuredData.quality.recommendation} (${structuredData.quality.confidence || 'medium'} confidence)`);
+            }
+            if (structuredData?.washCare) {
+                insights.push(`Care: ${structuredData.washCare.recommendation} (${structuredData.washCare.confidence || 'medium'} confidence)`);
+            }
+            
+            if (insights.length > 0) {
+                params.set('insights', insights.join(' || '));
+                console.log('🔗 [PointFour] Added structured insights to URL');
+            }
+            
+            // Add review source breakdown for better context
+            if (data.externalSearchResults?.reviews) {
+                const sources = [...new Set(data.externalSearchResults.reviews.map(r => r.source))];
+                params.set('sources', sources.join(','));
+                console.log('🔗 [PointFour] Added review sources to URL:', sources.join(','));
+            }
+            
+            // Extract key insights from individual reviews for better card summaries
+            if (data.externalSearchResults?.reviews) {
+                const reviewInsights = data.externalSearchResults.reviews.slice(0, 10).map((review, index) => {
+                    const fullText = `${review.snippet || ''} ${review.fullContent || ''} ${review.title || ''}`.toLowerCase();
+                    
+                    // Extract conclusion/recommendation patterns
+                    const conclusionPatterns = [
+                        // Positive recommendations
+                        /(?:i (?:recommend|would recommend|suggest|love|prefer)|highly recommend|great (?:choice|option|bag)|worth (?:it|the money|buying)|go (?:with|for) (?:the )?(\w+))/i,
+                        // Comparisons and preferences  
+                        /(?:(?:the )?(\w+) (?:version|model) (?:is )?(?:better|superior|preferred)|i (?:chose|picked|went with) (?:the )?(\w+))/i,
+                        // Size/fit conclusions
+                        /(?:(?:runs|fits) (?:true to size|small|large)|size (?:up|down)|(?:perfect|great) (?:fit|size))/i,
+                        // Quality assessments
+                        /(?:(?:excellent|great|poor|disappointing) quality|well (?:made|built)|(?:durable|sturdy)|(?:cheap|flimsy) (?:feeling|construction))/i,
+                        // Material feedback
+                        /(?:material (?:feels|is) (?:great|good|poor|cheap)|(?:love|hate) the (?:fabric|material))/i
+                    ];
+                    
+                    let insight = '';
+                    
+                    // Look for conclusion patterns
+                    for (const pattern of conclusionPatterns) {
+                        const match = fullText.match(pattern);
+                        if (match) {
+                            // Extract the relevant sentence containing the match
+                            const sentences = fullText.split(/[.!?]+/);
+                            const matchingSentence = sentences.find(sentence => pattern.test(sentence));
+                            if (matchingSentence && matchingSentence.trim().length > 20 && matchingSentence.trim().length < 200) {
+                                insight = matchingSentence.trim();
+                                // Capitalize first letter and clean up
+                                insight = insight.charAt(0).toUpperCase() + insight.slice(1);
+                                if (!/[.!?]$/.test(insight)) insight += '.';
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Fallback: look for key decision/conclusion phrases
+                    if (!insight) {
+                        const decisionPhrases = [
+                            /(?:my (?:verdict|conclusion|take|opinion) (?:is )?:?(.{20,150}))/i,
+                            /(?:(?:overall|in conclusion|final thoughts?):?(.{20,150}))/i,
+                            /(?:(?:tldr|tl;dr):?(.{20,150}))/i,
+                            /(?:(?:bottom line|the verdict):?(.{20,150}))/i
+                        ];
+                        
+                        for (const phrase of decisionPhrases) {
+                            const match = fullText.match(phrase);
+                            if (match && match[1]) {
+                                insight = match[1].trim();
+                                insight = insight.charAt(0).toUpperCase() + insight.slice(1);
+                                if (!/[.!?]$/.test(insight)) insight += '.';
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // If still no insight, use a shortened version of the most relevant part
+                    if (!insight && review.snippet && review.snippet.length > 50) {
+                        // Look for sentences with brand mention + opinion
+                        const sentences = review.snippet.split(/[.!?]+/);
+                        const brandMention = sentences.find(sentence => 
+                            sentence.toLowerCase().includes(brandName.toLowerCase()) && 
+                            (/(?:good|great|excellent|amazing|love|recommend|prefer|better|best|poor|bad|disappointing|hate|avoid)/.test(sentence.toLowerCase()))
+                        );
+                        
+                        if (brandMention && brandMention.trim().length < 150) {
+                            insight = brandMention.trim();
+                            insight = insight.charAt(0).toUpperCase() + insight.slice(1);
+                            if (!/[.!?]$/.test(insight)) insight += '.';
+                        }
+                    }
+                    
+                    return {
+                        id: index,
+                        title: review.title?.substring(0, 100) || `Review ${index + 1}`,
+                        source: review.source || 'Unknown',
+                        insight: insight || `Discussion about ${brandName} - see full review for details`,
+                        confidence: insight && insight.length > 50 ? 'high' : insight ? 'medium' : 'low'
+                    };
+                }).filter(insight => insight.insight.length > 10);
+                
+                if (reviewInsights.length > 0) {
+                    // Send as JSON string that the reviews page can parse
+                    params.set('reviewInsights', JSON.stringify(reviewInsights));
+                    console.log('🔗 [PointFour] Added review insights:', reviewInsights.length, 'insights extracted');
+                    console.log('🔗 [PointFour] Sample insights:', reviewInsights.slice(0, 2));
+                }
+            }
+            
+            const analyzeUrl = `http://localhost:3001/extension-reviews?${params.toString()}`;
             console.log('🔗 [PointFour] Reviews page URL:', analyzeUrl);
             
             content += `
