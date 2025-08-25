@@ -251,9 +251,15 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
 }
 
 export async function POST(request: NextRequest) {
+  let brand = ''; // Declare brand outside try block for error handling
+  
   try {
     const body = await request.json();
-    const { brand, extractedData, pageData } = body;
+    const brandData = body.brand;
+    const extractedData = body.extractedData;
+    const pageData = body.pageData;
+    
+    brand = brandData;
     
     if (!brand) {
       return NextResponse.json({ error: 'Brand name is required' }, { status: 400 });
@@ -582,7 +588,7 @@ export async function POST(request: NextRequest) {
         title: 'Quality & Materials',
         recommendation: qualityMaterialsRecommendation,
         confidence: qualityMaterialsConfidence,
-        evidence: [...new Set(qualityMaterialsEvidence)].slice(0, 3) // Remove duplicates, limit to 3
+        evidence: Array.from(new Set(qualityMaterialsEvidence)).slice(0, 3) // Remove duplicates, limit to 3
       };
     }
     
@@ -790,7 +796,7 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
           variations.push(withSpaces, withoutHyphens);
         }
         
-        return [...new Set(variations)]; // Remove duplicates
+        return Array.from(new Set(variations)); // Remove duplicates
       };
       
       const brandVariations = createBrandVariations(brandLower);
@@ -941,7 +947,7 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json({
-      brandName: brand, // Include brand name even in error response
+      brandName: brand || 'Unknown Brand', // Include brand name even in error response
       brandFitSummary: {
         summary: 'Error loading reviews',
         confidence: 'low',
