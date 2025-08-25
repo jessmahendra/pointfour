@@ -1899,7 +1899,21 @@
         const brandName = data.brandName || currentBrand || 'Unknown Brand';
         const fitTips = data.fitTips || [];
         const hasData = data.hasData;
-        const totalReviews = data.externalSearchResults?.totalResults || 0;
+        // Use the same comprehensive approach as popup.js for finding total results
+        const totalReviews = data.externalSearchResults?.totalResults || 
+                             data.richSummaryData?.totalResults || 
+                             data.totalResults || 
+                             0;
+        
+        // Debug logging for review count investigation
+        console.log('🔍 REVIEW COUNT DEBUG:', {
+            totalReviews,
+            externalSearchResults: data.externalSearchResults?.totalResults,
+            richSummaryData: data.richSummaryData?.totalResults,
+            directTotalResults: data.totalResults,
+            hasExternalResults: !!data.externalSearchResults,
+            hasRichSummaryData: !!data.richSummaryData
+        });
         
         // Smart summary detection - check multiple locations
         const findBestSummary = () => {
@@ -2598,6 +2612,13 @@
             // Create enhanced search query for the analyze page
             const params = new URLSearchParams({
                 brand: brandName
+            });
+            
+            console.log('🔗 [PointFour] Widget URL Debug:', {
+                brandNameUsed: brandName,
+                originalDataBrandName: data.brandName,
+                currentBrand: currentBrand,
+                totalReviews: totalReviews
             });
             
             // Add item name if available from URL extraction

@@ -924,6 +924,7 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
     };
 
     return NextResponse.json({
+      brandName: brand, // Include the brand name in the response
       brandFitSummary: {
         summary,
         confidence: analysis.overallConfidence || 'low',
@@ -940,6 +941,7 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json({
+      brandName: brand, // Include brand name even in error response
       brandFitSummary: {
         summary: 'Error loading reviews',
         confidence: 'low',
