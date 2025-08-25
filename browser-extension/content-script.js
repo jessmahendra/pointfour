@@ -1912,7 +1912,10 @@
             richSummaryData: data.richSummaryData?.totalResults,
             directTotalResults: data.totalResults,
             hasExternalResults: !!data.externalSearchResults,
-            hasRichSummaryData: !!data.richSummaryData
+            hasRichSummaryData: !!data.richSummaryData,
+            hasReviews: !!data.externalSearchResults?.reviews,
+            reviewsLength: data.externalSearchResults?.reviews?.length || 0,
+            dataStructure: Object.keys(data)
         });
         
         // Smart summary detection - check multiple locations
@@ -2525,8 +2528,8 @@
             `;
         }
         
-        // Add clickable button for review count
-        if (totalReviews > 0) {
+        // Add clickable button for review count - also show if we have structured data even with 0 totalReviews
+        if (totalReviews > 0 || (structuredData && (structuredData.fit || structuredData.quality || structuredData.materials))) {
             // Get URL extraction data and materials for enhanced reviews page
             const urlExtraction = window.pointFourURLExtraction || null;
             
@@ -2769,7 +2772,7 @@
                 }
             }
             
-            const analyzeUrl = `http://localhost:3001/extension-reviews?${params.toString()}`;
+            const analyzeUrl = `https://www.pointfour.in/extension-reviews?${params.toString()}`;
             console.log('🔗 [PointFour] Reviews page URL:', analyzeUrl);
             
             content += `
@@ -2778,7 +2781,7 @@
                        target="_blank" 
                        rel="noopener noreferrer" 
                        class="pointfour-reviews-button">
-                        <span>Found ${totalReviews} reviews</span>
+                        <span>${totalReviews > 0 ? `Found ${totalReviews} reviews` : 'View detailed analysis'}</span>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M7 17L17 7"></path>
                             <path d="M7 7h10v10"></path>

@@ -1,8 +1,8 @@
 // Background Service Worker for Pointfour Fashion Assistant
 // Handles brand detection, API calls, and cross-tab state management
 
-// Use production URL by default, fallback to localhost for development
-const API_BASE_URL = 'https://www.pointfour.in';
+// Use localhost for development, production URL for deployed extension
+const API_BASE_URL = 'http://localhost:3002';
 const BRAND_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (reduced for testing fresh data)
 const brandCache = new Map();
 const tabStates = new Map();
@@ -422,7 +422,8 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
       brand: brandName,
       itemName: urlExtraction?.itemName || '',
       category,
-      enhancedAnalysis: true
+      enhancedAnalysis: true,
+      enableExternalSearch: true
     };
     
     // Add URL extraction data if available

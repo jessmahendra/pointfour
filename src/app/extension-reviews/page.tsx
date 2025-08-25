@@ -151,6 +151,7 @@ function ExtensionReviewsContent() {
         body: JSON.stringify({
           brand: brandName,
           itemName: itemName || "",
+          enableExternalSearch: true,
         }),
       });
 

@@ -815,14 +815,34 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       // STRICT REQUIREMENT: If this is a specific item search, must mention the specific item
       if (finalIsSpecificItem && enhancedItemName) {
         const itemNameLower = enhancedItemName.toLowerCase();
-        const hasSpecificItemMention = fullText.includes(itemNameLower);
+        
+        // Normalize both the item name and full text for better matching
+        const normalizeText = (text: string) => {
+          return text.toLowerCase()
+            .replace(/[,.\-_]/g, ' ')  // Replace punctuation with spaces
+            .replace(/\s+/g, ' ')       // Collapse multiple spaces
+            .trim();
+        };
+        
+        const normalizedItemName = normalizeText(itemNameLower);
+        const normalizedFullText = normalizeText(fullText);
+        
+        // Split into words for flexible matching
+        const itemWords = normalizedItemName.split(' ').filter(word => word.length > 2);
+        const textWords = normalizedFullText.split(' ');
+        
+        // Check if most of the significant item words are present
+        const matchingWords = itemWords.filter(word => textWords.includes(word));
+        const matchPercentage = matchingWords.length / itemWords.length;
+        
+        const hasSpecificItemMention = matchPercentage >= 0.7; // 70% of words must match
         
         if (!hasSpecificItemMention) {
-          console.log(`🚫 ITEM FILTER: Removing result without specific item "${enhancedItemName}" mention: "${result.title}"`);
+          console.log(`🚫 ITEM FILTER: Removing result without specific item "${enhancedItemName}" mention (${Math.round(matchPercentage * 100)}% match): "${result.title}"`);
           return false;
         }
         
-        console.log(`✅ ITEM MATCH: Found specific item "${enhancedItemName}" in: "${result.title}"`);
+        console.log(`✅ ITEM MATCH: Found specific item "${enhancedItemName}" in: "${result.title}" (${Math.round(matchPercentage * 100)}% match)`);
       }
       
       // Log which brand variation matched
