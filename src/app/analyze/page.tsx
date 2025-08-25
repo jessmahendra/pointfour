@@ -475,7 +475,60 @@ Please provide a specific answer to this follow-up question.`;
   // Parse real analysis data from API response
   const parseAnalysisData = (apiResponse: AnalysisResult) => {
     const isFootwear = userProfile.category === "footwear";
-    const brandName = brandQuery.split(" ")[0] || "Brand";
+    
+    // Better brand name extraction - try to identify the actual brand from the query
+    let brandName = "Brand";
+    
+    // Common fashion brands - if query starts with these, extract the full brand name
+    const knownBrands = [
+      "le monde beryl", "me+em", "cos", "arket", "& other stories", "ganni", 
+      "isabel marant", "acne studios", "jil sander", "lemaire", "toteme",
+      "the row", "khaite", "bottega veneta", "saint laurent", "celine"
+    ];
+    
+    const queryLower = brandQuery.toLowerCase();
+    const matchedBrand = knownBrands.find(brand => queryLower.startsWith(brand));
+    
+    if (matchedBrand) {
+      // Capitalize first letter of each word for display
+      brandName = matchedBrand.split(' ').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+    } else {
+      // Fallback: use first 1-3 words as brand name based on common patterns
+      const words = brandQuery.split(" ");
+      if (words.length >= 3) {
+        // For 3+ words, try to intelligently guess brand vs product
+        // Common product terms that indicate the brand ends before them
+        const productTerms = ["dress", "top", "shirt", "pants", "jeans", "jacket", "coat", 
+                             "sweater", "cardigan", "blazer", "skirt", "bag", "handbag", 
+                             "shoes", "boots", "sneakers", "sandals", "heels", "loafer", 
+                             "loafers", "oxford", "ballet", "flats"];
+        
+        let brandWords = words.length;
+        for (let i = 1; i < words.length; i++) {
+          if (productTerms.includes(words[i].toLowerCase())) {
+            brandWords = i;
+            break;
+          }
+        }
+        
+        // Take first 1-2 words as brand (max 2 for unknown brands)
+        brandName = words.slice(0, Math.min(brandWords, 2)).join(" ");
+      } else {
+        // For shorter queries, take first word
+        brandName = words[0] || "Brand";
+      }
+      
+      // Capitalize for display
+      brandName = brandName.split(' ').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+    }
+    
+    console.log("=== BRAND NAME EXTRACTION ===");
+    console.log("Original query:", brandQuery);
+    console.log("Extracted brand name:", brandName);
     const text = apiResponse.recommendation;
 
     // Debug logging

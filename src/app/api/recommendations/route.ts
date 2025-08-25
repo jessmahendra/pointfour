@@ -44,10 +44,49 @@ export async function POST(request: NextRequest) {
     const brandMatch = query.match(/Brand\/Item:\s*([^\n]+)/);
     const brandItemText = brandMatch ? brandMatch[1].trim() : '';
     
-    // Parse brand and item name - assume first word is brand, rest is item
-    const parts = brandItemText.split(' ');
-    const brandName = parts[0] || '';
-    const itemName = parts.length > 1 ? parts.slice(1).join(' ') : '';
+    // Parse brand and item name using intelligent brand recognition
+    let brandName = '';
+    let itemName = '';
+    
+    if (brandItemText) {
+      // Known fashion brands - if text starts with these, extract the full brand name
+      const knownBrands = [
+        "le monde beryl", "me+em", "cos", "arket", "& other stories", "ganni", 
+        "isabel marant", "acne studios", "jil sander", "lemaire", "toteme",
+        "the row", "khaite", "bottega veneta", "saint laurent", "celine", "zara",
+        "h&m", "uniqlo", "massimo dutti", "mango", "reformation", "everlane"
+      ];
+      
+      const textLower = brandItemText.toLowerCase();
+      const matchedBrand = knownBrands.find(brand => textLower.startsWith(brand));
+      
+      if (matchedBrand) {
+        brandName = matchedBrand;
+        // Remove the brand from the text to get item name
+        itemName = brandItemText.substring(matchedBrand.length).trim();
+      } else {
+        // Fallback: intelligent parsing based on product terms
+        const words = brandItemText.split(' ');
+        const productTerms = ["dress", "top", "shirt", "pants", "jeans", "jacket", "coat", 
+                             "sweater", "cardigan", "blazer", "skirt", "bag", "handbag", 
+                             "shoes", "boots", "sneakers", "sandals", "heels", "loafer", 
+                             "loafers", "oxford", "ballet", "flats", "soft"];
+        
+        let brandWords = 1; // Default to first word as brand
+        for (let i = 1; i < words.length; i++) {
+          if (productTerms.includes(words[i].toLowerCase())) {
+            brandWords = i;
+            break;
+          }
+        }
+        
+        // For unknown brands, limit to max 2 words to avoid taking product names
+        brandWords = Math.min(brandWords, 2);
+        
+        brandName = words.slice(0, brandWords).join(' ');
+        itemName = words.slice(brandWords).join(' ');
+      }
+    }
     
     console.log('=== DEBUG: Extracted brand and item ===');
     console.log('Brand name:', brandName);
