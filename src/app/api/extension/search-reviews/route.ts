@@ -216,23 +216,26 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
     }
   })();
 
-  // If this is a specific item search, add material-focused queries
+  // If this is a specific item search, add item-focused queries with exact matching
   if (isSpecificItem && itemName) {
-    const materialQueries = [
+    const specificItemQueries = [
+      `"${brand} ${itemName}" review`,
+      `"${brand} ${itemName}" fit "runs small" OR "runs large" OR "true to size"`,
+      `"${brand} ${itemName}" quality "well made" OR "poorly made"`,
       `"${brand} ${itemName}" material fabric composition`,
-      `"${brand} ${itemName}" "100%" OR "cotton" OR "wool" OR "silk" OR "polyester" OR "blend"`,
-      `"${brand} ${itemName}" review material quality fabric feel`
+      `"${brand} ${itemName}" "100%" OR "cotton" OR "wool" OR "silk" OR "polyester" OR "blend"`
     ];
     
     // For clothing items, add more specific material queries
     if (category === 'clothing') {
-      materialQueries.push(
+      specificItemQueries.push(
         `"${brand} ${itemName}" "merino wool" OR "organic cotton" OR "cashmere" OR "linen"`,
-        `"${brand} ${itemName}" care instructions washing fabric content`
+        `"${brand} ${itemName}" care instructions washing shrink`
       );
     }
     
-    return [...materialQueries, ...baseQueries];
+    // Return ONLY specific item queries - don't include generic brand queries
+    return specificItemQueries;
   }
   
   return baseQueries;
@@ -736,12 +739,13 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       };
     };
     
-    // Filter results to only include those that actually mention the brand
+    // Filter results to only include those that actually mention the brand AND specific item (if provided)
     const brandFilteredResults = allResults.filter(result => {
       const title = (result.title || '').toLowerCase();
       const snippet = (result.snippet || '').toLowerCase();
       const brandLower = brand.toLowerCase();
       const url = (result.link || '').toLowerCase();
+      const fullText = `${title} ${snippet}`;
       
       // Create flexible brand variations for common brand name formats
       const createBrandVariations = (brandName: string) => {
@@ -783,58 +787,36 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       const brandVariations = createBrandVariations(brandLower);
       console.log(`🔍 BRAND VARIATIONS: Checking for brand "${brand}" using variations:`, brandVariations);
       
-      // Check for any brand variation mention
+      // STRICT REQUIREMENT: Must mention brand
       const hasBrandMention = brandVariations.some(variation => 
         title.includes(variation) || snippet.includes(variation)
       );
-      
-      // Log which variation matched (if any)
-      if (hasBrandMention) {
-        const matchedVariations = brandVariations.filter(variation => 
-          title.includes(variation) || snippet.includes(variation)
-        );
-        console.log(`✅ BRAND MATCH: Found brand mention using variations: ${matchedVariations.join(', ')} in "${result.title}"`);
-      }
       
       if (!hasBrandMention) {
         console.log(`🚫 BRAND FILTER: Removing result without brand mention: "${result.title}"`);
         return false;
       }
       
-      // Check if this is from a reliable source for fit content
-      const isReliableSource = url.includes('reddit') || 
-                              url.includes('substack') || 
-                              url.includes('blog') ||
-                              url.includes('medium') ||
-                              url.includes('fashionista') ||
-                              url.includes('vogue') ||
-                              url.includes('elle') ||
-                              url.includes('harpersbazaar') ||
-                              url.includes('refinery29') ||
-                              url.includes('who-what-wear') ||
-                              url.includes('coveteur') ||
-                              url.includes('fashionbeans');
-      
-      // Check if content contains fit-related terms
-      const fitText = `${title} ${snippet}`;
-      const fitRelatedTerms = [
-        'runs small', 'runs large', 'true to size', 'fits small', 'fits large',
-        'size up', 'size down', 'sized up', 'sized down', 'sizing',
-        'too small', 'too big', 'too large', 'too tight', 'too loose',
-        'fits perfectly', 'perfect fit', 'great fit', 'good fit', 'fits well',
-        'fit', 'size', 'measurements', 'dimensions'
-      ];
-      
-      const hasFitContent = fitRelatedTerms.some(term => fitText.includes(term));
-      
-      // Relaxed criteria for reliable sources with fit content
-      if (isReliableSource && hasFitContent) {
-        console.log(`✅ FIT SOURCE: Keeping fit-related content from reliable source: "${result.title}"`);
-        return true;
+      // STRICT REQUIREMENT: If this is a specific item search, must mention the specific item
+      if (finalIsSpecificItem && enhancedItemName) {
+        const itemNameLower = enhancedItemName.toLowerCase();
+        const hasSpecificItemMention = fullText.includes(itemNameLower);
+        
+        if (!hasSpecificItemMention) {
+          console.log(`🚫 ITEM FILTER: Removing result without specific item "${enhancedItemName}" mention: "${result.title}"`);
+          return false;
+        }
+        
+        console.log(`✅ ITEM MATCH: Found specific item "${enhancedItemName}" in: "${result.title}"`);
       }
       
-      // Standard substantial mention check for other content using flexible matching
-      const fullText = `${title} ${snippet}`;
+      // Log which brand variation matched
+      const matchedVariations = brandVariations.filter(variation => 
+        title.includes(variation) || snippet.includes(variation)
+      );
+      console.log(`✅ BRAND MATCH: Found brand mention using variations: ${matchedVariations.join(', ')} in "${result.title}"`);
+      
+      // STRICT REQUIREMENT: Must have substantial brand mention (not just passing reference)
       let totalBrandMentions = 0;
       let hasContextualMention = false;
       
@@ -854,30 +836,24 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
             fullText.includes(`${variation} sizing`) ||
             fullText.includes(`${variation} clothes`) ||
             fullText.includes(`${variation} clothing`) ||
-            fullText.includes(`${variation} fashion`) ||
-            fullText.includes(`${variation} style`)) {
+            fullText.includes(`from ${variation}`) ||
+            fullText.includes(`${variation}'s`) ||
+            fullText.includes(`the ${variation}`) ||
+            // Brand mentioned in title is usually substantial
+            title.includes(variation)) {
           hasContextualMention = true;
         }
       });
       
-      // If brand is mentioned multiple times or in context of review/quality terms, it's likely substantial
-      const hasSubstantialMention = totalBrandMentions > 1 || hasContextualMention ||
-        fullText.includes(`${brandLower} opinion`) ||
-        fullText.includes(`${brandLower} versus`) ||
-        fullText.includes(`${brandLower} vs`) ||
-        fullText.includes(`${brandLower} comparison`) ||
-        fullText.includes(`from ${brandLower}`) ||
-        fullText.includes(`${brandLower}'s`) ||
-        fullText.includes(`the ${brandLower}`) ||
-        // Brand mentioned in title is usually substantial
-        title.includes(brandLower);
+      // Must have either multiple brand mentions OR contextual mention
+      const hasSubstantialMention = totalBrandMentions > 1 || hasContextualMention;
       
       if (!hasSubstantialMention) {
         console.log(`🚫 SUBSTANCE FILTER: Removing result with only passing brand mention: "${result.title}"`);
         return false;
       }
       
-      console.log(`✅ BRAND VALIDATION: Keeping result: "${result.title}"`);
+      console.log(`✅ FINAL VALIDATION: Keeping result with ${totalBrandMentions} brand mentions, contextual: ${hasContextualMention}: "${result.title}"`);
       return true;
     });
     
