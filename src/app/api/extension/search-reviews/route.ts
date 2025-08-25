@@ -209,17 +209,23 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
       case 'clothing':
       default:
         return [
-          `${brand} clothing fit review "runs small" OR "runs large" OR "true to size"`,
-          `${brand} fashion quality fabric review`,
-          `${brand} washing shrink care instructions`
+          `"${brand}" "runs small" OR "runs large" OR "true to size" OR "size up" OR "size down"`,
+          `"${brand}" "fit" review "tight" OR "loose" OR "perfect" OR "weird" sizing`,
+          `"${brand}" "quality" "fabric" "material" "cotton" OR "wool" OR "polyester"`,
+          `"${brand}" "shrinks" OR "shrink" OR "wash" OR "care" OR "dry clean"`,
+          `"${brand}" site:reddit.com fit size review`,
+          `"${brand}" review "disappointed" OR "impressed" OR "worth it" OR "overpriced"`
         ];
     }
   })();
 
-  // Add Substack-specific queries to target high-quality fashion content
-  const substackQueries = [
-    `${brand} site:substack.com review quality fit`,
-    `${brand} site:substack.com "runs small" OR "runs large" OR "true to size"`,
+  // Add platform-specific queries to target high-quality fashion content
+  const platformQueries = [
+    `"${brand}" site:substack.com review fit quality`,
+    `"${brand}" site:reddit.com "runs small" OR "runs large" OR "true to size"`,
+    `"${brand}" site:youtube.com review "fit" OR "size" OR "quality"`,
+    `"${brand}" fashion blog review fit sizing`,
+    `"${brand}" "wardrobe" OR "closet" review fit size`,
   ];
 
   // If this is a specific item search, add item-focused queries with exact matching
@@ -246,8 +252,20 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
     return specificItemQueries;
   }
   
-  // For general brand searches, include both base queries and Substack-specific queries
-  return [...baseQueries, ...substackQueries];
+  // For general brand searches, include both base queries and platform-specific queries
+  return [...baseQueries, ...platformQueries];
+}
+
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -949,7 +967,7 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       )
     };
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       brandName: brand, // Include the brand name in the response
       brandFitSummary: {
         summary,
@@ -964,9 +982,16 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       totalResults: prioritizedReviews.length
     });
     
+    // Add CORS headers for browser extension
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+    
+    return response;
+    
   } catch (error) {
     console.error('API Error:', error);
-    return NextResponse.json({
+    const errorResponse = NextResponse.json({
       brandName: brand || 'Unknown Brand', // Include brand name even in error response
       brandFitSummary: {
         summary: 'Error loading reviews',
@@ -987,6 +1012,13 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       },
       totalResults: 0
     });
+    
+    // Add CORS headers for browser extension
+    errorResponse.headers.set('Access-Control-Allow-Origin', '*');
+    errorResponse.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    errorResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+    
+    return errorResponse;
   }
 }
 

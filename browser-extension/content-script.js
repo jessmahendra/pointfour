@@ -1900,9 +1900,10 @@
         const fitTips = data.fitTips || [];
         const hasData = data.hasData;
         // Use the same comprehensive approach as popup.js for finding total results
-        const totalReviews = data.externalSearchResults?.totalResults || 
+        const totalReviews = data.totalResults ||
+                             data.brandFitSummary?.totalResults ||
+                             data.externalSearchResults?.totalResults || 
                              data.richSummaryData?.totalResults || 
-                             data.totalResults || 
                              0;
         
         // Debug logging for review count investigation
