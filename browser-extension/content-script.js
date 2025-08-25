@@ -263,6 +263,631 @@
           hasPriceElements: hasPriceElements
       };
   }
+
+  // ========================================
+  // ENHANCED PRODUCT PAGE DETECTION
+  // ========================================
+  
+  function detectPageType() {
+      console.log('[PointFour] Detecting page type: Product vs Listing...');
+      
+      const url = window.location.href.toLowerCase();
+      const path = window.location.pathname.toLowerCase();
+      
+      // Strong indicators for individual product pages
+      const productPageIndicators = {
+          url: [
+              /\/product\/[^\/]+$/,           // /product/item-name
+              /\/item\/[^\/]+$/,              // /item/item-name  
+              /\/p\/[^\/]+$/,                 // /p/item-name
+              /\/dp\/[^\/]+$/,                // /dp/item-name (Amazon style)
+              /\/[^\/]+-p-\d+/,               // item-name-p-12345
+              /\/products\/[^\/]+$/,          // /products/item-name (singular in path)
+              /\/.+-\d+\.html$/               // item-name-12345.html
+          ],
+          dom: [
+              // Single product specific elements
+              'button[data-add-to-cart]',
+              'button[data-add-to-bag]', 
+              'select[name="size"]',
+              'select[name="color"]',
+              '.size-selector',
+              '.color-selector',
+              '.product-options',
+              '.add-to-cart',
+              '.add-to-bag',
+              '.add-to-wishlist',
+              '.quantity-selector',
+              '.product-gallery',
+              '.product-thumbnails',
+              '.zoom-image',
+              '[data-product-id]:not([data-product-list])',
+              '.breadcrumb:has(a[href*="product"])'
+          ],
+          content: [
+              'add to cart',
+              'add to bag', 
+              'add to basket',
+              'select size',
+              'choose color',
+              'size guide',
+              'product details',
+              'care instructions',
+              'composition:',
+              'material:',
+              'model wears',
+              'model is wearing'
+          ]
+      };
+      
+      // Strong indicators for listing/category pages
+      const listingPageIndicators = {
+          url: [
+              /\/products\/?$/,               // /products (plural, no item)
+              /\/category\//,                 // /category/...
+              /\/collection\//,               // /collection/...
+              /\/shop\//,                     // /shop/...
+              /\/browse\//,                   // /browse/...
+              /\/search/,                     // /search...
+              /\/filter/,                     // /filter...
+              /\/sale\/?$/,                   // /sale
+              /\/new\/?$/,                    // /new
+              /\/bestsellers\/?$/             // /bestsellers
+          ],
+          dom: [
+              '.product-grid',
+              '.product-list',
+              '.products-grid', 
+              '.products-list',
+              '[data-product-list]',
+              '.category-products',
+              '.search-results',
+              '.filter-sidebar',
+              '.sort-dropdown',
+              '.pagination',
+              '.load-more',
+              '.product-card:nth-child(3)', // Multiple product cards
+              '.grid-item:nth-child(4)'     // Grid of items
+          ],
+          content: [
+              'showing \\d+ of \\d+ products',
+              'sort by',
+              'filter by',
+              'load more',
+              'view all',
+              'products found',
+              'results for'
+          ]
+      };
+      
+      let productScore = 0;
+      let listingScore = 0;
+      const signals = [];
+      
+      // Check URL patterns
+      for (const pattern of productPageIndicators.url) {
+          if (pattern.test(url) || pattern.test(path)) {
+              productScore += 3;
+              signals.push(`Product URL pattern: ${pattern}`);
+          }
+      }
+      
+      for (const pattern of listingPageIndicators.url) {
+          if (pattern.test(url) || pattern.test(path)) {
+              listingScore += 3;
+              signals.push(`Listing URL pattern: ${pattern}`);
+          }
+      }
+      
+      // Check DOM elements
+      for (const selector of productPageIndicators.dom) {
+          if (document.querySelector(selector)) {
+              productScore += 2;
+              signals.push(`Product DOM element: ${selector}`);
+          }
+      }
+      
+      for (const selector of listingPageIndicators.dom) {
+          if (document.querySelector(selector)) {
+              listingScore += 2;
+              signals.push(`Listing DOM element: ${selector}`);
+          }
+      }
+      
+      // Check content patterns
+      const pageText = document.body?.innerText?.toLowerCase() || '';
+      
+      for (const pattern of productPageIndicators.content) {
+          if (pageText.includes(pattern.toLowerCase())) {
+              productScore += 1;
+              signals.push(`Product content: ${pattern}`);
+          }
+      }
+      
+      for (const pattern of listingPageIndicators.content) {
+          const regex = new RegExp(pattern, 'i');
+          if (regex.test(pageText)) {
+              listingScore += 1;
+              signals.push(`Listing content: ${pattern}`);
+          }
+      }
+      
+      // Additional product page bonus checks
+      const hasUniqueProductData = !!(
+          document.querySelector('[data-product-id]') ||
+          document.querySelector('[data-sku]') ||
+          document.querySelector('.product-sku') ||
+          document.querySelector('.item-number')
+      );
+      
+      if (hasUniqueProductData) {
+          productScore += 2;
+          signals.push('Has unique product identifiers');
+      }
+      
+      // Check for multiple product links (strong listing indicator)
+      const productLinks = document.querySelectorAll('a[href*="/product/"], a[href*="/item/"], a[href*="/p/"]');
+      if (productLinks.length > 3) {
+          listingScore += 3;
+          signals.push(`Multiple product links found: ${productLinks.length}`);
+      }
+      
+      console.log('[PointFour] Page type detection scores:', { productScore, listingScore, signals });
+      
+      return {
+          isProductPage: productScore > listingScore && productScore >= 3,
+          isListingPage: listingScore > productScore && listingScore >= 3,
+          productScore,
+          listingScore,
+          signals,
+          confidence: Math.max(productScore, listingScore) >= 5 ? 'high' : 'medium'
+      };
+  }
+
+  function extractMaterialsFromPage() {
+      console.log('[PointFour] Extracting materials from product page...');
+      
+      const materials = {
+          composition: [],
+          careInstructions: [],
+          sizeGuide: {},
+          confidence: 'low'
+      };
+      
+      // Look for material composition in common locations
+      const materialSelectors = [
+          '.product-details',
+          '.product-description', 
+          '.product-info',
+          '.composition',
+          '.materials',
+          '.care-instructions',
+          '.product-specifications',
+          '.spec-table',
+          '[data-tab="details"]',
+          '[data-tab="care"]',
+          '.accordion-content',
+          '.expandable-content'
+      ];
+      
+      const materialPatterns = [
+          /(\d+%\s+(?:organic\s+)?(?:merino\s+)?wool)/gi,
+          /(\d+%\s+(?:organic\s+)?cotton)/gi, 
+          /(\d+%\s+silk)/gi,
+          /(\d+%\s+linen)/gi,
+          /(\d+%\s+cashmere)/gi,
+          /(\d+%\s+polyester)/gi,
+          /(\d+%\s+viscose)/gi,
+          /(\d+%\s+lyocell)/gi,
+          /(\d+%\s+tencel)/gi,
+          /(\d+%\s+modal)/gi,
+          /(\d+%\s+spandex)/gi,
+          /(\d+%\s+elastane)/gi,
+          /(100%\s+\w+)/gi,
+          /(?:composition|material|fabric):\s*([^\.]+)/gi
+      ];
+      
+      const carePatterns = [
+          /machine wash/gi,
+          /hand wash/gi,
+          /dry clean/gi,
+          /do not bleach/gi,
+          /tumble dry/gi,
+          /iron on low/gi,
+          /lay flat to dry/gi,
+          /wash separately/gi
+      ];
+      
+      const sizeGuidePatterns = [
+          /size\s+(\w+):\s*([\d\-\s]+(?:cm|in|inches)?)/gi,
+          /(?:bust|chest|waist|hip|shoulder|length|inseam):\s*([\d\-\s]+(?:cm|in|inches)?)/gi
+      ];
+      
+      for (const selector of materialSelectors) {
+          const elements = document.querySelectorAll(selector);
+          for (const element of elements) {
+              const text = element.innerText || element.textContent || '';
+              
+              // Extract materials
+              for (const pattern of materialPatterns) {
+                  const matches = text.match(pattern);
+                  if (matches) {
+                      materials.composition.push(...matches);
+                      materials.confidence = 'high';
+                  }
+              }
+              
+              // Extract care instructions  
+              for (const pattern of carePatterns) {
+                  const matches = text.match(pattern);
+                  if (matches) {
+                      materials.careInstructions.push(...matches);
+                  }
+              }
+              
+              // Extract size guide info
+              for (const pattern of sizeGuidePatterns) {
+                  const matches = [...text.matchAll(pattern)];
+                  for (const match of matches) {
+                      materials.sizeGuide[match[1] || 'measurement'] = match[2] || match[1];
+                  }
+              }
+          }
+      }
+      
+      // Remove duplicates
+      materials.composition = [...new Set(materials.composition)];
+      materials.careInstructions = [...new Set(materials.careInstructions)];
+      
+      console.log('[PointFour] Extracted materials:', materials);
+      
+      // FINAL PROMINENT LOG MESSAGE
+      console.log('🧵🧵🧵 [PointFour] MATERIALS EXTRACTION COMPLETED 🧵🧵🧵');
+      console.log('🧵 MATERIALS FINAL RESULT:', JSON.stringify(materials, null, 2));
+      console.log('🧵🧵🧵 END MATERIALS EXTRACTION 🧵🧵🧵');
+      
+      return materials;
+  }
+
+  function extractSizeGuideFromPage() {
+      console.log('[PointFour] Extracting size guide from product page...');
+      
+      const sizeGuide = {
+          measurements: {},
+          sizingAdvice: [],
+          modelInfo: {},
+          confidence: 'low'
+      };
+      
+      // Debug: Check what elements are found
+      console.log('[PointFour] Debug: Checking for size guide elements on page...');
+      
+      // Look for size guide in common locations - focusing on tables and structured data
+      const sizeGuideSelectors = [
+          // Direct size guide containers
+          '.size-guide',
+          '.size-chart', 
+          '.sizing-info',
+          '.fit-guide',
+          '[data-tab="sizing"]',
+          '[data-tab="size-guide"]',
+          '.modal-size-guide',
+          '.sizing-table',
+          '.measurement-table',
+          
+          // Table-based size guides (most common)
+          'table',  // We'll analyze all tables and filter by content
+          
+          // More specific table selectors
+          'table[class*="size"]',
+          'table[id*="size"]',
+          '.size-table table',
+          '.sizing-chart table',
+          
+          // Modal and popup selectors
+          '[class*="modal"] table',
+          '[class*="popup"] table',
+          '[class*="overlay"] table',
+          
+          // Additional selectors for various sites
+          'a[href*="size-guide"]',
+          'button[class*="size-guide"]',
+          '[class*="size-fit"]',
+          '.product-size-guide',
+          '.size-info',
+          '.fit-information',
+          '.pdp-size-guide',
+          '.product-details .size',
+          '.product-info .size',
+          '#size-guide',
+          '.size-guide-link',
+          '.size-guide-button'
+      ];
+      
+      const measurementPatterns = [
+          /(?:size\s+)?(\w+(?:\s+\w+)?):\s*([\d\-\.\s]+)(?:\s*(?:cm|in|inches|'|"))/gi,
+          /(\w+)\s+\((?:cm|in|inches)\):\s*([\d\-\.\s]+)/gi,
+          /(\w+)\s+measurement:\s*([\d\-\.\s]+)/gi
+      ];
+      
+      const modelInfoPatterns = [
+          /model (?:is|wears) (?:size\s+)?(\w+)/gi,
+          /model (?:height|is):\s*([\d\.]+)(?:\s*(?:cm|ft|'|"))/gi,
+          /model measurements?:\s*([^\.]+)/gi
+      ];
+      
+      const sizingAdvicePatterns = [
+          /(?:runs?|fits?)\s+(large|small|true to size)/gi,
+          /(?:size|sizing)\s+(?:up|down)/gi,
+          /recommend(?:s|ed)?\s+(?:going|sizing)\s+(up|down)/gi,
+          /fits\s+(snug|loose|relaxed|tight)/gi
+      ];
+      
+      // Debug: Check each selector
+      let foundElements = 0;
+      for (const selector of sizeGuideSelectors) {
+          const elements = document.querySelectorAll(selector);
+          if (elements.length > 0) {
+              console.log(`[PointFour] Debug: Found ${elements.length} elements for selector "${selector}"`);
+              foundElements += elements.length;
+          }
+          
+          for (const element of elements) {
+              const text = element.innerText || element.textContent || '';
+              console.log(`[PointFour] Debug: Processing size guide text from "${selector}":`, text.substring(0, 100));
+              
+              // Extract measurements
+              for (const pattern of measurementPatterns) {
+                  const matches = [...text.matchAll(pattern)];
+                  for (const match of matches) {
+                      sizeGuide.measurements[match[1].toLowerCase()] = match[2].trim();
+                      sizeGuide.confidence = 'high';
+                  }
+              }
+              
+              // Extract model info
+              for (const pattern of modelInfoPatterns) {
+                  const matches = [...text.matchAll(pattern)];
+                  for (const match of matches) {
+                      if (match[0].toLowerCase().includes('size')) {
+                          sizeGuide.modelInfo.size = match[1];
+                      } else if (match[0].toLowerCase().includes('height')) {
+                          sizeGuide.modelInfo.height = match[1];
+                      } else {
+                          sizeGuide.modelInfo.measurements = match[1];
+                      }
+                  }
+              }
+              
+              // Extract sizing advice
+              for (const pattern of sizingAdvicePatterns) {
+                  const matches = text.match(pattern);
+                  if (matches) {
+                      sizeGuide.sizingAdvice.push(...matches);
+                  }
+              }
+          }
+      }
+      
+      // Also check main product description for sizing info
+      const productDescSelectors = ['.product-description', '.product-details', '.product-info'];
+      for (const selector of productDescSelectors) {
+          const element = document.querySelector(selector);
+          if (element) {
+              const text = element.innerText || element.textContent || '';
+              
+              for (const pattern of sizingAdvicePatterns) {
+                  const matches = text.match(pattern);
+                  if (matches) {
+                      sizeGuide.sizingAdvice.push(...matches);
+                  }
+              }
+              
+              for (const pattern of modelInfoPatterns) {
+                  const matches = [...text.matchAll(pattern)];
+                  for (const match of matches) {
+                      if (match[0].toLowerCase().includes('size')) {
+                          sizeGuide.modelInfo.size = match[1];
+                      } else if (match[0].toLowerCase().includes('height')) {
+                          sizeGuide.modelInfo.height = match[1];
+                      }
+                  }
+              }
+          }
+      }
+      
+      // SPECIFIC TABLE EXTRACTION - Look for size guide tables
+      console.log('[PointFour] Debug: Searching for size guide tables...');
+      const allTables = document.querySelectorAll('table');
+      
+      allTables.forEach((table, index) => {
+          const tableText = table.innerText || table.textContent || '';
+          const tableHTML = table.outerHTML;
+          
+          // Check if this table looks like a size guide
+          const sizeGuideIndicators = [
+              // Size indicators
+              /\b(EU|UK|US|CM|SIZE|XS|S|M|L|XL|XXL)\b/gi,
+              // Measurement indicators  
+              /\b(BUST|WAIST|HIP|CHEST|LENGTH|WIDTH|INSEAM)\b/gi,
+              // Shoe size indicators
+              /\b(36|37|38|39|40|41|42|43|44|45)\b/g, // Common EU shoe sizes
+              // Clothing size indicators
+              /\b(32|34|36|38|40|42|44|46)\b/g  // Common clothing sizes
+          ];
+          
+          const matchingIndicators = sizeGuideIndicators.filter(pattern => pattern.test(tableText));
+          
+          if (matchingIndicators.length >= 2) { // Must match at least 2 patterns
+              console.log(`[PointFour] Debug: Found potential size guide table ${index + 1}:`, {
+                  indicators: matchingIndicators.length,
+                  textPreview: tableText.substring(0, 200),
+                  rowCount: table.rows?.length || 0,
+                  columnCount: table.rows?.[0]?.cells?.length || 0
+              });
+              
+              // Extract structured data from the table
+              const tableData = extractTableData(table);
+              if (tableData) {
+                  console.log(`[PointFour] Debug: Extracted table data:`, tableData);
+                  
+                  // Add to size guide measurements
+                  Object.assign(sizeGuide.measurements, tableData.measurements || {});
+                  if (tableData.sizeChart) {
+                      sizeGuide.sizeChart = tableData.sizeChart;
+                  }
+                  sizeGuide.confidence = 'high';
+              }
+          }
+      });
+      
+      // Remove duplicates
+      sizeGuide.sizingAdvice = [...new Set(sizeGuide.sizingAdvice)];
+      
+      console.log(`[PointFour] Debug: Found ${foundElements} total size guide elements`);
+      console.log('[PointFour] Extracted size guide:', sizeGuide);
+      
+      // Also try a more aggressive search for size guide text
+      const bodyText = document.body.innerText || '';
+      const sizeGuideRegex = /size\s+guide|sizing\s+chart|fit\s+guide/gi;
+      const sizeGuideMatches = bodyText.match(sizeGuideRegex);
+      if (sizeGuideMatches) {
+          console.log('[PointFour] Debug: Found size guide text patterns in body:', sizeGuideMatches);
+      }
+      
+      // Try to extract measurements from visible text even if no specific size guide elements found
+      if (Object.keys(sizeGuide.measurements).length === 0) {
+          console.log('[PointFour] Debug: No structured measurements found, trying text extraction...');
+          
+          // Look for common measurement patterns in all visible text
+          const allTextContent = Array.from(document.querySelectorAll('*'))
+              .map(el => el.innerText || el.textContent || '')
+              .join(' ');
+          
+          // Enhanced measurement patterns
+          const advancedMeasurementPatterns = [
+              // Standard measurements with units
+              /(?:bust|chest|waist|hip|shoulder width|length|inseam|sleeve):\s*(\d+(?:\.\d+)?)\s*(?:cm|in|inches|'|")/gi,
+              // Size-specific measurements (e.g., "Size S: Bust 34", "Size M: 36 inches")
+              /size\s+(\w+):\s*(?:bust|chest|waist|hip)?\s*(\d+(?:\.\d+)?)\s*(?:cm|in|inches|'|")?/gi,
+              // Model wearing size
+              /model (?:wears|is wearing) (?:size\s+)?(\w+)/gi,
+              /model is (\d+(?:\.\d+)?)\s*(?:cm|ft|'|") tall/gi,
+              // Fit advice
+              /(?:runs?|fits?)\s+(large|small|true to size|generously|snug)/gi,
+              /recommend(?:s|ed)?\s+(?:sizing|going)\s+(up|down)/gi,
+              // Measurements in product details
+              /(?:height|length|width|depth):\s*(\d+(?:\.\d+)?)\s*(?:cm|in|inches)/gi
+          ];
+          
+          advancedMeasurementPatterns.forEach((pattern, index) => {
+              const matches = [...allTextContent.matchAll(pattern)];
+              if (matches.length > 0) {
+                  console.log(`[PointFour] Debug: Pattern ${index + 1} found ${matches.length} matches:`, matches.slice(0, 3).map(m => m[0]));
+                  
+                  matches.forEach(match => {
+                      if (match[1]) {
+                          const key = `pattern_${index + 1}_${matches.indexOf(match)}`;
+                          sizeGuide.measurements[key] = match[1];
+                          sizeGuide.confidence = 'medium';
+                      }
+                      
+                      // Add sizing advice
+                      if (pattern.source.includes('runs|fits|recommend')) {
+                          sizeGuide.sizingAdvice.push(match[0]);
+                      }
+                      
+                      // Add model info
+                      if (pattern.source.includes('model')) {
+                          if (match[0].toLowerCase().includes('size')) {
+                              sizeGuide.modelInfo.size = match[1];
+                          } else if (match[0].toLowerCase().includes('tall|height')) {
+                              sizeGuide.modelInfo.height = match[1];
+                          }
+                      }
+                  });
+              }
+          });
+      }
+      
+      // Try to find size guide buttons/links and log what we find
+      const sizeGuideButtons = document.querySelectorAll('a[href*="size"], button[class*="size"], [class*="size"]');
+      if (sizeGuideButtons.length > 0) {
+          console.log(`[PointFour] Debug: Found ${sizeGuideButtons.length} potential size guide interactive elements`);
+          sizeGuideButtons.forEach((button, index) => {
+              console.log(`[PointFour] Debug: Button ${index + 1}:`, {
+                  tagName: button.tagName,
+                  className: button.className,
+                  text: (button.innerText || button.textContent || '').substring(0, 50),
+                  href: button.href || 'no href'
+              });
+          });
+      }
+      
+      // FINAL PROMINENT LOG MESSAGE
+      console.log('🔥🔥🔥 [PointFour] SIZE GUIDE EXTRACTION COMPLETED 🔥🔥🔥');
+      console.log('📏 SIZE GUIDE FINAL RESULT:', JSON.stringify(sizeGuide, null, 2));
+      console.log('🔥🔥🔥 END SIZE GUIDE EXTRACTION 🔥🔥🔥');
+      
+      return sizeGuide;
+  }
+  
+  // Helper function to extract structured data from size guide tables
+  function extractTableData(table) {
+      try {
+          const result = {
+              measurements: {},
+              sizeChart: []
+          };
+          
+          if (!table.rows || table.rows.length < 2) {
+              return null; // Need at least header + 1 data row
+          }
+          
+          // Get headers (first row)
+          const headerRow = table.rows[0];
+          const headers = Array.from(headerRow.cells).map(cell => 
+              (cell.innerText || cell.textContent || '').trim().toUpperCase()
+          );
+          
+          console.log('[PointFour] Debug: Table headers:', headers);
+          
+          // Process each data row
+          for (let i = 1; i < table.rows.length; i++) {
+              const row = table.rows[i];
+              const cells = Array.from(row.cells);
+              
+              if (cells.length === headers.length) {
+                  const rowData = {};
+                  
+                  headers.forEach((header, colIndex) => {
+                      const cellValue = (cells[colIndex]?.innerText || cells[colIndex]?.textContent || '').trim();
+                      if (cellValue) {
+                          rowData[header] = cellValue;
+                      }
+                  });
+                  
+                  // Only add rows that have meaningful data
+                  if (Object.keys(rowData).length > 1) {
+                      result.sizeChart.push(rowData);
+                      
+                      // Extract common measurements for quick access
+                      if (rowData.EU) result.measurements[`EU_${rowData.EU}`] = rowData;
+                      if (rowData.UK) result.measurements[`UK_${rowData.UK}`] = rowData;
+                      if (rowData.US) result.measurements[`US_${rowData.US}`] = rowData;
+                      if (rowData.CM) result.measurements[`CM_${rowData.CM}`] = rowData;
+                  }
+              }
+          }
+          
+          console.log(`[PointFour] Debug: Extracted ${result.sizeChart.length} size chart rows`);
+          return result.sizeChart.length > 0 ? result : null;
+          
+      } catch (error) {
+          console.error('[PointFour] Error extracting table data:', error);
+          return null;
+      }
+  }
   
   function shouldRunOnThisPage() {
       // Basic checks first
@@ -2370,7 +2995,7 @@ function extractProductImageFromPage() {
   // API COMMUNICATION
   // ========================================
   
-  async function fetchBrandAnalysis(brand) {
+  async function fetchBrandAnalysis(brand, extractedData = null) {
     if (!brand || isProcessing) return;
     
     // Additional brand validation - don't even attempt to analyze non-fashion brands
@@ -2412,12 +3037,17 @@ function extractProductImageFromPage() {
         // Get URL extraction data if available
         const urlExtraction = window.pointFourURLExtraction || null;
         
+        // Get page data including enhanced detection
+        const pageData = window.pointFourPageData || null;
+        
         const messageData = {
             type: 'GET_BRAND_DATA',
             brandName: brand,
             url: window.location.href,
             title: document.title,
-            urlExtraction: urlExtraction
+            urlExtraction: urlExtraction,
+            extractedData: extractedData,
+            pageData: pageData
         };
         
         console.log('[PointFour] Sending message to background script:', messageData);
@@ -2482,11 +3112,63 @@ function extractProductImageFromPage() {
           
           if (currentBrand) {
               console.log('[PointFour] Initializing for brand:', currentBrand);
+              
+              // Enhanced page type detection
+              const pageType = detectPageType();
+              console.log('[PointFour] Page type detection result:', pageType);
+              
+              // Only extract detailed product information for product pages
+              let extractedData = null;
+              if (pageType.isProductPage && pageType.confidence === 'high') {
+                  console.log('[PointFour] Product page detected - extracting materials and size guide');
+                  extractedData = {
+                      materials: extractMaterialsFromPage(),
+                      sizeGuide: extractSizeGuideFromPage(),
+                      pageType: 'product'
+                  };
+              } else if (pageType.isProductPage) {
+                  console.log('[PointFour] Product page detected with medium confidence - extracting data anyway');
+                  extractedData = {
+                      materials: extractMaterialsFromPage(),
+                      sizeGuide: extractSizeGuideFromPage(),
+                      pageType: 'product'
+                  };
+              } else if (pageType.isListingPage) {
+                  console.log('[PointFour] Listing page detected - limiting data extraction');
+                  extractedData = {
+                      pageType: 'listing',
+                      materials: null,
+                      sizeGuide: null
+                  };
+              } else {
+                  console.log('[PointFour] Uncertain page type - trying extraction anyway');
+                  console.log('[PointFour] Page type details:', {
+                      isProductPage: pageType.isProductPage,
+                      isListingPage: pageType.isListingPage,
+                      confidence: pageType.confidence,
+                      productScore: pageType.productScore,
+                      listingScore: pageType.listingScore
+                  });
+                  extractedData = {
+                      materials: extractMaterialsFromPage(),
+                      sizeGuide: extractSizeGuideFromPage(),
+                      pageType: 'unknown'
+                  };
+              }
+              
+              // Store extracted data globally for API calls
+              window.pointFourPageData = {
+                  brand: currentBrand,
+                  pageType: pageType,
+                  extractedData: extractedData,
+                  url: window.location.href
+              };
+              
               createWidget();
               
               setTimeout(() => {
                   showWidget();
-                  fetchBrandAnalysis(currentBrand);
+                  fetchBrandAnalysis(currentBrand, extractedData);
               }, 100);
           } else {
               console.log('[PointFour] Could not detect brand name');

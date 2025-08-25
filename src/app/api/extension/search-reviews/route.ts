@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
+// TEMPORARY: Bypass SSL certificate validation for google.serper.dev DNS issue
+// Remove this once Serper fixes their DNS/certificate configuration
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -237,10 +241,48 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { brand } = body;
+    const { brand, extractedData, pageData } = body;
     
     if (!brand) {
       return NextResponse.json({ error: 'Brand name is required' }, { status: 400 });
+    }
+
+    // Log extracted data for debugging
+    if (extractedData) {
+      console.log('🔍 EXTRACTED DATA: Received from browser extension:', JSON.stringify(extractedData, null, 2));
+    }
+    
+    if (pageData) {
+      console.log('📄 PAGE DATA: Enhanced detection results:', JSON.stringify(pageData, null, 2));
+    }
+    
+    // Log specific size guide and materials data if present
+    if (extractedData?.materials) {
+      console.log('🧵 MATERIALS EXTRACTED:', {
+        composition: extractedData.materials.composition,
+        careInstructions: extractedData.materials.careInstructions,
+        confidence: extractedData.materials.confidence
+      });
+    }
+    
+    if (extractedData?.sizeGuide) {
+      console.log('📏 SIZE GUIDE EXTRACTED:', {
+        measurements: extractedData.sizeGuide.measurements,
+        sizingAdvice: extractedData.sizeGuide.sizingAdvice,
+        modelInfo: extractedData.sizeGuide.modelInfo,
+        confidence: extractedData.sizeGuide.confidence
+      });
+    }
+    
+    if (pageData?.pageType) {
+      console.log('🔍 PAGE TYPE DETECTION:', {
+        isProductPage: pageData.pageType.isProductPage,
+        isListingPage: pageData.pageType.isListingPage,
+        confidence: pageData.pageType.confidence,
+        productScore: pageData.pageType.productScore,
+        listingScore: pageData.pageType.listingScore,
+        signals: pageData.pageType.signals?.slice(0, 5) // Log first 5 signals to avoid clutter
+      });
     }
 
     // Validate that this is a fashion brand, not a tech/general company
@@ -367,44 +409,98 @@ export async function POST(request: NextRequest) {
     console.log('🔍 SERPER: Starting search for brand:', brand);
     console.log('🔍 SERPER: Search queries:', searchQueries);
     
-    for (const query of searchQueries) {
-      try {
-        console.log('🔍 SERPER: Executing query:', query);
-        
-        const response = await fetch('https://google.serper.dev/search', {
-          method: 'POST',
-          headers: {
-            'X-API-KEY': serperApiKey,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ q: query, gl: 'us', num: 10 })
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('✅ SERPER: Query response for:', query.substring(0, 50) + '...', {
-            organicResults: data.organic?.length || 0,
-            totalResults: data.searchParameters?.q || 'N/A'
+    // Helper function to execute a single search query with retry logic
+    const executeSearchQuery = async (query: string, maxRetries: number = 2): Promise<SerperResult[]> => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`🔍 SERPER: Executing query (attempt ${attempt}/${maxRetries}):`, query);
+          
+          const response = await fetch('https://google.serper.dev/search', {
+            method: 'POST',
+            headers: {
+              'X-API-KEY': serperApiKey,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ q: query, gl: 'us', num: 10 })
           });
           
-          if (data.organic) {
-            console.log('📄 SERPER: First few results for query:');
-            data.organic.slice(0, 3).forEach((result: SerperResult, index: number) => {
-              console.log(`  ${index + 1}. ${result.title}`);
-              console.log(`     Snippet: ${result.snippet?.substring(0, 100)}...`);
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ SERPER: Query response for:', query.substring(0, 50) + '...', {
+              organicResults: data.organic?.length || 0,
+              totalResults: data.searchParameters?.q || 'N/A'
             });
             
-            allResults = [...allResults, ...data.organic];
+            if (data.organic) {
+              console.log('📄 SERPER: First few results for query:');
+              data.organic.slice(0, 3).forEach((result: SerperResult, index: number) => {
+                console.log(`  ${index + 1}. ${result.title}`);
+                console.log(`     Snippet: ${result.snippet?.substring(0, 100)}...`);
+              });
+              
+              return data.organic;
+            }
+          } else {
+            console.error('❌ SERPER: Failed query:', query, 'Status:', response.status);
+            if (attempt === maxRetries) {
+              return [];
+            }
           }
-        } else {
-          console.error('❌ SERPER: Failed query:', query, 'Status:', response.status);
+        } catch (error) {
+          console.error(`❌ SERPER: Search error for query (attempt ${attempt}/${maxRetries}):`, query, error);
+          
+          // If this is a TLS certificate error, wait a bit before retrying
+          if (error instanceof Error && error.message.includes('certificate')) {
+            console.log(`⏰ SERPER: Waiting 1 second before retry due to certificate error...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          
+          // If this is the last attempt, return empty array
+          if (attempt === maxRetries) {
+            console.error(`💥 SERPER: All retry attempts failed for query: ${query}`);
+            return [];
+          }
         }
-      } catch (error) {
-        console.error('❌ SERPER: Search error for query:', query, error);
       }
+      return [];
+    };
+
+    // Execute all search queries with retry logic
+    for (const query of searchQueries) {
+      const queryResults = await executeSearchQuery(query);
+      allResults = [...allResults, ...queryResults];
     }
     
     console.log('📊 SERPER: Total results collected:', allResults.length);
+    
+    // If no results collected, return early with informative message
+    if (allResults.length === 0) {
+      console.warn('⚠️ SERPER: No search results collected - all queries may have failed');
+      
+      const fallbackSummary = `Unable to find reviews for ${brand} at this time. This may be due to temporary connectivity issues. Please try again in a few moments or use the full analysis page for more comprehensive results.`;
+      
+      return NextResponse.json({
+        brandFitSummary: {
+          summary: fallbackSummary,
+          confidence: 'low',
+          sections: {},
+          hasData: false,
+          totalResults: 0,
+          sources: []
+        },
+        reviews: [],
+        groupedReviews: {
+          primary: [],
+          community: [],
+          blogs: [],
+          videos: [],
+          social: [],
+          publications: [],
+          other: []
+        },
+        totalResults: 0
+      });
+    }
     
     // Analyze results for patterns based on product category using enhanced data
     const analysis = await analyzeResultsWithGPT5(allResults, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem);
@@ -647,8 +743,58 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       const brandLower = brand.toLowerCase();
       const url = (result.link || '').toLowerCase();
       
-      // Check for exact brand mention
-      const hasBrandMention = title.includes(brandLower) || snippet.includes(brandLower);
+      // Create flexible brand variations for common brand name formats
+      const createBrandVariations = (brandName: string) => {
+        const base = brandName.toLowerCase();
+        const variations = [base];
+        
+        // Handle common brand formatting variations
+        if (base.includes('+')) {
+          // For brands like "ME+EM" -> also check "me&em", "me & em", "me em", "me and em"
+          const withoutPlus = base.replace(/\+/g, '');
+          const withAmpersand = base.replace(/\+/g, '&');
+          const withSpaces = base.replace(/\+/g, ' ');
+          const withAnd = base.replace(/\+/g, ' and ');
+          const withSpacedAmpersand = base.replace(/\+/g, ' & ');
+          
+          variations.push(withoutPlus, withAmpersand, withSpaces, withAnd, withSpacedAmpersand);
+        }
+        
+        // Handle brands with spaces -> also check without spaces and with other separators
+        if (base.includes(' ')) {
+          const withoutSpaces = base.replace(/\s+/g, '');
+          const withUnderscores = base.replace(/\s+/g, '_');
+          const withHyphens = base.replace(/\s+/g, '-');
+          
+          variations.push(withoutSpaces, withUnderscores, withHyphens);
+        }
+        
+        // Handle brands with hyphens -> also check with spaces and without separators
+        if (base.includes('-')) {
+          const withSpaces = base.replace(/-/g, ' ');
+          const withoutHyphens = base.replace(/-/g, '');
+          
+          variations.push(withSpaces, withoutHyphens);
+        }
+        
+        return [...new Set(variations)]; // Remove duplicates
+      };
+      
+      const brandVariations = createBrandVariations(brandLower);
+      console.log(`🔍 BRAND VARIATIONS: Checking for brand "${brand}" using variations:`, brandVariations);
+      
+      // Check for any brand variation mention
+      const hasBrandMention = brandVariations.some(variation => 
+        title.includes(variation) || snippet.includes(variation)
+      );
+      
+      // Log which variation matched (if any)
+      if (hasBrandMention) {
+        const matchedVariations = brandVariations.filter(variation => 
+          title.includes(variation) || snippet.includes(variation)
+        );
+        console.log(`✅ BRAND MATCH: Found brand mention using variations: ${matchedVariations.join(', ')} in "${result.title}"`);
+      }
       
       if (!hasBrandMention) {
         console.log(`🚫 BRAND FILTER: Removing result without brand mention: "${result.title}"`);
@@ -670,7 +816,7 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
                               url.includes('fashionbeans');
       
       // Check if content contains fit-related terms
-      const text = `${title} ${snippet}`;
+      const fitText = `${title} ${snippet}`;
       const fitRelatedTerms = [
         'runs small', 'runs large', 'true to size', 'fits small', 'fits large',
         'size up', 'size down', 'sized up', 'sized down', 'sizing',
@@ -679,7 +825,7 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
         'fit', 'size', 'measurements', 'dimensions'
       ];
       
-      const hasFitContent = fitRelatedTerms.some(term => text.includes(term));
+      const hasFitContent = fitRelatedTerms.some(term => fitText.includes(term));
       
       // Relaxed criteria for reliable sources with fit content
       if (isReliableSource && hasFitContent) {
@@ -687,25 +833,42 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
         return true;
       }
       
-      // Standard substantial mention check for other content
-      const brandMentionCount = (text.match(new RegExp(brandLower, 'g')) || []).length;
+      // Standard substantial mention check for other content using flexible matching
+      const fullText = `${title} ${snippet}`;
+      let totalBrandMentions = 0;
+      let hasContextualMention = false;
+      
+      // Count mentions across all brand variations
+      brandVariations.forEach(variation => {
+        const matches = (fullText.match(new RegExp(variation, 'g')) || []).length;
+        totalBrandMentions += matches;
+        
+        // Check for contextual mentions with this variation
+        if (fullText.includes(`${variation} review`) ||
+            fullText.includes(`${variation} quality`) ||
+            fullText.includes(`${variation} fit`) ||
+            fullText.includes(`${variation} brand`) ||
+            fullText.includes(`${variation} product`) ||
+            fullText.includes(`${variation} experience`) ||
+            fullText.includes(`${variation} recommend`) ||
+            fullText.includes(`${variation} sizing`) ||
+            fullText.includes(`${variation} clothes`) ||
+            fullText.includes(`${variation} clothing`) ||
+            fullText.includes(`${variation} fashion`) ||
+            fullText.includes(`${variation} style`)) {
+          hasContextualMention = true;
+        }
+      });
       
       // If brand is mentioned multiple times or in context of review/quality terms, it's likely substantial
-      const hasSubstantialMention = brandMentionCount > 1 || 
-        text.includes(`${brandLower} review`) ||
-        text.includes(`${brandLower} quality`) ||
-        text.includes(`${brandLower} fit`) ||
-        text.includes(`${brandLower} brand`) ||
-        text.includes(`${brandLower} product`) ||
-        text.includes(`${brandLower} experience`) ||
-        text.includes(`${brandLower} recommend`) ||
-        text.includes(`${brandLower} opinion`) ||
-        text.includes(`${brandLower} versus`) ||
-        text.includes(`${brandLower} vs`) ||
-        text.includes(`${brandLower} comparison`) ||
-        text.includes(`from ${brandLower}`) ||
-        text.includes(`${brandLower}'s`) ||
-        text.includes(`the ${brandLower}`) ||
+      const hasSubstantialMention = totalBrandMentions > 1 || hasContextualMention ||
+        fullText.includes(`${brandLower} opinion`) ||
+        fullText.includes(`${brandLower} versus`) ||
+        fullText.includes(`${brandLower} vs`) ||
+        fullText.includes(`${brandLower} comparison`) ||
+        fullText.includes(`from ${brandLower}`) ||
+        fullText.includes(`${brandLower}'s`) ||
+        fullText.includes(`the ${brandLower}`) ||
         // Brand mentioned in title is usually substantial
         title.includes(brandLower);
       
@@ -786,7 +949,7 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       },
       reviews: prioritizedReviews.slice(0, 20),
       groupedReviews,
-      totalResults: brandFilteredResults.length
+      totalResults: prioritizedReviews.length
     });
     
   } catch (error) {

@@ -300,7 +300,7 @@ function getBrandCategoryFromName(brandName) {
 }
 
 // Enhanced brand detection with multiple fallback strategies
-async function detectBrand(tabId, domainOrBrand, url, urlExtraction = null) {
+async function detectBrand(tabId, domainOrBrand, url, urlExtraction = null, extractedData = null, pageData = null) {
   try {
     console.log('🎯 Background: detectBrand called with:', { tabId, domainOrBrand, url, urlExtraction });
     
@@ -352,7 +352,7 @@ async function detectBrand(tabId, domainOrBrand, url, urlExtraction = null) {
 
     // Get brand data from API with enhanced parameters
     console.log('🎯 Background: Calling fetchBrandData for:', brandName, 'category:', category, 'urlExtraction:', urlExtraction);
-    const brandData = await fetchBrandData(brandName, category, urlExtraction);
+    const brandData = await fetchBrandData(brandName, category, urlExtraction, extractedData, pageData);
     console.log('🎯 Background: fetchBrandData returned:', brandData);
     
     // Extract product image from the page
@@ -398,7 +398,7 @@ async function detectBrand(tabId, domainOrBrand, url, urlExtraction = null) {
 }
 
 // Enhanced brand data fetching with improved analysis
-async function fetchBrandData(brandName, category = 'general', urlExtraction = null) {
+async function fetchBrandData(brandName, category = 'general', urlExtraction = null, extractedData = null, pageData = null) {
   try {
     console.log('🔗 fetchBrandData called with URL extraction:', urlExtraction);
     // Check if this brand category should show fit advice
@@ -434,6 +434,18 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
         confidence: urlExtraction.confidence,
         source: urlExtraction.source
       });
+    }
+    
+    // Add enhanced extraction data if available
+    if (extractedData) {
+      apiRequestData.extractedData = extractedData;
+      console.log('🔍 Including enhanced extraction data in API request:', JSON.stringify(extractedData, null, 2));
+    }
+    
+    // Add page data if available
+    if (pageData) {
+      apiRequestData.pageData = pageData;
+      console.log('📄 Including page data in API request:', JSON.stringify(pageData, null, 2));
     }
     
     // Use the working search-reviews endpoint for brands that should show fit advice
@@ -1196,10 +1208,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.type === 'GET_BRAND_DATA') {
     const tabId = sender.tab.id;
-    const { brandName, url, title, urlExtraction } = message;
+    const { brandName, url, title, urlExtraction, extractedData, pageData } = message;
     
     console.log('🎯 Background: GET_BRAND_DATA requested for:', brandName, 'on tab:', tabId);
-    console.log('🎯 Background: Message details:', { brandName, url, title, urlExtraction });
+    console.log('🎯 Background: Message details:', { brandName, url, title, urlExtraction, extractedData, pageData });
     console.log('🎯 Background: Sender tab info:', sender.tab);
     
     // Log URL extraction details
@@ -1209,6 +1221,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         itemName: urlExtraction.itemName,
         confidence: urlExtraction.confidence,
         source: urlExtraction.source
+      });
+    }
+    
+    // Log enhanced extraction details
+    if (extractedData) {
+      console.log('🔍 Background: Enhanced extraction data received:', JSON.stringify(extractedData, null, 2));
+      
+      if (extractedData.materials) {
+        console.log('🧵 Background: Materials extracted:', {
+          composition: extractedData.materials.composition,
+          careInstructions: extractedData.materials.careInstructions,
+          confidence: extractedData.materials.confidence
+        });
+      }
+      
+      if (extractedData.sizeGuide) {
+        console.log('📏 Background: Size guide extracted:', {
+          measurements: extractedData.sizeGuide.measurements,
+          sizingAdvice: extractedData.sizeGuide.sizingAdvice,
+          modelInfo: extractedData.sizeGuide.modelInfo,
+          confidence: extractedData.sizeGuide.confidence
+        });
+      }
+    }
+    
+    // Log page type detection
+    if (pageData?.pageType) {
+      console.log('🔍 Background: Page type detection:', {
+        isProductPage: pageData.pageType.isProductPage,
+        isListingPage: pageData.pageType.isListingPage,
+        confidence: pageData.pageType.confidence,
+        productScore: pageData.pageType.productScore,
+        listingScore: pageData.pageType.listingScore
       });
     }
     
@@ -1227,7 +1272,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     // Start the detection process but don't wait for it to complete
     // The response will be sent via sendBrandDataToTab when detection completes
-    detectBrand(tabId, brandName, url, urlExtraction).catch(error => {
+    detectBrand(tabId, brandName, url, urlExtraction, extractedData, pageData).catch(error => {
       console.error('🎯 Background: Error during brand detection:', error);
       // Send error response via message to content script
       chrome.tabs.sendMessage(tabId, {

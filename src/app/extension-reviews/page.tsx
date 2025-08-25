@@ -47,6 +47,63 @@ interface ReviewData {
   pageUrl?: string;
 }
 
+// Enhanced markdown formatting function for better text rendering
+const formatMarkdownText = (text: string) => {
+  if (!text || !text.trim()) {
+    return <span>{text}</span>;
+  }
+  // Split the text into lines, preserving empty lines for spacing
+  const lines = text.split("\n");
+  return (
+    <div>
+      {lines.map((line, lineIndex) => {
+        const trimmedLine = line.trim();
+        // Handle empty lines as spacing
+        if (!trimmedLine) {
+          return <div key={lineIndex} style={{ marginBottom: "16px" }} />;
+        }
+        // Check if this line is a heading (starts with **)
+        const isHeading = trimmedLine.match(/^\*\*.*?\*\*/);
+        // Process bold text and quoted text
+        const parts = trimmedLine.split(/(\*\*.*?\*\*|".*?")/g);
+        const processedParts = parts.map((part, partIndex) => {
+          if (part.startsWith("**") && part.endsWith("**")) {
+            return <strong key={partIndex}>{part.slice(2, -2)}</strong>;
+          }
+          if (part.startsWith('"') && part.endsWith('"')) {
+            return (
+              <span
+                key={partIndex}
+                style={{
+                  fontStyle: "italic",
+                  backgroundColor: "#F8F7F4",
+                  padding: "2px 4px",
+                  borderRadius: "3px",
+                }}
+              >
+                {part}
+              </span>
+            );
+          }
+          return part;
+        });
+        return (
+          <div
+            key={lineIndex}
+            style={{
+              marginBottom: isHeading ? "8px" : "8px",
+              marginTop: isHeading && lineIndex > 0 ? "8px" : "0px",
+              lineHeight: "1.2",
+            }}
+          >
+            {processedParts}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 function ExtensionReviewsContent() {
   const searchParams = useSearchParams();
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
@@ -366,17 +423,17 @@ function ExtensionReviewsContent() {
               marginBottom: "32px",
             }}
           >
-            <h2
+            <h3
               style={{
-                fontSize: "28px",
-                fontWeight: "400",
+                fontSize: "16px",
+                fontWeight: "600",
                 marginBottom: "16px",
                 color: "#333",
                 fontFamily: "system-ui, -apple-system, sans-serif",
               }}
             >
               Fit review
-            </h2>
+            </h3>
 
             <p
               style={{
@@ -393,22 +450,22 @@ function ExtensionReviewsContent() {
 
             <div
               style={{
-                fontSize: "18px",
+                fontSize: "14px",
                 color: "#333",
                 lineHeight: "1.5",
                 fontWeight: "400",
               }}
             >
               {tldrParam && (
-                <p style={{ margin: "0 0 16px 0" }}>
-                  {decodeURIComponent(tldrParam)}
-                </p>
+                <div style={{ margin: "0 0 16px 0" }}>
+                  {formatMarkdownText(decodeURIComponent(tldrParam))}
+                </div>
               )}
 
               {reviewData.brandFitSummary?.summary && (
-                <p style={{ margin: "0" }}>
-                  {reviewData.brandFitSummary.summary}
-                </p>
+                <div style={{ margin: "0" }}>
+                  {formatMarkdownText(reviewData.brandFitSummary.summary)}
+                </div>
               )}
             </div>
           </div>
