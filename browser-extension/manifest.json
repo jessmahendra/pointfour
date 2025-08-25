@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pointfour Fashion Assistant",
-  "version": "2.1.1",
+  "version": "3",
   "description": "Proactive fashion brand fit information and reviews on fashion websites - Improved detection system ensures widget only appears on confirmed fashion brand websites where users can shop",
   "permissions": [
     "activeTab",
