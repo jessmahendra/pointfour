@@ -75,7 +75,7 @@ export default function PrivacyPolicyPage() {
               Introduction
             </h2>
             <p style={{ marginBottom: "16px" }}>
-              Pointfour ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how our browser extension collects, uses, and protects your information when you use our fit and review analysis service.
+              Pointfour (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;) is committed to protecting your privacy. This Privacy Policy explains how our browser extension collects, uses, and protects your information when you use our fit and review analysis service.
             </p>
           </section>
 
@@ -150,7 +150,7 @@ export default function PrivacyPolicyPage() {
             </h2>
             <p style={{ marginBottom: "12px" }}>We use the collected information to:</p>
             <ul style={{ marginBottom: "16px", paddingLeft: "24px" }}>
-              <li style={{ marginBottom: "8px" }}>Display relevant fit and sizing information for products you're viewing</li>
+              <li style={{ marginBottom: "8px" }}>Display relevant fit and sizing information for products you&apos;re viewing</li>
               <li style={{ marginBottom: "8px" }}>Provide aggregated review summaries and quality insights</li>
               <li style={{ marginBottom: "8px" }}>Improve our fit prediction algorithms</li>
               <li style={{ marginBottom: "8px" }}>Enhance extension performance and fix bugs</li>
@@ -213,7 +213,7 @@ export default function PrivacyPolicyPage() {
             <p style={{ marginBottom: "12px" }}>You can:</p>
             <ul style={{ marginBottom: "16px", paddingLeft: "24px" }}>
               <li style={{ marginBottom: "8px" }}>Disable the extension at any time through your browser settings</li>
-              <li style={{ marginBottom: "8px" }}>Control permissions through your browser's extension management</li>
+              <li style={{ marginBottom: "8px" }}>Control permissions through your browser&apos;s extension management</li>
               <li style={{ marginBottom: "8px" }}>Request data deletion by contacting us at <a href="mailto:privacy@jessmahendra.com" style={{ color: "#9F513A" }}>privacy@jessmahendra.com</a></li>
             </ul>
           </section>
@@ -245,7 +245,7 @@ export default function PrivacyPolicyPage() {
                 marginBottom: "16px",
               }}
             >
-              Children's Privacy
+              Children&apos;s Privacy
             </h2>
             <p style={{ marginBottom: "16px" }}>
               Our service is not intended for users under 13 years of age. We do not knowingly collect information from children under 13.
@@ -283,7 +283,7 @@ export default function PrivacyPolicyPage() {
             <ul style={{ marginBottom: "16px", paddingLeft: "24px" }}>
               <li style={{ marginBottom: "8px" }}>Extension update notes</li>
               <li style={{ marginBottom: "8px" }}>In-extension notifications</li>
-              <li style={{ marginBottom: "8px" }}>Updates to the "Last Updated" date above</li>
+              <li style={{ marginBottom: "8px" }}>Updates to the &ldquo;Last Updated&rdquo; date above</li>
             </ul>
           </section>
 
