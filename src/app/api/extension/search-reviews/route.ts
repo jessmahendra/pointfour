@@ -216,6 +216,12 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
     }
   })();
 
+  // Add Substack-specific queries to target high-quality fashion content
+  const substackQueries = [
+    `${brand} site:substack.com review quality fit`,
+    `${brand} site:substack.com "runs small" OR "runs large" OR "true to size"`,
+  ];
+
   // If this is a specific item search, add item-focused queries with exact matching
   if (isSpecificItem && itemName) {
     const specificItemQueries = [
@@ -223,7 +229,9 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
       `"${brand} ${itemName}" fit "runs small" OR "runs large" OR "true to size"`,
       `"${brand} ${itemName}" quality "well made" OR "poorly made"`,
       `"${brand} ${itemName}" material fabric composition`,
-      `"${brand} ${itemName}" "100%" OR "cotton" OR "wool" OR "silk" OR "polyester" OR "blend"`
+      `"${brand} ${itemName}" "100%" OR "cotton" OR "wool" OR "silk" OR "polyester" OR "blend"`,
+      `"${brand} ${itemName}" site:substack.com review`,
+      `"${brand} ${itemName}" site:reddit.com review`
     ];
     
     // For clothing items, add more specific material queries
@@ -238,7 +246,8 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
     return specificItemQueries;
   }
   
-  return baseQueries;
+  // For general brand searches, include both base queries and Substack-specific queries
+  return [...baseQueries, ...substackQueries];
 }
 
 export async function POST(request: NextRequest) {
