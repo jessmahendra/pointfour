@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 const fs = require('fs');
 const path = require('path');
@@ -85,7 +86,7 @@ function updateManifest() {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     
     // Update version to indicate it's a production build
-    manifest.version = `${manifest.version}-prod`;
+    manifest.version = `${manifest.version}`;
     manifest.description = `${manifest.description} (Production Build)`;
     
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));

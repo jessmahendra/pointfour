@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pointfour Fashion Assistant",
-  "version": "3-prod",
+  "version": "3",
   "description": "Proactive fashion brand fit & quality information and reviews on fashion websites (Production Build)",
   "permissions": [
     "activeTab",
