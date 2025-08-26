@@ -369,7 +369,7 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
     console.log('Prompt length:', aiPrompt.length);
     
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-5-mini",
       messages: [
         {
           role: "system",

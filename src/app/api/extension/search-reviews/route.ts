@@ -538,8 +538,21 @@ export async function POST(request: NextRequest) {
       });
     }
     
+    // Limit results sent to GPT analysis to prevent rate limiting (max 30 results)
+    // Prioritize most relevant results first by fit score
+    const prioritizedForGPT = allResults
+      .map(result => ({
+        result,
+        fitScore: calculateFitRelevanceScoreForResult(result, enhancedBrand)
+      }))
+      .sort((a, b) => b.fitScore - a.fitScore)
+      .slice(0, 30) // Limit to top 30 results to stay under OpenAI token limits
+      .map(item => item.result);
+    
+    console.log(`🤖 GPT ANALYSIS: Limiting analysis from ${allResults.length} to ${prioritizedForGPT.length} top results to prevent rate limiting`);
+    
     // Analyze results for patterns based on product category using enhanced data
-    const analysis = await analyzeResultsWithGPT5(allResults, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem);
+    const analysis = await analyzeResultsWithGPT5(prioritizedForGPT, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem);
     
     // Create structured sections
     const sections: Record<string, {
@@ -638,7 +651,7 @@ Format as bullet points like:
 Focus on concrete experiences like comfort, durability, functionality, value, etc. If insufficient information, return just the title without "Review of" prefix.`;
 
         const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini", // Use faster, cheaper model for this task
+          model: "gpt-5-mini", // Use faster, cheaper model for this task
           messages: [{
             role: "system",
             content: "You are an expert at extracting specific pros/cons from product reviews. Provide concrete bullet points about user experiences."
@@ -1072,6 +1085,61 @@ function extractTags(title?: string, snippet?: string): string[] {
   return tags;
 }
 
+// Helper function to calculate fit relevance score for SerperResult (used for GPT prioritization)
+function calculateFitRelevanceScoreForResult(result: SerperResult, brand: string): number {
+  const text = `${result.title || ''} ${result.snippet || ''}`.toLowerCase();
+  let score = 0;
+  
+  // High priority fit terms (most valuable for fit analysis)
+  const highPriorityFitTerms = [
+    'runs small', 'runs large', 'true to size', 'fits small', 'fits large',
+    'size up', 'size down', 'sized up', 'sized down',
+    'too small', 'too big', 'too large', 'too tight', 'too loose',
+    'fits perfectly', 'perfect fit', 'great fit', 'good fit',
+    'fits well', 'fits true', 'sizing'
+  ];
+  
+  // Medium priority fit terms
+  const mediumPriorityFitTerms = [
+    'fit', 'size', 'quality', 'material', 'fabric', 'review'
+  ];
+  
+  // Experience indicators (shows first-hand experience)
+  const experienceTerms = [
+    'i bought', 'i ordered', 'i tried', 'i wear', 'i own', 'i have',
+    'my size', 'my usual', 'i purchased', 'fit me', 'on me', 'for me'
+  ];
+  
+  // Count high priority terms (worth 10 points each)
+  highPriorityFitTerms.forEach(term => {
+    if (text.includes(term)) score += 10;
+  });
+  
+  // Count medium priority terms (worth 3 points each, max 15 points)
+  let mediumTermCount = 0;
+  mediumPriorityFitTerms.forEach(term => {
+    if (text.includes(term)) mediumTermCount++;
+  });
+  score += Math.min(mediumTermCount * 3, 15);
+  
+  // Count experience terms (worth 5 points each, max 10 points)  
+  let experienceCount = 0;
+  experienceTerms.forEach(term => {
+    if (text.includes(term)) experienceCount++;
+  });
+  score += Math.min(experienceCount * 5, 10);
+  
+  // Brand mention bonus (ensures relevance)
+  if (text.includes(brand.toLowerCase())) score += 5;
+  
+  // Quality sources bonus
+  if (result.link && (result.link.includes('reddit') || result.link.includes('substack'))) {
+    score += 2;
+  }
+  
+  return score;
+}
+
 // Helper function to calculate fit relevance score for prioritizing reviews
 function calculateFitRelevanceScore(review: Review): number {
   const text = `${review.title} ${review.snippet}`.toLowerCase();
@@ -1285,7 +1353,7 @@ IMPORTANT GUIDELINES:
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-5-mini",
       messages: [
         {
           role: "system",
@@ -1331,6 +1399,12 @@ IMPORTANT GUIDELINES:
     }
   } catch (error) {
     console.error('🤖 GPT-5 ANALYSIS: Error calling GPT-5:', error);
+    
+    // Check if this is a rate limit error
+    if (error instanceof Error && (error.message.includes('429') || error.message.includes('Rate limit'))) {
+      console.warn('🤖 GPT-5 ANALYSIS: Rate limit hit - this should be reduced with the new result limiting');
+    }
+    
     // Fallback to rule-based analysis
     console.log('🤖 GPT-5 ANALYSIS: Falling back to rule-based analysis');
     return analyzeResultsRuleBased(results, brand, category, itemName, isSpecificItem);
