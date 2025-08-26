@@ -115,6 +115,8 @@ function ExtensionReviewsContent() {
 
   const brandName = searchParams.get("brand") || "";
   const itemName = searchParams.get("item") || "";
+  const fromWidget = searchParams.get("fromWidget") === 'true';
+  const widgetDataParam = searchParams.get("widgetData");
 
   // Get enhanced data from extension
   const tldrParam = searchParams.get("tldr") || "";
@@ -143,6 +145,40 @@ function ExtensionReviewsContent() {
       setLoading(true);
       setError(null);
 
+      // If coming from widget with data, use that instead of making a new API call
+      if (fromWidget && widgetDataParam) {
+        try {
+          const widgetData = JSON.parse(widgetDataParam);
+          console.log('🔗 [ExtensionReviews] Using widget data:', widgetData);
+          
+          // Transform widget data to match expected format
+          const transformedData: ReviewData = {
+            brand: brandName,
+            itemName: itemName,
+            brandFitSummary: widgetData.brandFitSummary,
+            reviews: widgetData.reviews || [],
+            groupedReviews: {
+              primary: widgetData.reviews?.filter((r: Review) => r.source?.includes('reddit') || r.source?.includes('substack')) || [],
+              community: widgetData.reviews?.filter((r: Review) => r.source?.includes('community')) || [],
+              blogs: widgetData.reviews?.filter((r: Review) => r.source?.includes('blog')) || [],
+              videos: widgetData.reviews?.filter((r: Review) => r.source?.includes('youtube')) || [],
+              social: widgetData.reviews?.filter((r: Review) => r.source?.includes('social')) || [],
+              publications: widgetData.reviews?.filter((r: Review) => r.source?.includes('publication')) || [],
+              other: widgetData.reviews || []
+            },
+            totalResults: widgetData.totalResults || widgetData.reviews?.length || 0,
+            timestamp: widgetData.timestamp
+          };
+          
+          setReviewData(transformedData);
+          setLoading(false);
+          return;
+        } catch (e) {
+          console.warn('🔗 [ExtensionReviews] Failed to parse widget data, falling back to API:', e);
+        }
+      }
+
+      // Fallback to API call when no widget data or parsing failed
       const response = await fetch("/api/extension/search-reviews", {
         method: "POST",
         headers: {
@@ -184,7 +220,7 @@ function ExtensionReviewsContent() {
     } finally {
       setLoading(false);
     }
-  }, [brandName, itemName]);
+  }, [brandName, itemName, fromWidget, widgetDataParam]);
 
   useEffect(() => {
     if (!brandName) {

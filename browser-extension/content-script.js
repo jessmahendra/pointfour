@@ -617,9 +617,16 @@
       ];
       
       const sizingAdvicePatterns = [
-          /(?:runs?|fits?)\s+(large|small|true to size)/gi,
+          /(?:runs?|fits?)\s+(large|small|true to size|big|oversized|generous)/gi,
           /(?:size|sizing)\s+(?:up|down)/gi,
           /recommend(?:s|ed)?\s+(?:going|sizing)\s+(up|down)/gi,
+          /this\s+(?:item|piece|style)\s+(?:runs?|fits?)\s+(large|small|true to size)/gi,
+          /(?:we\s+)?(?:recommend|suggest)\s+(?:sizing|going)\s+(up|down)/gi,
+          /(?:order|choose|go)\s+(?:a\s+)?(?:half\s+)?size\s+(up|down)/gi,
+          /(?:fit|runs)\s+(?:slightly|a\s+bit|somewhat)\s+(large|small|tight|loose)/gi,
+          /generous\s+(?:fit|sizing)/gi,
+          /snug\s+(?:fit|fitting)/gi,
+          /relaxed\s+(?:fit|fitting)/gi,
           /fits\s+(snug|loose|relaxed|tight)/gi
       ];
       
@@ -2615,8 +2622,19 @@
             
             // Create enhanced search query for the analyze page
             const params = new URLSearchParams({
-                brand: brandName
+                brand: brandName,
+                fromWidget: 'true' // Flag to indicate this came from widget
             });
+            
+            // Pass the complete analysis data to avoid re-fetching
+            if (data && data.externalSearchResults) {
+                params.set('widgetData', JSON.stringify({
+                    brandFitSummary: data.externalSearchResults.brandFitSummary,
+                    reviews: data.externalSearchResults.reviews,
+                    totalResults: data.externalSearchResults.totalResults,
+                    timestamp: Date.now()
+                }));
+            }
             
             console.log('🔗 [PointFour] Widget URL Debug:', {
                 brandNameUsed: brandName,

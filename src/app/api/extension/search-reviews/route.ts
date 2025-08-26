@@ -27,6 +27,13 @@ interface Review {
   fullContent: string;
 }
 
+interface DirectFitAdvice {
+  hasDirectAdvice: boolean;
+  advice: string[];
+  recommendation: string | null;
+  confidence: 'low' | 'medium' | 'high';
+}
+
 interface AnalysisResult {
   fit?: {
     recommendation: string;
@@ -257,7 +264,7 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
 }
 
 // Handle CORS preflight requests
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
@@ -308,6 +315,11 @@ export async function POST(request: NextRequest) {
         modelInfo: extractedData.sizeGuide.modelInfo,
         confidence: extractedData.sizeGuide.confidence
       });
+      
+      // Log sizing advice specifically if found
+      if (extractedData.sizeGuide.sizingAdvice && extractedData.sizeGuide.sizingAdvice.length > 0) {
+        console.log('🎯 DIRECT FIT ADVICE FOUND:', extractedData.sizeGuide.sizingAdvice);
+      }
     }
     
     if (pageData?.pageType) {
@@ -551,8 +563,11 @@ export async function POST(request: NextRequest) {
     
     console.log(`🤖 GPT ANALYSIS: Limiting analysis from ${allResults.length} to ${prioritizedForGPT.length} top results to prevent rate limiting`);
     
+    // Extract direct fit advice from page data if available
+    const directFitAdvice = extractDirectFitAdvice(extractedData);
+    
     // Analyze results for patterns based on product category using enhanced data
-    const analysis = await analyzeResultsWithGPT5(prioritizedForGPT, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem);
+    const analysis = await analyzeResultsWithGPT5(prioritizedForGPT, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem, directFitAdvice);
     
     // Create structured sections
     const sections: Record<string, {
@@ -790,7 +805,6 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       const title = (result.title || '').toLowerCase();
       const snippet = (result.snippet || '').toLowerCase();
       const brandLower = brand.toLowerCase();
-      const url = (result.link || '').toLowerCase();
       const fullText = `${title} ${snippet}`;
       
       // Create flexible brand variations for common brand name formats
@@ -1035,6 +1049,61 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
   }
 }
 
+// Helper function to extract direct fit advice from page data
+function extractDirectFitAdvice(extractedData: unknown): { 
+  hasDirectAdvice: boolean; 
+  advice: string[]; 
+  recommendation: string | null;
+  confidence: 'low' | 'medium' | 'high';
+} {
+  const result: {
+    hasDirectAdvice: boolean;
+    advice: string[];
+    recommendation: string | null;
+    confidence: 'low' | 'medium' | 'high';
+  } = {
+    hasDirectAdvice: false,
+    advice: [],
+    recommendation: null,
+    confidence: 'low'
+  };
+  
+  // Type guard for extracted data
+  if (!extractedData || typeof extractedData !== 'object') {
+    return result;
+  }
+  
+  const data = extractedData as Record<string, unknown>;
+  const sizeGuide = data.sizeGuide as Record<string, unknown> | undefined;
+  
+  if (!sizeGuide?.sizingAdvice || !Array.isArray(sizeGuide.sizingAdvice) || sizeGuide.sizingAdvice.length === 0) {
+    return result;
+  }
+  
+  const advice = sizeGuide.sizingAdvice as string[];
+  result.hasDirectAdvice = true;
+  result.advice = advice;
+  result.confidence = (sizeGuide.confidence as 'low' | 'medium' | 'high') || 'medium';
+  
+  // Analyze the advice to create a recommendation
+  const adviceText = advice.join(' ').toLowerCase();
+  
+  if (adviceText.includes('runs small') || adviceText.includes('size up') || adviceText.includes('recommend sizing up')) {
+    result.recommendation = 'runs small';
+  } else if (adviceText.includes('runs large') || adviceText.includes('size down') || adviceText.includes('recommend sizing down') || adviceText.includes('generous')) {
+    result.recommendation = 'runs large';
+  } else if (adviceText.includes('true to size') || adviceText.includes('fits as expected')) {
+    result.recommendation = 'true to size';
+  } else if (adviceText.includes('snug') || adviceText.includes('tight')) {
+    result.recommendation = 'runs small';
+  } else if (adviceText.includes('loose') || adviceText.includes('relaxed') || adviceText.includes('oversized')) {
+    result.recommendation = 'runs large';
+  }
+  
+  console.log('🎯 PROCESSED DIRECT FIT ADVICE:', result);
+  return result;
+}
+
 // Helper function to extract source name from URL
 function extractSourceName(url: string): string {
   try {
@@ -1254,7 +1323,7 @@ function calculateConfidence(result: SerperResult): "high" | "medium" | "low" {
 }
 
 // GPT-5 powered analysis function
-async function analyzeResultsWithGPT5(results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general', itemName: string = '', isSpecificItem: boolean = false): Promise<AnalysisResult> {
+async function analyzeResultsWithGPT5(results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general', itemName: string = '', isSpecificItem: boolean = false, directFitAdvice?: DirectFitAdvice): Promise<AnalysisResult> {
   console.log(`🤖 GPT-5 ANALYSIS: Starting AI analysis for ${brand} with ${results.length} results`);
   
   if (results.length === 0) {
@@ -1273,6 +1342,9 @@ async function analyzeResultsWithGPT5(results: SerperResult[], brand: string, ca
   
   const categoryContext = category !== 'general' ? 
     `\nThis is a ${category} brand, so focus on ${category}-specific aspects.` : '';
+    
+  const directFitContext = directFitAdvice?.hasDirectAdvice ? 
+    `\n\nIMPORTANT: Direct fit advice found on product page: "${directFitAdvice.advice.join(', ')}". This should take priority over conflicting review analysis. Use this as the primary fit recommendation unless reviews strongly contradict it.` : '';
   
   // Create category-aware JSON structure
   const getFitSection = () => {
@@ -1319,7 +1391,7 @@ async function analyzeResultsWithGPT5(results: SerperResult[], brand: string, ca
   const prompt = `You are a fashion expert analyzing customer reviews to provide structured insights. Your goal is to extract useful insights even from limited data, rather than returning empty analysis.
 
 Brand: ${brand}
-Category: ${category}${itemContext}${categoryContext}
+Category: ${category}${itemContext}${categoryContext}${directFitContext}
 
 Reviews to analyze:
 ${reviewTexts}
@@ -1411,12 +1483,12 @@ IMPORTANT GUIDELINES:
     
     // Fallback to rule-based analysis
     console.log('🤖 GPT-5 ANALYSIS: Falling back to rule-based analysis');
-    return analyzeResultsRuleBased(results, brand, category, itemName, isSpecificItem);
+    return analyzeResultsRuleBased(results, brand, category, itemName, isSpecificItem, directFitAdvice);
   }
 }
 
 // Renamed original function as fallback
-function analyzeResultsRuleBased(results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general', itemName: string = '', isSpecificItem: boolean = false): AnalysisResult {
+function analyzeResultsRuleBased(results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general', itemName: string = '', isSpecificItem: boolean = false, directFitAdvice?: DirectFitAdvice): AnalysisResult {
   const analysis: AnalysisResult = {};
   const allText = results.map(r => `${r.title} ${r.snippet}`).join(' ').toLowerCase();
   
@@ -1424,8 +1496,30 @@ function analyzeResultsRuleBased(results: SerperResult[], brand: string, categor
   console.log(`🔍 ANALYSIS: Combined text sample (first 300 chars):`, allText.substring(0, 300) + '...');
   console.log(`🔍 ANALYSIS: Full text length:`, allText.length, 'characters');
   
-  // Analyze fit only for relevant categories
-  if (category === 'clothing' || category === 'shoes') {
+  // Check for direct fit advice first - this takes priority
+  if (directFitAdvice?.hasDirectAdvice && (category === 'clothing' || category === 'shoes')) {
+    const productType = category === 'shoes' ? 'shoes' : 'items';
+    console.log('🎯 PRIORITIZING DIRECT FIT ADVICE:', directFitAdvice);
+    
+    let recommendation = '';
+    if (directFitAdvice.recommendation === 'runs small') {
+      recommendation = `Product page indicates ${brand} ${productType} run small. Direct advice: "${directFitAdvice.advice.join(', ')}" Consider sizing up.`;
+    } else if (directFitAdvice.recommendation === 'runs large') {
+      recommendation = `Product page indicates ${brand} ${productType} run large. Direct advice: "${directFitAdvice.advice.join(', ')}" Consider sizing down.`;
+    } else if (directFitAdvice.recommendation === 'true to size') {
+      recommendation = `Product page indicates ${brand} ${productType} are true-to-size. Direct advice: "${directFitAdvice.advice.join(', ')}" Order your usual size.`;
+    } else {
+      recommendation = `Product page provides fit guidance: "${directFitAdvice.advice.join(', ')}" Refer to brand sizing advice.`;
+    }
+    
+    analysis.fit = {
+      recommendation,
+      confidence: directFitAdvice.confidence === 'high' ? 'high' : 'medium',
+      evidence: directFitAdvice.advice
+    };
+  }
+  // If no direct advice, analyze fit from reviews for relevant categories
+  else if (category === 'clothing' || category === 'shoes') {
     const fitPatterns = category === 'shoes' 
       ? {
           runsSmall: (allText.match(/runs small|size up|tight|narrow|small fit/g) || []).length,
