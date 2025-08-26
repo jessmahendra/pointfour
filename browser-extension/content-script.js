@@ -2537,8 +2537,8 @@
             `;
         }
         
-        // Add clickable button for review count - only show if we have actual reviews
-        if (totalReviews > 0) {
+        // Add clickable button for review count - show if we have reviews OR analysis data
+        if (totalReviews > 0 || hasData) {
             // Get URL extraction data and materials for enhanced reviews page
             const urlExtraction = window.pointFourURLExtraction || null;
             
@@ -2802,7 +2802,7 @@
                        target="_blank" 
                        rel="noopener noreferrer" 
                        class="pointfour-reviews-button">
-                        <span>Found ${totalReviews} review${totalReviews === 1 ? '' : 's'}</span>
+                        <span>${totalReviews > 0 ? `Found ${totalReviews} review${totalReviews === 1 ? '' : 's'}` : 'View Full Analysis'}</span>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M7 17L17 7"></path>
                             <path d="M7 7h10v10"></path>
@@ -2813,7 +2813,7 @@
         }
 
         // Add "Style with your pieces" button when we have fit data
-        if (recommendation !== 'Analyzing fit information...' && totalReviews > 0) {
+        if (recommendation !== 'Analyzing fit information...' && (totalReviews > 0 || hasData)) {
             content += `
                 <div class="pointfour-style-info">
                     <button class="pointfour-style-button" id="pointfour-style-btn">

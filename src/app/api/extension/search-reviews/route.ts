@@ -887,6 +887,17 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
           variations.push(withSpaces, withoutHyphens);
         }
         
+        // Handle brands with underscore suffixes (like "sezane_paris" -> "sezane")
+        if (base.includes('_')) {
+          const withSpaces = base.replace(/_/g, ' ');
+          const withoutUnderscores = base.replace(/_/g, '');
+          
+          // Also add just the base brand name (before the underscore)
+          const baseBrandName = base.split('_')[0];
+          
+          variations.push(withSpaces, withoutUnderscores, baseBrandName);
+        }
+        
         return Array.from(new Set(variations)); // Remove duplicates
       };
       
@@ -1280,9 +1291,25 @@ function calculateFitRelevanceScoreForResult(result: SerperResult, brand: string
   // Brand mention bonus (ensures relevance)
   if (text.includes(brand.toLowerCase())) score += 5;
   
-  // Quality sources bonus
-  if (result.link && (result.link.includes('reddit') || result.link.includes('substack'))) {
+  // Quality sources bonus - Reddit often has community discussions with valuable fit insights
+  if (result.link && result.link.includes('reddit')) {
+    score += 8; // Higher bonus for Reddit due to community discussions
+  } else if (result.link && result.link.includes('substack')) {
     score += 2;
+  }
+  
+  // Additional Reddit discussion bonus for posts that look like community questions/discussions
+  if (result.link && result.link.includes('reddit') && result.title) {
+    const title = result.title.toLowerCase();
+    const discussionIndicators = [
+      'worth it', 'help', 'advice', 'experience', 'opinions', 'thoughts',
+      'sizing', 'fit', 'quality', 'review', 'recommend', 'comparison'
+    ];
+    
+    const hasDiscussionIndicator = discussionIndicators.some(indicator => title.includes(indicator));
+    if (hasDiscussionIndicator) {
+      score += 5; // Extra bonus for discussion-oriented Reddit posts
+    }
   }
   
   return score;
@@ -1355,9 +1382,22 @@ function calculateFitRelevanceScore(review: Review): number {
     score += 1;
   }
   
-  // Bonus for quality sources (Reddit discussions tend to have good fit info)
+  // Bonus for quality sources - Reddit often has community discussions with valuable fit insights
   if (text.includes('reddit') || review.url.includes('reddit')) {
-    score += 2;
+    score += 8; // Higher bonus for Reddit due to community discussions
+    
+    // Additional Reddit discussion bonus for posts that look like community questions/discussions
+    const title = review.title.toLowerCase();
+    const discussionIndicators = [
+      'worth it', 'help', 'advice', 'experience', 'opinions', 'thoughts',
+      'sizing', 'fit', 'quality', 'review', 'recommend', 'comparison'
+    ];
+    
+    const hasDiscussionIndicator = discussionIndicators.some(indicator => title.includes(indicator));
+    if (hasDiscussionIndicator) {
+      score += 5; // Extra bonus for discussion-oriented Reddit posts
+      console.log(`🔥 REDDIT DISCUSSION: "${title.substring(0, 40)}..." (+5 discussion bonus)`);
+    }
   }
   
   return score;

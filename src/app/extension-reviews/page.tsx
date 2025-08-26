@@ -530,10 +530,47 @@ function ExtensionReviewsContent() {
                 </div>
               )}
 
-              {reviewData.brandFitSummary?.summary && (
+              {/* Display structured sections instead of basic summary */}
+              {reviewData.brandFitSummary?.sections && Object.keys(reviewData.brandFitSummary.sections).length > 0 ? (
                 <div style={{ margin: "0" }}>
-                  {formatMarkdownText(reviewData.brandFitSummary.summary)}
+                  {Object.entries(reviewData.brandFitSummary.sections).map(([sectionKey, section]: [string, any]) => (
+                    <div key={sectionKey} style={{ marginBottom: "20px" }}>
+                      <h4 style={{ 
+                        fontSize: "16px", 
+                        fontWeight: "600", 
+                        color: "#333", 
+                        margin: "0 0 8px 0" 
+                      }}>
+                        {section.title}
+                      </h4>
+                      <p style={{ 
+                        fontSize: "14px", 
+                        color: "#666", 
+                        margin: "0 0 8px 0",
+                        lineHeight: "1.5" 
+                      }}>
+                        {section.recommendation}
+                      </p>
+                      {section.confidence && (
+                        <p style={{ 
+                          fontSize: "12px", 
+                          color: "#888", 
+                          fontStyle: "italic",
+                          margin: "0"
+                        }}>
+                          Confidence: {section.confidence.toUpperCase()}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                /* Fallback to basic summary if no structured sections available */
+                reviewData.brandFitSummary?.summary && (
+                  <div style={{ margin: "0" }}>
+                    {formatMarkdownText(reviewData.brandFitSummary.summary)}
+                  </div>
+                )
               )}
             </div>
           </div>
