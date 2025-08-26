@@ -125,7 +125,7 @@ function ExtensionReviewsContent() {
 
   const brandName = searchParams.get("brand") || "";
   const itemName = searchParams.get("item") || "";
-  const fromWidget = searchParams.get("fromWidget") === 'true';
+  const fromWidget = searchParams.get("fromWidget") === "true";
   const widgetDataParam = searchParams.get("widgetData");
 
   // Get enhanced data from extension
@@ -159,8 +159,8 @@ function ExtensionReviewsContent() {
       if (fromWidget && widgetDataParam) {
         try {
           const widgetData = JSON.parse(widgetDataParam);
-          console.log('🔗 [ExtensionReviews] Using widget data:', widgetData);
-          
+          console.log("🔗 [ExtensionReviews] Using widget data:", widgetData);
+
           // Transform widget data to match expected format
           const transformedData: ReviewData = {
             brand: brandName,
@@ -169,41 +169,74 @@ function ExtensionReviewsContent() {
             reviews: widgetData.reviews || [],
             groupedReviews: widgetData.groupedReviews || {
               // Fallback to client-side grouping if server grouping not available
-              primary: widgetData.reviews?.filter((r: Review) => r.source?.includes('reddit') || r.source?.includes('substack')) || [],
-              community: widgetData.reviews?.filter((r: Review) => r.source?.includes('community')) || [],
-              blogs: widgetData.reviews?.filter((r: Review) => r.source?.includes('blog')) || [],
-              videos: widgetData.reviews?.filter((r: Review) => r.source?.includes('youtube')) || [],
-              social: widgetData.reviews?.filter((r: Review) => r.source?.includes('social')) || [],
-              publications: widgetData.reviews?.filter((r: Review) => r.source?.includes('publication')) || [],
-              other: widgetData.reviews || []
+              primary:
+                widgetData.reviews?.filter(
+                  (r: Review) =>
+                    r.source?.includes("reddit") ||
+                    r.source?.includes("substack")
+                ) || [],
+              community:
+                widgetData.reviews?.filter((r: Review) =>
+                  r.source?.includes("community")
+                ) || [],
+              blogs:
+                widgetData.reviews?.filter((r: Review) =>
+                  r.source?.includes("blog")
+                ) || [],
+              videos:
+                widgetData.reviews?.filter((r: Review) =>
+                  r.source?.includes("youtube")
+                ) || [],
+              social:
+                widgetData.reviews?.filter((r: Review) =>
+                  r.source?.includes("social")
+                ) || [],
+              publications:
+                widgetData.reviews?.filter((r: Review) =>
+                  r.source?.includes("publication")
+                ) || [],
+              other: widgetData.reviews || [],
             },
             totalResults: (() => {
               // Use groupedReviews as single source of truth for count consistency
               if (widgetData.groupedReviews) {
-                const groupedCount: number = (Object.values(widgetData.groupedReviews) as Review[][]).reduce((total: number, group: Review[]) => 
-                  total + group.length, 0);
-                
+                const groupedCount: number = (
+                  Object.values(widgetData.groupedReviews) as Review[][]
+                ).reduce(
+                  (total: number, group: Review[]) => total + group.length,
+                  0
+                );
+
                 // Warn if counts don't match by >20%
-                const originalCount = Number(widgetData.totalResults) || (widgetData.reviews?.length ?? 0) || 0;
+                const originalCount =
+                  Number(widgetData.totalResults) ||
+                  (widgetData.reviews?.length ?? 0) ||
+                  0;
                 if (originalCount > 0) {
-                  const ratio = Math.abs(groupedCount - originalCount) / originalCount;
+                  const ratio =
+                    Math.abs(groupedCount - originalCount) / originalCount;
                   if (ratio > 0.2) {
-                    console.warn(`🔢 COUNT MISMATCH: Grouped=${groupedCount}, Original=${originalCount}`);
+                    console.warn(
+                      `🔢 COUNT MISMATCH: Grouped=${groupedCount}, Original=${originalCount}`
+                    );
                   }
                 }
-                
+
                 return groupedCount;
               }
               return widgetData.totalResults || widgetData.reviews?.length || 0;
             })(),
-            timestamp: widgetData.timestamp
+            timestamp: widgetData.timestamp,
           };
-          
+
           setReviewData(transformedData);
           setLoading(false);
           return;
         } catch (e) {
-          console.warn('🔗 [ExtensionReviews] Failed to parse widget data, falling back to API:', e);
+          console.warn(
+            "🔗 [ExtensionReviews] Failed to parse widget data, falling back to API:",
+            e
+          );
         }
       }
 
@@ -320,7 +353,7 @@ function ExtensionReviewsContent() {
             Loading reviews for {brandName}...
           </p>
         </div>
-        <style jsx>{`
+        <style>{`
           @keyframes spin {
             0% {
               transform: rotate(0deg);
@@ -476,9 +509,13 @@ function ExtensionReviewsContent() {
           <p style={{ color: "#666", fontSize: "14px" }}>
             {(() => {
               const totalCount = reviewData.totalResults;
-              const groupCount = Object.keys(reviewData.groupedReviews).filter(key => 
-                reviewData.groupedReviews[key as keyof typeof reviewData.groupedReviews].length > 0).length;
-              
+              const groupCount = Object.keys(reviewData.groupedReviews).filter(
+                (key) =>
+                  reviewData.groupedReviews[
+                    key as keyof typeof reviewData.groupedReviews
+                  ].length > 0
+              ).length;
+
               if (totalCount === 0) {
                 return "No reviews found from web sources";
               } else if (groupCount > 1) {
@@ -541,38 +578,69 @@ function ExtensionReviewsContent() {
               )}
 
               {/* Display structured sections instead of basic summary */}
-              {reviewData.brandFitSummary?.sections && Object.keys(reviewData.brandFitSummary.sections).length > 0 ? (
+              {reviewData.brandFitSummary?.sections &&
+              Object.keys(reviewData.brandFitSummary.sections).length > 0 ? (
                 <div style={{ margin: "0" }}>
-                  {Object.entries(reviewData.brandFitSummary.sections).map(([sectionKey, section]: [string, FitSection]) => (
-                    <div key={sectionKey} style={{ marginBottom: "20px" }}>
-                      <h4 style={{ 
-                        fontSize: "16px", 
-                        fontWeight: "600", 
-                        color: "#333", 
-                        margin: "0 0 8px 0" 
-                      }}>
-                        {section.title}
-                      </h4>
-                      <p style={{ 
-                        fontSize: "14px", 
-                        color: "#666", 
-                        margin: "0 0 8px 0",
-                        lineHeight: "1.5" 
-                      }}>
-                        {section.recommendation}
-                      </p>
-                      {section.confidence && (
-                        <p style={{ 
-                          fontSize: "12px", 
-                          color: "#888", 
-                          fontStyle: "italic",
-                          margin: "0"
-                        }}>
-                          Confidence: {section.confidence.toUpperCase()}
+                  {Object.entries(reviewData.brandFitSummary.sections).map(
+                    ([sectionKey, section]: [string, FitSection]) => (
+                      <div key={sectionKey} style={{ marginBottom: "20px" }}>
+                        <h4
+                          style={{
+                            fontSize: "16px",
+                            fontWeight: "600",
+                            color: "#333",
+                            margin: "0 0 8px 0",
+                          }}
+                        >
+                          {section.title}
+                        </h4>
+                        <p
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            margin: "0 0 8px 0",
+                            lineHeight: "1.5",
+                          }}
+                        >
+                          {section.recommendation}
                         </p>
-                      )}
-                    </div>
-                  ))}
+                        {section.evidence && section.evidence.length > 0 && (
+                          <div style={{ margin: "8px 0" }}>
+                            {section.evidence.map((quote, index) => (
+                              <div
+                                key={index}
+                                style={{
+                                  backgroundColor: "#f9f8f6",
+                                  border: "1px solid #e9ded5",
+                                  borderRadius: "6px",
+                                  padding: "8px 12px",
+                                  margin: "4px 0",
+                                  fontSize: "13px",
+                                  color: "#555",
+                                  fontStyle: "italic",
+                                  lineHeight: "1.4",
+                                }}
+                              >
+                                &quot;{quote}&quot;
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {section.confidence && (
+                          <p
+                            style={{
+                              fontSize: "12px",
+                              color: "#888",
+                              fontStyle: "italic",
+                              margin: "0",
+                            }}
+                          >
+                            Confidence: {section.confidence.toUpperCase()}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
               ) : (
                 /* Fallback to basic summary if no structured sections available */
@@ -912,7 +980,7 @@ function LoadingFallback() {
         />
         <p style={{ color: "#666", fontSize: "14px" }}>Loading reviews...</p>
       </div>
-      <style jsx>{`
+      <style>{`
         @keyframes spin {
           0% {
             transform: rotate(0deg);
