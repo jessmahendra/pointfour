@@ -16,11 +16,21 @@ interface Review {
   fullContent: string;
 }
 
+interface FitSection {
+  title: string;
+  recommendation: string;
+  confidence: "high" | "medium" | "low";
+  evidence?: string[];
+}
+
 interface BrandFitSummary {
   summary: string | null;
   confidence: "high" | "medium" | "low";
   sources: string[];
   totalResults: number;
+  sections?: {
+    [key: string]: FitSection;
+  };
 }
 
 interface ReviewData {
@@ -533,7 +543,7 @@ function ExtensionReviewsContent() {
               {/* Display structured sections instead of basic summary */}
               {reviewData.brandFitSummary?.sections && Object.keys(reviewData.brandFitSummary.sections).length > 0 ? (
                 <div style={{ margin: "0" }}>
-                  {Object.entries(reviewData.brandFitSummary.sections).map(([sectionKey, section]: [string, any]) => (
+                  {Object.entries(reviewData.brandFitSummary.sections).map(([sectionKey, section]: [string, FitSection]) => (
                     <div key={sectionKey} style={{ marginBottom: "20px" }}>
                       <h4 style={{ 
                         fontSize: "16px", 
