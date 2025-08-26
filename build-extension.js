@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /* eslint-disable @typescript-eslint/no-require-imports */
 
-const fs = require('fs');
-const path = require('path');
+import { existsSync, rmSync, mkdirSync, readdirSync, statSync, copyFileSync, readFileSync, writeFileSync, createWriteStream } from 'fs';
+import { join } from 'path';
 
 // Configuration
 const SOURCE_DIR = './browser-extension';
@@ -25,31 +25,31 @@ console.log(`🔗 Production URL: ${PRODUCTION_URL}`);
 
 // Clean and create build directory
 function cleanBuildDir() {
-  if (fs.existsSync(BUILD_DIR)) {
+  if (existsSync(BUILD_DIR)) {
     console.log('🧹 Cleaning existing build directory...');
-    fs.rmSync(BUILD_DIR, { recursive: true, force: true });
+    rmSync(BUILD_DIR, { recursive: true, force: true });
   }
   
   console.log('📁 Creating build directory...');
-  fs.mkdirSync(BUILD_DIR, { recursive: true });
+  mkdirSync(BUILD_DIR, { recursive: true });
 }
 
 // Copy directory recursively
 function copyDirectory(src, dest) {
-  if (!fs.existsSync(dest)) {
-    fs.mkdirSync(dest, { recursive: true });
+  if (!existsSync(dest)) {
+    mkdirSync(dest, { recursive: true });
   }
   
-  const items = fs.readdirSync(src);
+  const items = readdirSync(src);
   
   for (const item of items) {
-    const srcPath = path.join(src, item);
-    const destPath = path.join(dest, item);
+    const srcPath = join(src, item);
+    const destPath = join(dest, item);
     
-    if (fs.statSync(srcPath).isDirectory()) {
+    if (statSync(srcPath).isDirectory()) {
       copyDirectory(srcPath, destPath);
     } else {
-      fs.copyFileSync(srcPath, destPath);
+      copyFileSync(srcPath, destPath);
     }
   }
 }
@@ -64,13 +64,13 @@ function updateFiles() {
   console.log('🔄 Updating files with production URLs...');
   
   for (const file of FILES_TO_UPDATE) {
-    const filePath = path.join(BUILD_DIR, file);
+    const filePath = join(BUILD_DIR, file);
     
-    if (fs.existsSync(filePath)) {
+    if (existsSync(filePath)) {
       console.log(`  📝 Updating ${file}...`);
-      let content = fs.readFileSync(filePath, 'utf8');
+      let content = readFileSync(filePath, 'utf8');
       content = replaceUrls(content);
-      fs.writeFileSync(filePath, content);
+      writeFileSync(filePath, content);
     } else {
       console.log(`  ⚠️  Warning: ${file} not found in build directory`);
     }
@@ -79,17 +79,17 @@ function updateFiles() {
 
 // Create production manifest
 function updateManifest() {
-  const manifestPath = path.join(BUILD_DIR, 'manifest.json');
+  const manifestPath = join(BUILD_DIR, 'manifest.json');
   
-  if (fs.existsSync(manifestPath)) {
+  if (existsSync(manifestPath)) {
     console.log('📋 Updating manifest.json...');
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
     
     // Update version to indicate it's a production build
     manifest.version = `${manifest.version}`;
     manifest.description = `${manifest.description} (Production Build)`;
     
-    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
   }
 }
 
@@ -102,8 +102,8 @@ function createBuildInfo() {
     buildType: 'production'
   };
   
-  const buildInfoPath = path.join(BUILD_DIR, 'BUILD_INFO.json');
-  fs.writeFileSync(buildInfoPath, JSON.stringify(buildInfo, null, 2));
+  const buildInfoPath = join(BUILD_DIR, 'BUILD_INFO.json');
+  writeFileSync(buildInfoPath, JSON.stringify(buildInfo, null, 2));
   
   console.log('📊 Created BUILD_INFO.json');
 }
@@ -112,7 +112,7 @@ function createBuildInfo() {
 function createZip() {
   console.log('📦 Creating zip file...');
   const archiver = require('archiver');
-  const output = fs.createWriteStream(`${BUILD_DIR}.zip`);
+  const output = createWriteStream(`${BUILD_DIR}.zip`);
   const archive = archiver('zip', { zlib: { level: 9 } });
   
   return new Promise((resolve, reject) => {
@@ -133,7 +133,7 @@ function createZip() {
 async function build() {
   try {
     // Check if source directory exists
-    if (!fs.existsSync(SOURCE_DIR)) {
+    if (!existsSync(SOURCE_DIR)) {
       console.error(`❌ Error: Source directory '${SOURCE_DIR}' not found!`);
       console.log('💡 Make sure you\'re running this script from the fashion-recommendations directory');
       process.exit(1);
