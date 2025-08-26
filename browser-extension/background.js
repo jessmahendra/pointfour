@@ -2,7 +2,7 @@
 // Handles brand detection, API calls, and cross-tab state management
 
 // Use localhost for development, production URL for deployed extension
-const API_BASE_URL = 'http://localhost:3003';
+const API_BASE_URL = 'http://localhost:3000';
 const BRAND_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (reduced for testing fresh data)
 const brandCache = new Map();
 const tabStates = new Map();
@@ -454,13 +454,20 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
     console.log('🔍 API URL:', `${API_BASE_URL}/api/extension/search-reviews`);
     console.log('🔍 Request body:', JSON.stringify(apiRequestData));
     
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
+    
     const response = await fetch(`${API_BASE_URL}/api/extension/search-reviews`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(apiRequestData)
+      body: JSON.stringify(apiRequestData),
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     console.log('🔍 API response status:', response.status, response.statusText);
 
@@ -525,10 +532,12 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
   } catch (error) {
     console.error('Error fetching brand data:', error);
     
-    // Check if it's an API key issue
+    // Check if it's a timeout or API issue
     let errorMessage = `Unable to load fit information for ${brandName} at this time. Please try again later or manually search for reviews.`;
     
-    if (error.message.includes('SERPER_API_KEY not found') || error.message.includes('Search API not configured')) {
+    if (error.name === 'AbortError') {
+      errorMessage = `Analysis is taking longer than expected. Please try again in a moment.`;
+    } else if (error.message.includes('SERPER_API_KEY not found') || error.message.includes('Search API not configured')) {
       errorMessage = `Search API not configured. Please contact support to enable live review search.`;
     } else if (error.message.includes('403') || error.message.includes('authorization')) {
       errorMessage = `Search API authorization failed. Please check API configuration.`;

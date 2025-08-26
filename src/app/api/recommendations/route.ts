@@ -369,7 +369,7 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
     console.log('Prompt length:', aiPrompt.length);
     
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "4o-mini",
       messages: [
         {
           role: "system",
@@ -380,8 +380,8 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
           content: aiPrompt
         }
       ],
-      max_tokens: 1000,
-      temperature: 0.7,
+      max_tokens: 2000,
+      temperature: 0.3,
     });
     
     const aiResponse = completion.choices[0]?.message?.content || "Sorry, I couldn't generate a response.";

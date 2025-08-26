@@ -7,6 +7,7 @@ process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  timeout: 30000, // 30 second timeout
 });
 
 interface SerperResult {
@@ -142,6 +143,35 @@ function detectProductCategory(brand: string, itemName: string = ''): 'clothing'
   }
   
   return 'general';
+}
+
+// Calculate string similarity using Levenshtein distance
+function calculateStringSimilarity(str1: string, str2: string): number {
+  const len1 = str1.length;
+  const len2 = str2.length;
+  
+  // Create a matrix to store distances
+  const matrix = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(null));
+  
+  // Initialize first row and column
+  for (let i = 0; i <= len1; i++) matrix[i][0] = i;
+  for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+  
+  // Calculate distances
+  for (let i = 1; i <= len1; i++) {
+    for (let j = 1; j <= len2; j++) {
+      const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,       // deletion
+        matrix[i][j - 1] + 1,       // insertion
+        matrix[i - 1][j - 1] + cost // substitution
+      );
+    }
+  }
+  
+  // Return similarity as percentage
+  const maxLen = Math.max(len1, len2);
+  return maxLen === 0 ? 1 : (maxLen - matrix[len1][len2]) / maxLen;
 }
 
 // Detect if user is searching for a specific item rather than just a brand
@@ -463,14 +493,21 @@ export async function POST(request: NextRequest) {
         try {
           console.log(`🔍 SERPER: Executing query (attempt ${attempt}/${maxRetries}):`, query);
           
+          // Add timeout to prevent hanging
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+          
           const response = await fetch('https://google.serper.dev/search', {
             method: 'POST',
             headers: {
               'X-API-KEY': serperApiKey,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ q: query, gl: 'us', num: 10 })
+            body: JSON.stringify({ q: query, gl: 'us', num: 20 }),
+            signal: controller.signal
           });
+          
+          clearTimeout(timeoutId);
           
           if (response.ok) {
             const data = await response.json();
@@ -497,8 +534,10 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           console.error(`❌ SERPER: Search error for query (attempt ${attempt}/${maxRetries}):`, query, error);
           
-          // If this is a TLS certificate error, wait a bit before retrying
-          if (error instanceof Error && error.message.includes('certificate')) {
+          // Handle timeout/abort errors
+          if (error instanceof Error && error.name === 'AbortError') {
+            console.log(`⏰ SERPER: Query timed out after 15 seconds`);
+          } else if (error instanceof Error && error.message.includes('certificate')) {
             console.log(`⏰ SERPER: Waiting 1 second before retry due to certificate error...`);
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
@@ -568,6 +607,13 @@ export async function POST(request: NextRequest) {
     
     // Analyze results for patterns based on product category using enhanced data
     const analysis = await analyzeResultsWithGPT5(prioritizedForGPT, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem, directFitAdvice);
+    
+    // Debug: Log the analysis object
+    console.log('🔍 ANALYSIS DEBUG: Full analysis object:', JSON.stringify(analysis, null, 2));
+    console.log('🔍 ANALYSIS DEBUG: Analysis keys:', Object.keys(analysis));
+    console.log('🔍 ANALYSIS DEBUG: Has fit?', !!analysis.fit);
+    console.log('🔍 ANALYSIS DEBUG: Has quality?', !!analysis.quality);
+    console.log('🔍 ANALYSIS DEBUG: Has materials?', !!analysis.materials);
     
     // Create structured sections
     const sections: Record<string, {
@@ -647,8 +693,7 @@ export async function POST(request: NextRequest) {
       };
     }
     
-    // Create detailed summary based on analysis
-    const summary = generateDetailedSummary(analysis, allResults, brand, productCategory);
+    // Summary will be generated after review prioritization to use correct count
     
     // Helper function to use GPT for generating meaningful summaries
     const generateMeaningfulSummary = async (title: string, snippet: string, brand: string): Promise<string | null> => {
@@ -666,7 +711,7 @@ Format as bullet points like:
 Focus on concrete experiences like comfort, durability, functionality, value, etc. If insufficient information, return just the title without "Review of" prefix.`;
 
         const completion = await openai.chat.completions.create({
-          model: "gpt-5-mini", // Keep using mini for snippet processing (cost optimization)
+          model: "gpt-4o-mini", // Keep using mini for snippet processing (cost optimization)
           messages: [{
             role: "system",
             content: "You are an expert at extracting specific pros/cons from product reviews. Provide concrete bullet points about user experiences."
@@ -674,8 +719,9 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
             role: "user", 
             content: prompt
           }],
-          max_completion_tokens: 120,
+          max_tokens: 2000,
           temperature: 0.3
+          // Note: GPT-5 models only support default temperature (1)
         });
 
         const summary = completion.choices[0]?.message?.content?.trim();
@@ -943,22 +989,47 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
     console.log('🤖 Starting GPT-enhanced snippet processing...');
     const formattedReviews = await Promise.all(brandFilteredResults.map(convertToReview));
     
-    // Deduplicate reviews based on title and URL
+    // Deduplicate reviews with improved logic
     const uniqueReviews = formattedReviews.filter((review, index, array) => {
       // Check if this is the first occurrence of this title or URL
-      const firstIndex = array.findIndex(r => 
-        r.title === review.title || 
-        r.url === review.url ||
-        (r.title.length > 10 && review.title.length > 10 && 
-         r.title.toLowerCase().includes(review.title.toLowerCase().substring(0, 20)))
-      );
+      const firstIndex = array.findIndex(r => {
+        // Exact URL match (highest priority)
+        if (r.url === review.url) return true;
+        
+        // Exact title match
+        if (r.title === review.title) return true;
+        
+        // Similarity check only for longer titles and with 80% threshold
+        if (r.title.length > 20 && review.title.length > 20) {
+          const similarity = calculateStringSimilarity(r.title.toLowerCase(), review.title.toLowerCase());
+          return similarity > 0.8;
+        }
+        
+        return false;
+      });
       return firstIndex === index;
     });
     
     console.log(`🔄 DEDUPLICATION: Reduced from ${formattedReviews.length} to ${uniqueReviews.length} reviews`);
     
-    // Prioritize reviews by fit relevance
-    const prioritizedReviews = uniqueReviews.sort((a, b) => {
+    // Add minimum result threshold - if too few results after dedup, be less aggressive
+
+    let finalUniqueReviews: Review[];
+
+if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
+  console.log(`⚠️ DEDUP WARNING: Too few results (${uniqueReviews.length}), relaxing criteria`);
+  const relaxedUniqueReviews = formattedReviews.filter((review, index, array) => {
+    const firstIndex = array.findIndex(r => r.url === review.url || r.title === review.title);
+    return firstIndex === index;
+  });
+  console.log(`🔄 RELAXED DEDUPLICATION: Using ${relaxedUniqueReviews.length} reviews instead`);
+  finalUniqueReviews = relaxedUniqueReviews;
+} else {
+  finalUniqueReviews = uniqueReviews;
+}
+    
+    // Prioritize reviews by fit relevance using final deduplicated results
+    const prioritizedReviews = finalUniqueReviews.sort((a, b) => {
       const scoreA = calculateFitRelevanceScore(a);
       const scoreB = calculateFitRelevanceScore(b);
       
@@ -972,13 +1043,16 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       return confidenceOrder[b.confidence] - confidenceOrder[a.confidence];
     });
     
-    console.log(`📊 FIT PRIORITIZATION: Sorted ${uniqueReviews.length} reviews by fit relevance`);
+    console.log(`📊 FIT PRIORITIZATION: Sorted ${finalUniqueReviews.length} reviews by fit relevance`);
     
     // Log top fit-relevant reviews
     prioritizedReviews.slice(0, 5).forEach((review, index) => {
       const score = calculateFitRelevanceScore(review);
       console.log(`🏆 #${index + 1} FIT RELEVANT: "${review.title.substring(0, 60)}..." (score: ${score})`);
     });
+    
+    // Create detailed summary based on analysis using filtered/prioritized results
+    const summary = generateDetailedSummary(analysis, prioritizedReviews, brand, productCategory);
     
     // Group reviews by source type with proper Review structure using prioritized reviews
     const groupedReviews = {
@@ -993,6 +1067,11 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
           .some(s => r.url.includes(s))
       )
     };
+
+    // Debug: Log the sections object being returned
+    console.log('🔍 API RESPONSE DEBUG: Final sections object:', JSON.stringify(sections, null, 2));
+    console.log('🔍 API RESPONSE DEBUG: Sections keys:', Object.keys(sections));
+    console.log('🔍 API RESPONSE DEBUG: hasData will be:', Object.keys(sections).length > 0);
 
     const response = NextResponse.json({
       brandName: brand, // Include the brand name in the response
@@ -1429,7 +1508,7 @@ IMPORTANT GUIDELINES:
     // Use higher quality model (gpt-4o) for final analysis and recommendations
     // This provides better insight extraction and more nuanced analysis
     const completion = await openai.chat.completions.create({
-      model: "gpt-5", // Using full gpt-4o for better analysis quality
+      model: "gpt-4o-mini", // Temporarily using gpt-4o while debugging GPT-5 issues
       messages: [
         {
           role: "system",
@@ -1440,10 +1519,15 @@ IMPORTANT GUIDELINES:
           content: prompt
         }
       ],
-      max_completion_tokens: 1500,
-      temperature: 0.3,
+      max_tokens: 2000,
+      temperature: 0.3
     });
 
+    // Debug: Log key completion info 
+    console.log('🔍 GPT-5 DEBUG: Message content length:', (completion.choices?.[0]?.message?.content || '').length);
+    console.log('🔍 GPT-5 DEBUG: Finish reason:', completion.choices?.[0]?.finish_reason);
+    console.log('🔍 GPT-5 DEBUG: Reasoning tokens:', completion.usage?.completion_tokens_details?.reasoning_tokens || 0);
+    
     const aiResponse = completion.choices[0]?.message?.content;
     if (!aiResponse) {
       console.log('🤖 GPT-5 ANALYSIS: No response from GPT-5');
@@ -2131,13 +2215,13 @@ function extractReadableSourceName(url: string): string {
 }
 
 // Generate a detailed, nuanced summary from the analysis
-function generateDetailedSummary(analysis: AnalysisResult, results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general'): string {
+function generateDetailedSummary(analysis: AnalysisResult, results: Review[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general'): string {
   const totalReviews = results.length;
   
   // Get unique sources for transparency
   const allSources = new Set<string>();
   for (const result of results.slice(0, 10)) {
-    const sourceName = extractReadableSourceName(result.link || '');
+    const sourceName = extractReadableSourceName(result.url || '');
     if (sourceName) {
       allSources.add(sourceName);
     }

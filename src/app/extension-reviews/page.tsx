@@ -157,7 +157,8 @@ function ExtensionReviewsContent() {
             itemName: itemName,
             brandFitSummary: widgetData.brandFitSummary,
             reviews: widgetData.reviews || [],
-            groupedReviews: {
+            groupedReviews: widgetData.groupedReviews || {
+              // Fallback to client-side grouping if server grouping not available
               primary: widgetData.reviews?.filter((r: Review) => r.source?.includes('reddit') || r.source?.includes('substack')) || [],
               community: widgetData.reviews?.filter((r: Review) => r.source?.includes('community')) || [],
               blogs: widgetData.reviews?.filter((r: Review) => r.source?.includes('blog')) || [],
@@ -166,7 +167,25 @@ function ExtensionReviewsContent() {
               publications: widgetData.reviews?.filter((r: Review) => r.source?.includes('publication')) || [],
               other: widgetData.reviews || []
             },
-            totalResults: widgetData.totalResults || widgetData.reviews?.length || 0,
+            totalResults: (() => {
+              // Use groupedReviews as single source of truth for count consistency
+              if (widgetData.groupedReviews) {
+                const groupedCount: number = (Object.values(widgetData.groupedReviews) as Review[][]).reduce((total: number, group: Review[]) => 
+                  total + group.length, 0);
+                
+                // Warn if counts don't match by >20%
+                const originalCount = Number(widgetData.totalResults) || (widgetData.reviews?.length ?? 0) || 0;
+                if (originalCount > 0) {
+                  const ratio = Math.abs(groupedCount - originalCount) / originalCount;
+                  if (ratio > 0.2) {
+                    console.warn(`🔢 COUNT MISMATCH: Grouped=${groupedCount}, Original=${originalCount}`);
+                  }
+                }
+                
+                return groupedCount;
+              }
+              return widgetData.totalResults || widgetData.reviews?.length || 0;
+            })(),
             timestamp: widgetData.timestamp
           };
           
@@ -445,7 +464,19 @@ function ExtensionReviewsContent() {
           </h1>
 
           <p style={{ color: "#666", fontSize: "14px" }}>
-            Found {reviewData.totalResults} reviews from web sources
+            {(() => {
+              const totalCount = reviewData.totalResults;
+              const groupCount = Object.keys(reviewData.groupedReviews).filter(key => 
+                reviewData.groupedReviews[key as keyof typeof reviewData.groupedReviews].length > 0).length;
+              
+              if (totalCount === 0) {
+                return "No reviews found from web sources";
+              } else if (groupCount > 1) {
+                return `Found ${totalCount} reviews across ${groupCount} categories`;
+              } else {
+                return `Found ${totalCount} reviews from web sources`;
+              }
+            })()}
           </p>
         </div>
 

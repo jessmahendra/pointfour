@@ -86,6 +86,7 @@
   let initTimeout = null;
   let isProcessing = false;
   let detectionScore = 0;
+  let analysisTimeoutId = null;
 
   // ========================================
   // INTELLIGENT DETECTION
@@ -2536,8 +2537,8 @@
             `;
         }
         
-        // Add clickable button for review count - also show if we have structured data even with 0 totalReviews
-        if (totalReviews > 0 || (structuredData && (structuredData.fit || structuredData.quality || structuredData.materials))) {
+        // Add clickable button for review count - only show if we have actual reviews
+        if (totalReviews > 0) {
             // Get URL extraction data and materials for enhanced reviews page
             const urlExtraction = window.pointFourURLExtraction || null;
             
@@ -2631,6 +2632,7 @@
                 params.set('widgetData', JSON.stringify({
                     brandFitSummary: data.externalSearchResults.brandFitSummary,
                     reviews: data.externalSearchResults.reviews,
+                    groupedReviews: data.externalSearchResults.groupedReviews,
                     totalResults: data.externalSearchResults.totalResults,
                     timestamp: Date.now()
                 }));
@@ -2800,7 +2802,7 @@
                        target="_blank" 
                        rel="noopener noreferrer" 
                        class="pointfour-reviews-button">
-                        <span>${totalReviews > 0 ? `Found ${totalReviews} reviews` : 'View detailed analysis'}</span>
+                        <span>Found ${totalReviews} review${totalReviews === 1 ? '' : 's'}</span>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M7 17L17 7"></path>
                             <path d="M7 7h10v10"></path>
@@ -3076,6 +3078,20 @@ function extractProductImageFromPage() {
         }
     }
     
+    // Add timeout to prevent stuck loading state
+    analysisTimeoutId = setTimeout(() => {
+        if (isProcessing && widgetContainer) {
+            console.log('[PointFour] Analysis timeout - showing fallback message');
+            updateWidgetContent({
+                error: true,
+                message: 'Analysis is taking longer than expected. The server may be busy.',
+                brandName: brand,
+                hasData: false
+            });
+            isProcessing = false;
+        }
+    }, 30000); // 30 second timeout
+    
     try {
         // Get URL extraction data if available
         const urlExtraction = window.pointFourURLExtraction || null;
@@ -3108,6 +3124,7 @@ function extractProductImageFromPage() {
         
         if (response && response.success && response.brandData) {
             console.log('[PointFour] Updating widget with brand data:', response.brandData);
+            clearTimeout(analysisTimeoutId);
             updateWidgetContent(response.brandData);
         } else if (response && !response.success) {
             console.log('[PointFour] Response indicates failure:', response);
@@ -3268,7 +3285,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'BRAND_DATA') {
       console.log('[PointFour] Processing brand data:', message.data);
       
-      // Clear processing flag when we receive actual data
+      // Clear timeout and processing flag when we receive actual data
+      clearTimeout(analysisTimeoutId);
       isProcessing = false;
       
       // Update the widget with the received data
