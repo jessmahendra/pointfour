@@ -571,84 +571,108 @@ function ExtensionReviewsContent() {
                 fontWeight: "400",
               }}
             >
-              {tldrParam && (
-                <div style={{ margin: "0 0 16px 0" }}>
-                  {formatMarkdownText(decodeURIComponent(tldrParam))}
+              {/* Enhanced Summary with Brand Reputation & Inconsistency Detection */}
+              {reviewData.brandFitSummary?.summary && (
+                <div style={{ 
+                  margin: "0 0 20px 0",
+                  padding: "16px",
+                  backgroundColor: "#f9f8f6",
+                  border: "1px solid #e9ded5",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  lineHeight: "1.6",
+                  color: "#333"
+                }}>
+                  {reviewData.brandFitSummary.summary.split('\n').map((line, index) => {
+                    if (line.trim() === '') {
+                      return <br key={index} />;
+                    }
+                    
+                    // Handle warning lines with subtle styling
+                    if (line.includes('⚠️')) {
+                      return (
+                        <p key={index} style={{
+                          margin: "0 0 8px 0",
+                          fontSize: "13px",
+                          color: "#666",
+                          fontStyle: "italic"
+                        }}>
+                          {line.replace('⚠️ ', '')}
+                        </p>
+                      );
+                    }
+                    
+                    // Handle bold sections (brand reputation, sizing, quality)
+                    if (line.includes('**') && line.includes('**:')) {
+                      const parts = line.split(/(\*\*[^*]+\*\*)/);
+                      return (
+                        <p key={index} style={{ margin: "0 0 8px 0", fontWeight: "400" }}>
+                          {parts.map((part, i) => {
+                            if (part.startsWith('**') && part.endsWith('**')) {
+                              return <strong key={i} style={{ fontWeight: "600" }}>{part.slice(2, -2)}</strong>;
+                            }
+                            return part;
+                          })}
+                        </p>
+                      );
+                    }
+                    
+                    return (
+                      <p key={index} style={{ margin: "0 0 8px 0", fontWeight: "400" }}>
+                        {line}
+                      </p>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {/* TLDR Summary - fallback for legacy URLs */}
+              {tldrParam && !reviewData.brandFitSummary?.summary && (
+                <div style={{ 
+                  margin: "0 0 20px 0",
+                  padding: "12px 16px",
+                  backgroundColor: "#f9f8f6",
+                  border: "1px solid #e9ded5",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  color: "#333"
+                }}>
+                  {decodeURIComponent(tldrParam)}
                 </div>
               )}
 
-              {/* Display structured sections instead of basic summary */}
-              {reviewData.brandFitSummary?.sections &&
-              Object.keys(reviewData.brandFitSummary.sections).length > 0 ? (
+              {/* Customer Evidence/Quotes */}
+              {reviewData.brandFitSummary?.sections && Object.keys(reviewData.brandFitSummary.sections).length > 0 && (
                 <div style={{ margin: "0" }}>
                   {Object.entries(reviewData.brandFitSummary.sections).map(
                     ([sectionKey, section]: [string, FitSection]) => (
-                      <div key={sectionKey} style={{ marginBottom: "20px" }}>
-                        <h4
-                          style={{
-                            fontSize: "16px",
-                            fontWeight: "600",
-                            color: "#333",
-                            margin: "0 0 8px 0",
-                          }}
-                        >
-                          {section.title}
-                        </h4>
-                        <p
-                          style={{
-                            fontSize: "14px",
-                            color: "#666",
-                            margin: "0 0 8px 0",
-                            lineHeight: "1.5",
-                          }}
-                        >
-                          {section.recommendation}
-                        </p>
-                        {section.evidence && section.evidence.length > 0 && (
-                          <div style={{ margin: "8px 0" }}>
-                            {section.evidence.map((quote, index) => (
-                              <div
-                                key={index}
-                                style={{
-                                  backgroundColor: "#f9f8f6",
-                                  border: "1px solid #e9ded5",
-                                  borderRadius: "6px",
-                                  padding: "8px 12px",
-                                  margin: "4px 0",
-                                  fontSize: "13px",
-                                  color: "#555",
-                                  fontStyle: "italic",
-                                  lineHeight: "1.4",
-                                }}
-                              >
-                                &quot;{quote}&quot;
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {section.confidence && (
-                          <p
-                            style={{
-                              fontSize: "12px",
-                              color: "#888",
-                              fontStyle: "italic",
-                              margin: "0",
-                            }}
-                          >
-                            Confidence: {section.confidence.toUpperCase()}
-                          </p>
-                        )}
-                      </div>
+                      section.evidence && section.evidence.length > 0 ? (
+                        <div key={sectionKey} style={{ marginBottom: "16px" }}>
+                          {section.evidence.map((quote, index) => (
+                            <div
+                              key={`${sectionKey}-${index}`}
+                              style={{
+                                backgroundColor: "#ffffff",
+                                border: "1px solid #e9ded5",
+                                borderLeft: "3px solid #d4b894",
+                                borderRadius: "6px",
+                                padding: "10px 14px",
+                                margin: "8px 0",
+                                fontSize: "13px",
+                                color: "#555",
+                                fontStyle: "italic",
+                                lineHeight: "1.4",
+                              }}
+                            >
+                              &quot;{quote}&quot;
+                            </div>
+                          ))}
+                        </div>
+                      ) : null
                     )
                   )}
                 </div>
-              ) : (
-                /* Fallback to basic summary if no structured sections available */
-                reviewData.brandFitSummary?.summary && (
-                  <div style={{ margin: "0" }}>
-                    {formatMarkdownText(reviewData.brandFitSummary.summary)}
-                  </div>
-                )
               )}
             </div>
           </div>

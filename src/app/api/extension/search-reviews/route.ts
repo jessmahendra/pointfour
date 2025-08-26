@@ -2268,19 +2268,91 @@ function generateDetailedSummary(analysis: AnalysisResult, results: Review[], br
   }
   const sourcesList = Array.from(allSources).slice(0, 4);
   
+  // Detect sizing inconsistencies in reviews
+  const detectSizingInconsistencies = (reviews: Review[]) => {
+    const sizingMentions = {
+      runsSmall: 0,
+      runsLarge: 0,
+      trueToSize: 0,
+      inconsistent: [] as string[]
+    };
+    
+    reviews.forEach(review => {
+      const content = (review.snippet + ' ' + review.title).toLowerCase();
+      if (content.includes('run small') || content.includes('runs small') || content.includes('size up')) {
+        sizingMentions.runsSmall++;
+      }
+      if (content.includes('run large') || content.includes('runs large') || content.includes('size down')) {
+        sizingMentions.runsLarge++;
+      }
+      if (content.includes('true to size') || content.includes('fits perfectly')) {
+        sizingMentions.trueToSize++;
+      }
+      if (content.includes('inconsistent') || content.includes('varies') || content.includes('different fit')) {
+        sizingMentions.inconsistent.push(review.title.substring(0, 50) + '...');
+      }
+    });
+    
+    return sizingMentions;
+  };
+  
+  // Generate brand reputation context
+  const generateBrandReputation = (brandName: string) => {
+    const brandLower = brandName.toLowerCase();
+    
+    // Brand reputation data based on common knowledge
+    const brandProfiles: { [key: string]: { description: string; positioning: string; heritage: string } } = {
+      'uniqlo': {
+        description: 'UNIQLO is a Japanese fast-fashion retailer known for affordable basics and innovative fabrics',
+        positioning: 'Mid-range fast fashion with emphasis on functional clothing and accessible pricing',
+        heritage: 'Founded in Japan in 1984, focuses on "LifeWear" - clothing designed for daily life'
+      },
+      'zara': {
+        description: 'Spanish fast-fashion brand known for trend-driven clothing and quick turnaround',
+        positioning: 'Fast fashion with contemporary European styling',
+        heritage: 'Founded in Spain in 1975, part of Inditex group'
+      },
+      'h&m': {
+        description: 'Swedish multinational clothing retailer known for affordable fashion',
+        positioning: 'Budget-friendly fast fashion with trend-conscious designs',
+        heritage: 'Founded in Sweden in 1947, focus on sustainability and accessibility'
+      },
+      'cos': {
+        description: 'Minimalist fashion brand offering modern, architectural designs',
+        positioning: 'Contemporary fashion with clean lines and quality materials',
+        heritage: 'H&M premium brand launched in 2007, focus on timeless design'
+      },
+      'everlane': {
+        description: 'Direct-to-consumer brand focused on ethical manufacturing and transparency',
+        positioning: 'Premium basics with emphasis on sustainability and fair pricing',
+        heritage: 'Founded in 2010, known for "radical transparency" in pricing and production'
+      }
+    };
+    
+    return brandProfiles[brandLower] || null;
+  };
+  
   // Generate conversational summary in personal summary style
   const summaryParts: string[] = [];
+  
+  // Skip brand reputation section for cleaner summary
   
   // Start with context about what we found
   if (totalReviews > 0) {
     const sourcesText = sourcesList.length > 0 ? ` from sources like ${sourcesList.join(', ')}` : ' from various review sources';
-    summaryParts.push(`Based on feedback from ${totalReviews} reviews${sourcesText}, here's what customers are saying about ${brand}:`);
+    summaryParts.push(`Based on feedback from ${totalReviews} reviews${sourcesText}, here's what customers are saying:`);
     summaryParts.push(''); // Add spacing
   }
   
   // Add fit analysis in conversational tone (only for clothing/shoes)
   if (analysis.fit && analysis.fit.evidence && analysis.fit.evidence.length > 0 && (category === 'clothing' || category === 'shoes')) {
     const productType = category === 'shoes' ? 'shoes' : 'clothing';
+    const sizingData = detectSizingInconsistencies(results);
+    
+    // Check for significant inconsistencies
+    const totalSizingFeedback = sizingData.runsSmall + sizingData.runsLarge + sizingData.trueToSize;
+    const hasInconsistencies = sizingData.inconsistent.length > 0 || 
+                               (totalSizingFeedback >= 3 && Math.max(sizingData.runsSmall, sizingData.runsLarge, sizingData.trueToSize) / totalSizingFeedback < 0.6);
     
     if (analysis.fit.recommendation.toLowerCase().includes('run small') || analysis.fit.recommendation.toLowerCase().includes('runs small')) {
       if (analysis.fit.confidence === 'high') {
@@ -2306,6 +2378,17 @@ function generateDetailedSummary(analysis: AnalysisResult, results: Review[], br
         summaryParts.push(`**Sizing**: Customer experiences with ${brand} ${productType} sizing are mixed. Check individual reviews for specific items you're considering.`);
       }
     }
+    
+    // Add inconsistency note if detected
+    if (hasInconsistencies) {
+      if (sizingData.inconsistent.length > 0) {
+        summaryParts.push(`⚠️ **Sizing Note**: Some reviews mention inconsistent sizing across different items. Customer experiences vary significantly, so checking reviews for specific products is especially important.`);
+      } else if (totalSizingFeedback >= 3) {
+        const distribution = `${sizingData.runsSmall} mention small fit, ${sizingData.runsLarge} mention large fit, ${sizingData.trueToSize} say true to size`;
+        summaryParts.push(`⚠️ **Sizing Note**: Reviews show mixed feedback on sizing (${distribution}). This suggests fit may vary by item or style, so individual product reviews are recommended.`);
+      }
+    }
+    
     summaryParts.push(''); // Add spacing
   }
   
