@@ -6,12 +6,15 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "build:extension": "node build-extension.js",
+    "friend": "cd fashion-recommendations && node build-extension.js"
   },
   "dependencies": {
     "@types/airtable": "^0.10.0",
     "@types/uuid": "^10.0.0",
     "airtable": "^0.12.2",
+    "archiver": "^6.0.1",
     "axios": "^1.11.0",
     "cheerio": "^1.1.2",
     "dotenv": "^17.2.1",
