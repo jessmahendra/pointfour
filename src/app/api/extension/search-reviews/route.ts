@@ -651,7 +651,7 @@ Format as bullet points like:
 Focus on concrete experiences like comfort, durability, functionality, value, etc. If insufficient information, return just the title without "Review of" prefix.`;
 
         const completion = await openai.chat.completions.create({
-          model: "gpt-5-mini", // Use faster, cheaper model for this task
+          model: "gpt-5-mini", // Keep using mini for snippet processing (cost optimization)
           messages: [{
             role: "system",
             content: "You are an expert at extracting specific pros/cons from product reviews. Provide concrete bullet points about user experiences."
@@ -659,7 +659,7 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
             role: "user", 
             content: prompt
           }],
-          max_tokens: 120,
+          max_completion_tokens: 120,
           temperature: 0.3
         });
 
@@ -1316,7 +1316,7 @@ async function analyzeResultsWithGPT5(results: SerperResult[], brand: string, ca
   },`;
   };
 
-  const prompt = `You are a fashion expert analyzing customer reviews to provide structured insights. Analyze the following reviews and provide a JSON response with specific sections.
+  const prompt = `You are a fashion expert analyzing customer reviews to provide structured insights. Your goal is to extract useful insights even from limited data, rather than returning empty analysis.
 
 Brand: ${brand}
 Category: ${category}${itemContext}${categoryContext}
@@ -1330,7 +1330,7 @@ ${getFitSection()}
   "quality": {
     "recommendation": "${getQualityLabel()}",
     "confidence": "low|medium|high", 
-    "evidence": ["Direct quotes about quality"]
+    "evidence": ["Direct quotes about quality or general customer experiences"]
   },
   "materials": {
     "composition": ["${getMaterialsLabel()}"],
@@ -1342,18 +1342,22 @@ ${getWashCareSection()}
 }
 
 IMPORTANT GUIDELINES:
-- Only include sections where you have actual evidence from the reviews
-- Use direct quotes from reviews as evidence 
-- Be specific and actionable in recommendations
-- Set confidence based on amount and consistency of evidence
-- For materials, extract specific compositions like "100% cotton" or "merino wool"
+- ALWAYS try to provide SOME analysis rather than completely empty sections
+- If you find ANY customer feedback patterns, include them even with low confidence
+- Use direct quotes from reviews as evidence, but also paraphrase customer sentiment when helpful
+- Be specific and actionable in recommendations when possible
+- For limited data, focus on what customers ARE saying rather than what's missing
+- If only 1-2 reviews mention something, still include it but mark confidence as "low"
+- Extract insights from review titles and snippets even if not perfectly detailed
+- Better to provide cautious insights than no insights at all
 - Focus on customer experiences, not brand descriptions
-- If analyzing a specific item, filter out reviews about other products from the same brand
 - Return valid JSON only, no other text`;
 
   try {
+    // Use higher quality model (gpt-4o) for final analysis and recommendations
+    // This provides better insight extraction and more nuanced analysis
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-5", // Using full gpt-4o for better analysis quality
       messages: [
         {
           role: "system",
@@ -1364,7 +1368,7 @@ IMPORTANT GUIDELINES:
           content: prompt
         }
       ],
-      max_tokens: 1500,
+      max_completion_tokens: 1500,
       temperature: 0.3,
     });
 
@@ -1472,15 +1476,31 @@ function analyzeResultsRuleBased(results: SerperResult[], brand: string, categor
   }
   
   // Analyze quality with enhanced pattern matching for better detection
-  const qualityPositive = (allText.match(/high quality|durable|well-made|sturdy|excellent|premium|luxury|luxurious|solid construction|beautiful quality|great quality|amazing quality|love the quality|quality is great|quality is amazing|worth the money|investment piece|good quality|decent quality|quality materials|quality fabric|nice quality|quality pieces|quality construction|timeless construction|natural fabrics|thoughtful silhouettes/g) || []).length;
-  const qualityNegative = (allText.match(/poor quality|cheap|flimsy|falls apart|thin material|see through|transparent|cheap feeling|not worth|disappointed|returned|poor construction|badly made|quality come down|quality has gone down|quality declined|fabric.*thinner|fabric.*thin|wish.*thicker|could be thicker|quality issues|quality concerns/g) || []).length;
+  const qualityPositive = (allText.match(/high quality|durable|well-made|sturdy|excellent|premium|luxury|luxurious|solid construction|beautiful quality|great quality|amazing quality|love the quality|quality is great|quality is amazing|worth the money|investment piece|good quality|decent quality|quality materials|quality fabric|nice quality|quality pieces|quality construction|timeless construction|natural fabrics|thoughtful silhouettes|impressed|recommend|love|satisfied|happy|perfect|beautiful|gorgeous|amazing|fantastic/g) || []).length;
+  const qualityNegative = (allText.match(/poor quality|cheap|flimsy|falls apart|thin material|see through|transparent|cheap feeling|not worth|disappointed|returned|poor construction|badly made|quality come down|quality has gone down|quality declined|fabric.*thinner|fabric.*thin|wish.*thicker|could be thicker|quality issues|quality concerns|regret|waste|terrible|awful|horrible/g) || []).length;
   
-  // Adaptive quality threshold - lower for smaller/niche brands
+  // Much more adaptive quality threshold - prioritize extracting insights
   const totalQualityMentions = qualityPositive + qualityNegative;
-  const qualityThreshold = results.length < 15 ? 1 : 2; // Lower threshold for smaller brands
-  if (totalQualityMentions >= qualityThreshold) {
-    const qualityRatio = qualityPositive / totalQualityMentions;
-    const isPositive = qualityPositive > qualityNegative;
+  const qualityThreshold = results.length < 10 ? 1 : (results.length < 25 ? 1 : 2); // Very low threshold for smaller brands
+  
+  // Also check for general review sentiment even without explicit quality keywords
+  const generalPositive = (allText.match(/recommend|love|great|amazing|perfect|beautiful|satisfied|happy|impressed|fantastic|excellent/g) || []).length;
+  const generalNegative = (allText.match(/disappointed|returned|regret|waste|terrible|awful|horrible|not worth/g) || []).length;
+  const totalGeneralSentiment = generalPositive + generalNegative;
+  
+  // If we have quality mentions OR general sentiment, provide analysis
+  if (totalQualityMentions >= qualityThreshold || totalGeneralSentiment >= 2) {
+    // Determine sentiment based on both quality and general feedback
+    let isPositive, qualityRatio;
+    
+    if (totalQualityMentions > 0) {
+      qualityRatio = qualityPositive / totalQualityMentions;
+      isPositive = qualityPositive > qualityNegative;
+    } else {
+      // Fall back to general sentiment
+      qualityRatio = generalPositive / totalGeneralSentiment;
+      isPositive = generalPositive > generalNegative;
+    }
     
     // Extract actual quality-related quotes from reviews
     const qualityEvidence = extractQualityEvidence(results, isPositive);
@@ -1492,28 +1512,45 @@ function analyzeResultsRuleBased(results: SerperResult[], brand: string, categor
     const qualitySources = extractSourcesFromEvidence(results, qualityEvidence);
     const qualitySourceText = qualitySources.length > 0 ? ` (from ${qualitySources.join(', ')})` : '';
     
-    // ONLY generate analysis if we have actual evidence from reviews
+    // Generate analysis with available evidence, being more flexible
+    const totalRelevantMentions = totalQualityMentions + totalGeneralSentiment;
+    
     if (qualityEvidence.length === 0) {
-      console.log(`🔍 ANALYSIS: No quality evidence found in reviews, skipping quality analysis`);
-      // Don't generate any quality analysis without evidence
-    } else if (qualityRatio >= 0.8 && qualityPositive >= 2) {
+      // Try to generate something useful even without perfect evidence
+      if (totalRelevantMentions >= 2) {
+        if (isPositive) {
+          recommendation = `Customer feedback appears generally positive${qualitySourceText}. Based on available reviews.`;
+          confidence = 'low';
+        } else {
+          recommendation = `Some customer concerns noted in reviews${qualitySourceText}. Mixed feedback reported.`;
+          confidence = 'low';
+        }
+      } else {
+        console.log(`🔍 ANALYSIS: Insufficient quality evidence (${totalRelevantMentions} total mentions)`);
+      }
+    } else if (qualityRatio >= 0.8 && (qualityPositive >= 2 || generalPositive >= 3)) {
       const topQuote = qualityEvidence[0].substring(0, 140) + '...';
       recommendation = `Reviews consistently mention good quality${qualitySourceText}. Customer review: "${topQuote}"`;
-      confidence = totalQualityMentions >= 4 ? 'high' : totalQualityMentions >= 3 ? 'medium' : 'low';
-    } else if (qualityRatio >= 0.6 && qualityPositive >= 2) {
+      confidence = totalRelevantMentions >= 6 ? 'high' : totalRelevantMentions >= 4 ? 'medium' : 'low';
+    } else if (qualityRatio >= 0.6 && (qualityPositive >= 1 || generalPositive >= 2)) {
       const topQuote = qualityEvidence[0].substring(0, 140) + '...';
       recommendation = `Most quality feedback is positive${qualitySourceText}. Customer review: "${topQuote}"`;
-      confidence = totalQualityMentions >= 4 ? 'medium' : 'low';
-    } else if (qualityRatio >= 0.4 && totalQualityMentions >= 3) {
+      confidence = totalRelevantMentions >= 5 ? 'medium' : 'low';
+    } else if (qualityRatio >= 0.4 && totalRelevantMentions >= 2) {
       const concernQuote = qualityEvidence[0].substring(0, 120) + '...';
-      recommendation = `Mixed quality feedback (${qualityPositive} positive vs ${qualityNegative} negative mentions)${qualitySourceText}. Customer review: "${concernQuote}"`;
-      confidence = 'medium';
-    } else if (qualityNegative >= 2 && qualityEvidence.length > 0) {
-      const negativeQuote = qualityEvidence[0].substring(0, 140) + '...';
-      recommendation = `Quality concerns noted in reviews${qualitySourceText}. Customer review: "${negativeQuote}"`;
-      confidence = totalQualityMentions >= 4 ? 'medium' : 'low';
-    } else {
-      console.log(`🔍 ANALYSIS: Insufficient quality evidence (${totalQualityMentions} mentions, ${qualityEvidence.length} evidence pieces)`);
+      const positiveCount = qualityPositive + generalPositive;
+      const negativeCount = qualityNegative + generalNegative;
+      recommendation = `Mixed quality feedback (${positiveCount} positive vs ${negativeCount} negative mentions)${qualitySourceText}. Customer review: "${concernQuote}"`;
+      confidence = totalRelevantMentions >= 5 ? 'medium' : 'low';
+    } else if (!isPositive && totalRelevantMentions >= 1) {
+      const negativeQuote = qualityEvidence.length > 0 ? qualityEvidence[0].substring(0, 140) + '...' : '';
+      recommendation = `Quality concerns noted in reviews${qualitySourceText}. ${negativeQuote ? 'Customer review: "' + negativeQuote + '"' : 'Mixed customer feedback reported.'}`;
+      confidence = totalRelevantMentions >= 4 ? 'medium' : 'low';
+    } else if (qualityEvidence.length > 0) {
+      // Fallback - provide something rather than nothing
+      const quote = qualityEvidence[0].substring(0, 140) + '...';
+      recommendation = `Customer feedback available${qualitySourceText}. Review: "${quote}"`;
+      confidence = 'low';
     }
     
     if (recommendation && confidence) {
@@ -1709,22 +1746,36 @@ function analyzeResultsRuleBased(results: SerperResult[], brand: string, categor
 }
 
 function extractEvidence(results: SerperResult[], pattern: string): string[] {
-  const evidence = [];
+  const evidence: string[] = [];
   const keywords = {
-    runsSmall: ['runs small', 'size up', 'tight'],
-    runsLarge: ['runs large', 'size down', 'loose'],
-    trueToSize: ['true to size', 'fits perfectly']
+    runsSmall: ['runs small', 'size up', 'tight', 'small', 'snug', 'fitted'],
+    runsLarge: ['runs large', 'size down', 'loose', 'big', 'oversized', 'baggy'],
+    trueToSize: ['true to size', 'fits perfectly', 'accurate', 'normal', 'as expected', 'usual size']
   };
   
   const relevant = keywords[pattern as keyof typeof keywords] || [];
   
-  for (const result of results.slice(0, 5)) {
+  // More flexible evidence extraction - look through more results
+  for (const result of results.slice(0, 10)) {
     const text = `${result.title} ${result.snippet}`.toLowerCase();
-    if (relevant.some(k => text.includes(k))) {
-      const snippet = result.snippet?.substring(0, 150) + '...';
-      if (snippet) evidence.push(snippet);
+    
+    // Check for any relevant keywords
+    const hasRelevantKeyword = relevant.some(k => text.includes(k));
+    
+    // Also look for fit-related context even without exact keywords
+    const hasFitContext = text.includes('fit') || text.includes('size') || text.includes('sizing');
+    
+    if (hasRelevantKeyword || (hasFitContext && pattern !== 'quality')) {
+      const snippet = result.snippet || result.title;
+      if (snippet && snippet.length > 10) {
+        // Clean and truncate snippet
+        const cleanSnippet = snippet.substring(0, 150).trim();
+        if (cleanSnippet && !evidence.some(e => e.includes(cleanSnippet.substring(0, 30)))) {
+          evidence.push(cleanSnippet + (cleanSnippet.length >= 150 ? '...' : ''));
+        }
+      }
     }
-    if (evidence.length >= 2) break;
+    if (evidence.length >= 3) break; // Increased from 2 to 3
   }
   
   return evidence;
@@ -1739,29 +1790,39 @@ function extractQualityEvidence(results: SerperResult[], isPositive: boolean): s
     'love the quality', 'great quality', 'amazing quality', 'good quality', 'quality is',
     'well made', 'solid construction', 'beautiful quality', 'worth the money', 
     'investment piece', 'quality materials', 'quality fabric', 'timeless construction',
-    'thoughtful silhouettes', 'natural fabrics'
+    'thoughtful silhouettes', 'natural fabrics', 'impressed', 'recommend', 'love',
+    'satisfied', 'happy', 'perfect', 'beautiful', 'gorgeous', 'amazing', 'fantastic'
   ];
   
   const negativeKeywords = [
     'poor quality', 'cheap', 'flimsy', 'falls apart', 'disappointed', 'not worth',
     'cheap feeling', 'thin material', 'see through', 'poor construction', 
-    'badly made', 'quality declined', 'quality issues', 'quality concerns'
+    'badly made', 'quality declined', 'quality issues', 'quality concerns',
+    'returned', 'regret', 'waste', 'terrible', 'awful', 'horrible'
   ];
   
   const keywords = isPositive ? positiveKeywords : negativeKeywords;
   
-  for (const result of results.slice(0, 10)) {
+  // Look through more results and be more flexible
+  for (const result of results.slice(0, 15)) {
     const text = `${result.title} ${result.snippet}`.toLowerCase();
     const matchingKeywords = keywords.filter(k => text.includes(k));
     
-    if (matchingKeywords.length > 0) {
-      // Extract more context around the quality mention
-      const snippet = result.snippet || '';
-      if (snippet.length > 10 && !evidence.some(e => e.includes(snippet.substring(0, 50)))) {
-        evidence.push(snippet);
+    // Also extract evidence for general review context even without perfect keyword matches
+    const hasGeneralContext = text.includes('review') || text.includes('experience') || 
+                              text.includes('bought') || text.includes('ordered') ||
+                              text.includes('tried') || text.includes('wear');
+    
+    if (matchingKeywords.length > 0 || (hasGeneralContext && evidence.length < 2)) {
+      const snippet = result.snippet || result.title;
+      if (snippet && snippet.length > 15) {
+        const cleanSnippet = snippet.substring(0, 180).trim();
+        if (!evidence.some(e => e.includes(cleanSnippet.substring(0, 40)))) {
+          evidence.push(cleanSnippet + (cleanSnippet.length >= 180 ? '...' : ''));
+        }
       }
     }
-    if (evidence.length >= 3) break;
+    if (evidence.length >= 4) break; // Increased from 3 to 4
   }
   
   return evidence;
@@ -2072,9 +2133,22 @@ function generateDetailedSummary(analysis: AnalysisResult, results: SerperResult
     summaryParts.push(`These insights come from real customer experiences, though everyone's preferences and body types are different.`);
   }
   
-  // Fallback for no analysis
+  // Improved fallback - try to provide some insight even with minimal analysis
   if (summaryParts.length <= 2) { // Only intro and spacing
-    return `Found ${totalReviews} reviews for ${brand}, but the feedback varies quite a bit. Individual product reviews will give you the most specific insights for what you're considering.`;
+    // Try to extract at least some general sentiment from the reviews
+    let fallbackInsight = '';
+    
+    if (totalReviews >= 10) {
+      fallbackInsight = `Found ${totalReviews} reviews for ${brand}. While individual experiences vary, customer feedback suggests checking specific product reviews for detailed fit and quality insights.`;
+    } else if (totalReviews >= 5) {
+      fallbackInsight = `Based on ${totalReviews} reviews for ${brand}, customer experiences show mixed feedback. Individual product reviews will provide the most relevant insights for your specific needs.`;
+    } else if (totalReviews >= 2) {
+      fallbackInsight = `Limited review data available for ${brand} (${totalReviews} reviews found). Consider checking individual product pages and recent customer feedback for the most current insights.`;
+    } else {
+      fallbackInsight = `Very limited review data found for ${brand}. You may want to check the brand's website or recent social media mentions for more current customer feedback.`;
+    }
+    
+    return fallbackInsight;
   }
   
   // Join parts with proper line breaks

@@ -2,7 +2,7 @@
 // Handles brand detection, API calls, and cross-tab state management
 
 // Use localhost for development, production URL for deployed extension
-const API_BASE_URL = 'http://localhost:3002';
+const API_BASE_URL = 'http://localhost:3003';
 const BRAND_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (reduced for testing fresh data)
 const brandCache = new Map();
 const tabStates = new Map();
