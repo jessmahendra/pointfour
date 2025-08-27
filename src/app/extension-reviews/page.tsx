@@ -708,7 +708,7 @@ function ExtensionReviewsContent() {
               style={{
                 fontSize: "14px",
                 color: "#666",
-                margin: "0 0 20px 0",
+                margin: "0 0 12px 0",
               }}
             >
               {reviewData.totalResults}+ sources including{" "}
@@ -726,7 +726,7 @@ function ExtensionReviewsContent() {
                   border: "none",
                   borderRadius: "0",
                   fontSize: "15px",
-                  lineHeight: "1.6",
+                  lineHeight: "1.4",
                   color: "#333",
                 }}
               >
@@ -734,7 +734,7 @@ function ExtensionReviewsContent() {
                   style={{
                     fontSize: "16px",
                     fontWeight: "600",
-                    margin: "0 0 12px 0",
+                    margin: "0 0 8px 0",
                     color: "#333",
                   }}
                 >
@@ -808,7 +808,7 @@ function ExtensionReviewsContent() {
                   border: "none",
                   borderRadius: "0",
                   fontSize: "15px",
-                  lineHeight: "1.6",
+                  lineHeight: "1.4",
                   color: "#333",
                 }}
               >
@@ -816,13 +816,13 @@ function ExtensionReviewsContent() {
                   style={{
                     fontSize: "16px",
                     fontWeight: "600",
-                    margin: "0 0 12px 0",
+                    margin: "0 0 8px 0",
                     color: "#333",
                   }}
                 >
                   TL;DR
                 </h3>
-                <p style={{ margin: "0", fontWeight: "400" }}>
+                <p style={{ margin: "0 0 8px 0", fontWeight: "400" }}>
                   {decodeURIComponent(tldrParam)}
                 </p>
               </div>
