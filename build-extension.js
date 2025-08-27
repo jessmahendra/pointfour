@@ -3,6 +3,8 @@
 
 import { existsSync, rmSync, mkdirSync, readdirSync, statSync, copyFileSync, readFileSync, writeFileSync, createWriteStream } from 'fs';
 import { join } from 'path';
+import { readFile } from 'fs/promises';
+import archiver from 'archiver';
 
 // Configuration
 const SOURCE_DIR = './browser-extension';
@@ -94,11 +96,11 @@ function updateManifest() {
 }
 
 // Create build info file
-function createBuildInfo() {
+async function createBuildInfo() {
   const buildInfo = {
     buildDate: new Date().toISOString(),
     productionUrl: PRODUCTION_URL,
-    sourceVersion: require('./package.json').version,
+    sourceVersion: JSON.parse(await readFile('./package.json', 'utf8')).version,
     buildType: 'production'
   };
   
@@ -111,7 +113,6 @@ function createBuildInfo() {
 // Create zip file
 function createZip() {
   console.log('📦 Creating zip file...');
-  const archiver = require('archiver');
   const output = createWriteStream(`${BUILD_DIR}.zip`);
   const archive = archiver('zip', { zlib: { level: 9 } });
   
@@ -143,7 +144,7 @@ async function build() {
     copyDirectory(SOURCE_DIR, BUILD_DIR);
     updateFiles();
     updateManifest();
-    createBuildInfo();
+    await createBuildInfo();
     
     // Create zip file (archiver is required)
     await createZip();

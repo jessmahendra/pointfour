@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "Pointfour Fashion Assistant",
+  "version": "3",
+  "description": "Proactive fashion brand fit & quality information and reviews on fashion websites (Production Build)",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content-script.js"
+      ],
+      "css": [
+        "content-styles.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Pointfour Fashion Assistant"
+  },
+  "options_page": "settings.html",
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "widget.html",
+        "widget.js",
+        "widget-styles.css"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}
