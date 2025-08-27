@@ -139,7 +139,7 @@ const getSourceName = (source: string) => {
 };
 
 // Function to prioritize fit and quality information in snippets
-const prioritizeFitAndQuality = (snippet: string, tags: string[] = []) => {
+const prioritizeFitAndQuality = (snippet: string) => {
   if (!snippet) return snippet;
 
   // Split snippet into sentences or bullet points
@@ -740,7 +740,7 @@ function ExtensionReviewsContent() {
                 TL;DR
               </h3>
               <p style={{ margin: "0 0 24px 0", fontWeight: "400" }}>
-                Based on feedback from {reviewData.totalResults} reviews from sources like Reddit, Thingtesting, here's what customers are saying:
+                Based on feedback from {reviewData.totalResults} reviews from sources like Reddit, Thingtesting, here&apos;s what customers are saying:
               </p>
 
               {/* Fit/Sizing Section */}
@@ -750,11 +750,11 @@ function ExtensionReviewsContent() {
 
               {/* Quality Section */}
               <p style={{ margin: "0 0 16px 0", fontWeight: "400" }}>
-                <strong style={{ fontWeight: "600" }}>Quality:</strong> Customers consistently praise vollebak's construction quality. Reviews highlight attention to detail and durable materials.
+                <strong style={{ fontWeight: "600" }}>Quality:</strong> Customers consistently praise vollebak&apos;s construction quality. Reviews highlight attention to detail and durable materials.
               </p>
 
               <p style={{ margin: "0", fontWeight: "400", fontSize: "14px", color: "#666" }}>
-                These insights come from real customer experiences, though everyone's preferences and body types are different.
+                These insights come from real customer experiences, though everyone&apos;s preferences and body types are different.
               </p>
             </div>
 
@@ -917,8 +917,7 @@ function ExtensionReviewsContent() {
                             }}
                           >
                             {prioritizeFitAndQuality(
-                              review.snippet,
-                              review.tags
+                              review.snippet
                             )}
                           </p>
 
