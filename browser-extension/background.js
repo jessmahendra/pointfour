@@ -1,8 +1,34 @@
 // Background Service Worker for Pointfour Fashion Assistant
 // Handles brand detection, API calls, and cross-tab state management
 
+console.log('🚀 BACKGROUND SCRIPT STARTING...');
+
 // Use localhost for development, production URL for deployed extension
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://localhost:3002';
+console.log('🔧 BACKGROUND SCRIPT LOADED AT:', new Date().toISOString(), 'API_BASE_URL:', API_BASE_URL);
+
+// Test API connection immediately
+async function testAPIConnection() {
+  try {
+    console.log('🧪 Testing API connection to:', API_BASE_URL);
+    const response = await fetch(`${API_BASE_URL}/api/extension/search-reviews`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ brand: 'TestConnection' })
+    });
+    console.log('🧪 API Test Response:', response.status, response.ok);
+    if (response.ok) {
+      const data = await response.json();
+      console.log('🧪 API Test Data:', data.brandName, data.totalResults || 0, 'results');
+    }
+  } catch (error) {
+    console.error('🧪 API Test Failed:', error.name, error.message);
+    console.error('🧪 Full error:', error);
+  }
+}
+// Run test after 1 second delay
+setTimeout(testAPIConnection, 1000);
+
 const BRAND_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (reduced for testing fresh data)
 const brandCache = new Map();
 const tabStates = new Map();

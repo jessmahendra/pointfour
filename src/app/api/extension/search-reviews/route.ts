@@ -493,21 +493,14 @@ export async function POST(request: NextRequest) {
         try {
           console.log(`🔍 SERPER: Executing query (attempt ${attempt}/${maxRetries}):`, query);
           
-          // Add timeout to prevent hanging
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-          
           const response = await fetch('https://google.serper.dev/search', {
             method: 'POST',
             headers: {
               'X-API-KEY': serperApiKey,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ q: query, gl: 'us', num: 20 }),
-            signal: controller.signal
+            body: JSON.stringify({ q: query, gl: 'us', num: 20 })
           });
-          
-          clearTimeout(timeoutId);
           
           if (response.ok) {
             const data = await response.json();
@@ -534,10 +527,7 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           console.error(`❌ SERPER: Search error for query (attempt ${attempt}/${maxRetries}):`, query, error);
           
-          // Handle timeout/abort errors
-          if (error instanceof Error && error.name === 'AbortError') {
-            console.log(`⏰ SERPER: Query timed out after 15 seconds`);
-          } else if (error instanceof Error && error.message.includes('certificate')) {
+          if (error instanceof Error && error.message.includes('certificate')) {
             console.log(`⏰ SERPER: Waiting 1 second before retry due to certificate error...`);
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
@@ -594,7 +584,7 @@ export async function POST(request: NextRequest) {
     const prioritizedForGPT = allResults
       .map(result => ({
         result,
-        fitScore: calculateFitRelevanceScoreForResult(result, enhancedBrand)
+        fitScore: calculateFitRelevanceScoreForResult(result, enhancedBrand, itemName)
       }))
       .sort((a, b) => b.fitScore - a.fitScore)
       .slice(0, 30) // Limit to top 30 results to stay under OpenAI token limits
@@ -1245,7 +1235,7 @@ function extractTags(title?: string, snippet?: string): string[] {
 }
 
 // Helper function to calculate fit relevance score for SerperResult (used for GPT prioritization)
-function calculateFitRelevanceScoreForResult(result: SerperResult, brand: string): number {
+function calculateFitRelevanceScoreForResult(result: SerperResult, brand: string, itemName?: string): number {
   const text = `${result.title || ''} ${result.snippet || ''}`.toLowerCase();
   let score = 0;
   
@@ -1290,6 +1280,44 @@ function calculateFitRelevanceScoreForResult(result: SerperResult, brand: string
   
   // Brand mention bonus (ensures relevance)
   if (text.includes(brand.toLowerCase())) score += 5;
+  
+  // Item-specific relevance bonus
+  if (itemName && itemName.trim().length > 2) {
+    const itemLower = itemName.toLowerCase().trim();
+    
+    // Exact item match gets high bonus
+    if (text.includes(itemLower)) {
+      score += 25;
+    } else {
+      // Check for partial matches with item words
+      const itemWords = itemLower.split(/\s+/).filter(word => word.length > 2);
+      let matchedWords = 0;
+      
+      itemWords.forEach(word => {
+        if (text.includes(word)) {
+          matchedWords++;
+        }
+      });
+      
+      // Bonus based on how many item words matched
+      if (matchedWords >= Math.min(2, itemWords.length)) {
+        score += 15; // Good partial match
+      } else if (matchedWords > 0) {
+        score += 8; // Some relevance
+      }
+    }
+    
+    // Penalty for reviews that mention conflicting item types
+    const itemTypes = ['jeans', 'dress', 'shirt', 'pants', 'jacket', 'sweater', 'top', 'blouse', 'skirt', 'coat', 'hoodie'];
+    const targetType = itemTypes.find(type => itemLower.includes(type));
+    
+    if (targetType) {
+      const conflictingTypes = itemTypes.filter(type => type !== targetType && text.includes(type));
+      if (conflictingTypes.length > 0) {
+        score -= 10; // Penalty for mentioning different garment types
+      }
+    }
+  }
   
   // Quality sources bonus - Reddit often has community discussions with valuable fit insights
   if (result.link && result.link.includes('reddit')) {

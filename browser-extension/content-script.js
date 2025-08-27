@@ -2627,16 +2627,16 @@
                 fromWidget: 'true' // Flag to indicate this came from widget
             });
             
-            // Pass the complete analysis data to avoid re-fetching
-            if (data && data.externalSearchResults) {
-                params.set('widgetData', JSON.stringify({
-                    brandFitSummary: data.externalSearchResults.brandFitSummary,
-                    reviews: data.externalSearchResults.reviews,
-                    groupedReviews: data.externalSearchResults.groupedReviews,
-                    totalResults: data.externalSearchResults.totalResults,
-                    timestamp: Date.now()
-                }));
-            }
+            // Temporarily disabled: always make fresh API calls to avoid cached data
+            // if (data && data.externalSearchResults) {
+            //     params.set('widgetData', JSON.stringify({
+            //         brandFitSummary: data.externalSearchResults.brandFitSummary,
+            //         reviews: data.externalSearchResults.reviews,
+            //         groupedReviews: data.externalSearchResults.groupedReviews,
+            //         totalResults: data.externalSearchResults.totalResults,
+            //         timestamp: Date.now()
+            //     }));
+            // }
             
             console.log('🔗 [PointFour] Widget URL Debug:', {
                 brandNameUsed: brandName,

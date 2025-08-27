@@ -109,6 +109,10 @@ function safeGetBoolean(record: any, fieldName: string): boolean | undefined {
   }
 }
 
+// Simple in-memory cache for reviews (5 minute TTL)  
+let reviewsCache: { data: Review[]; timestamp: number } | null = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export const airtableService = {
   async getBrands(): Promise<Brand[]> {
     try {
@@ -189,6 +193,12 @@ export const airtableService = {
 
   async getReviews(): Promise<Review[]> {
     try {
+      // Check cache first
+      if (reviewsCache && (Date.now() - reviewsCache.timestamp) < CACHE_TTL) {
+        console.log('📊 Using cached reviews data');
+        return reviewsCache.data;
+      }
+      
       console.log('📊 Fetching reviews from Airtable...');
       const base = initializeAirtable();
       
@@ -265,6 +275,13 @@ export const airtableService = {
       
       console.log('📊 Reviews by brand:', brandCounts);
       console.log('✅ Reviews processed successfully');
+      
+      // Cache the results
+      reviewsCache = {
+        data: reviews,
+        timestamp: Date.now()
+      };
+      
       return reviews;
     } catch (error) {
       console.error('💥 Error fetching reviews:', error);

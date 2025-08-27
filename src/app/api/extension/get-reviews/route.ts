@@ -1,5 +1,85 @@
 import { airtableService } from '@/lib/airtable';
 
+// Helper function to calculate brand-item relevance score for ranking reviews
+function calculateBrandItemRelevanceScore(
+  review: any, 
+  targetBrand: string, 
+  targetItemName?: string
+): number {
+  let score = 0;
+  
+  const reviewBrand = (review.brandName || '').toLowerCase().trim();
+  const reviewItem = (review.itemName || '').toLowerCase().trim();
+  const targetBrandLower = targetBrand.toLowerCase().trim();
+  const targetItemLower = (targetItemName || '').toLowerCase().trim();
+  
+  // Brand match is essential - high score if exact match
+  if (reviewBrand === targetBrandLower) {
+    score += 100;
+  } else if (reviewBrand.includes(targetBrandLower) || targetBrandLower.includes(reviewBrand)) {
+    score += 50;
+  }
+  
+  // Item-specific bonus if we have a target item name
+  if (targetItemLower && targetItemLower.length > 2) {
+    // Exact item match gets highest bonus
+    if (reviewItem === targetItemLower) {
+      score += 150;
+    }
+    // Partial matches get moderate bonus
+    else if (reviewItem.includes(targetItemLower) || targetItemLower.includes(reviewItem)) {
+      score += 75;
+    }
+    // Word-based matching for variations like "Val Jeans" vs "Val 90s Mid Rise Straight Jeans"
+    else {
+      const targetWords = targetItemLower.split(/\s+/).filter(word => word.length > 2);
+      const reviewWords = reviewItem.split(/\s+/).filter(word => word.length > 2);
+      
+      const matchingWords = targetWords.filter(targetWord =>
+        reviewWords.some(reviewWord =>
+          reviewWord.includes(targetWord) || targetWord.includes(reviewWord)
+        )
+      );
+      
+      // Give points for each matching significant word
+      if (matchingWords.length >= Math.min(2, targetWords.length)) {
+        score += 30 * matchingWords.length;
+      } else if (matchingWords.length > 0) {
+        score += 15 * matchingWords.length;
+      }
+    }
+  }
+  
+  // Bonus for reviews with specific details that are more helpful
+  if (review.fitComments && review.fitComments.length > 50) {
+    score += 10; // Detailed reviews are more valuable
+  }
+  
+  // Bonus for reviews with fit rating
+  if (review.fitRating && review.fitRating > 0) {
+    score += 5;
+  }
+  
+  // Penalty for reviews that are too item-specific when user is looking at different item
+  if (targetItemLower && targetItemLower.length > 2 && 
+      reviewItem && reviewItem.length > 2 &&
+      !reviewItem.includes(targetItemLower) && !targetItemLower.includes(reviewItem)) {
+    
+    // Check if the items are completely different garment types
+    const itemTypes = ['jeans', 'dress', 'shirt', 'pants', 'jacket', 'sweater', 'top', 'blouse', 'skirt'];
+    const targetType = itemTypes.find(type => targetItemLower.includes(type));
+    const reviewType = itemTypes.find(type => reviewItem.includes(type));
+    
+    if (targetType && reviewType && targetType !== reviewType) {
+      score -= 50; // Heavy penalty for different garment types
+    } else if (targetType !== reviewType) {
+      score -= 20; // Moderate penalty for potentially different items
+    }
+  }
+  
+  return Math.max(0, score); // Ensure score doesn't go negative
+}
+
 export async function POST(request: Request) {
   try {
     const { brand, itemName, item } = await request.json();
@@ -32,24 +112,17 @@ export async function POST(request: Request) {
       console.log('🔍 DEBUG: Total reviews fetched:', allReviews.length);
       console.log('🔍 DEBUG: Looking for brand:', brand);
       
-      // Filter reviews by brand (case-insensitive)
+      // Filter reviews by brand (case-insensitive) - OPTIMIZED
       const normalizedBrand = brand.toLowerCase().trim();
       
       const brandReviews = allReviews.filter(review => {
         // Handle case where brandName might be empty or null
         if (!review.brandName) {
-          console.log(`⚠️ Review missing brand name: ${review.itemName}`);
           return false;
         }
         
         const reviewBrandLower = review.brandName.toLowerCase().trim();
-        const matches = reviewBrandLower === normalizedBrand;
-        
-        if (matches) {
-          console.log(`✅ Brand match found: "${review.brandName}" for "${brand}"`);
-        }
-        
-        return matches;
+        return reviewBrandLower === normalizedBrand;
       });
       
       console.log('🔍 DEBUG: Found brand reviews:', brandReviews.length);
@@ -137,19 +210,42 @@ export async function POST(request: Request) {
         console.log(`🔍 DEBUG: Found ${finalReviews.length} reviews after item filtering`);
       }
       
-      // Sort reviews by submission date (newest first) and then by fit rating (highest first)
-      finalReviews.sort((a, b) => {
-        // First sort by submission date (newest first)
-        const dateA = new Date(a.submissionDate || 0);
-        const dateB = new Date(b.submissionDate || 0);
-        if (dateA > dateB) return -1;
-        if (dateA < dateB) return 1;
-        
-        // Then sort by fit rating (highest first)
-        const ratingA = a.fitRating || 0;
-        const ratingB = b.fitRating || 0;
-        return ratingB - ratingA;
-      });
+      // Sort reviews by relevance only if we have an item name, otherwise use simple date/rating sort
+      if (finalItemName && finalItemName.trim() && finalReviews.length > 0) {
+        finalReviews.sort((a, b) => {
+          // Calculate relevance scores for both reviews
+          const scoreA = calculateBrandItemRelevanceScore(a, brand, finalItemName);
+          const scoreB = calculateBrandItemRelevanceScore(b, brand, finalItemName);
+          
+          // First sort by relevance score (highest first)
+          if (scoreA !== scoreB) return scoreB - scoreA;
+          
+          // Then sort by submission date (newest first)
+          const dateA = new Date(a.submissionDate || 0);
+          const dateB = new Date(b.submissionDate || 0);
+          if (dateA > dateB) return -1;
+          if (dateA < dateB) return 1;
+          
+          // Finally sort by fit rating (highest first)
+          const ratingA = a.fitRating || 0;
+          const ratingB = b.fitRating || 0;
+          return ratingB - ratingA;
+        });
+      } else {
+        // Simple sort by date and rating when no specific item
+        finalReviews.sort((a, b) => {
+          // Sort by submission date (newest first)
+          const dateA = new Date(a.submissionDate || 0);
+          const dateB = new Date(b.submissionDate || 0);
+          if (dateA > dateB) return -1;
+          if (dateA < dateB) return 1;
+          
+          // Then sort by fit rating (highest first)
+          const ratingA = a.fitRating || 0;
+          const ratingB = b.fitRating || 0;
+          return ratingB - ratingA;
+        });
+      }
       
       // Limit to top 10 reviews to avoid overwhelming the popup
       const limitedReviews = finalReviews.slice(0, 10);

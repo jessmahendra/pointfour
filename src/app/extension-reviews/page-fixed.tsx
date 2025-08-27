@@ -177,48 +177,43 @@ function ExtensionReviewsContent() {
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#F8F7F4" }}>
-      <h1>
-        {brandName}
-        {itemName && ` - ${itemName}`}
-      </h1>
-
+      <h1>{brandName}{itemName && ` - ${itemName}`}</h1>
+      
       {/* Fit Review Section */}
       {reviewData.brandFitSummary && (
         <div>
           <h2>Fit Review</h2>
           <p>
             <strong>Fit/Sizing:</strong>{" "}
-            {reviewData.brandFitSummary?.sections?.fit?.recommendation ||
-              reviewData.brandFitSummary?.summary ||
-              "Information based on customer reviews"}
+            {reviewData.brandFitSummary?.sections?.fit?.recommendation || 
+             reviewData.brandFitSummary?.summary || 
+             "Information based on customer reviews"}
           </p>
           <p>
             <strong>Quality:</strong>{" "}
-            {reviewData.brandFitSummary?.sections?.quality?.recommendation ||
-              "Quality information based on customer feedback"}
+            {reviewData.brandFitSummary?.sections?.quality?.recommendation || 
+             "Quality information based on customer feedback"}
           </p>
         </div>
       )}
 
       {/* Reviews */}
       <div>
-        {Object.entries(reviewData.groupedReviews).map(
-          ([category, reviews]) => {
-            if (!reviews || reviews.length === 0) return null;
-
-            return (
-              <div key={category}>
-                <h3>{category}</h3>
-                {reviews.slice(0, 3).map((review, index) => (
-                  <div key={index}>
-                    <h4>{review.title}</h4>
-                    <p>{review.snippet}</p>
-                  </div>
-                ))}
-              </div>
-            );
-          }
-        )}
+        {Object.entries(reviewData.groupedReviews).map(([category, reviews]) => {
+          if (!reviews || reviews.length === 0) return null;
+          
+          return (
+            <div key={category}>
+              <h3>{category}</h3>
+              {reviews.slice(0, 3).map((review, index) => (
+                <div key={index}>
+                  <h4>{review.title}</h4>
+                  <p>{review.snippet}</p>
+                </div>
+              ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
