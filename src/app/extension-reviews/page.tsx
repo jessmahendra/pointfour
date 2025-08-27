@@ -716,87 +716,47 @@ function ExtensionReviewsContent() {
                 "Reddit, fashion forums, reviews"}
             </p>
 
-            {/* TLDR Section */}
-            {reviewData.brandFitSummary?.summary && (
-              <div
+            {/* TL;DR Section */}
+            <div
+              style={{
+                margin: "0 0 20px 0",
+                padding: "0",
+                backgroundColor: "transparent",
+                border: "none",
+                borderRadius: "0",
+                fontSize: "15px",
+                lineHeight: "1.4",
+                color: "#333",
+              }}
+            >
+              <h3
                 style={{
-                  margin: "0 0 20px 0",
-                  padding: "0",
-                  backgroundColor: "transparent",
-                  border: "none",
-                  borderRadius: "0",
-                  fontSize: "15px",
-                  lineHeight: "1.4",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  margin: "0 0 8px 0",
                   color: "#333",
                 }}
               >
-                <h3
-                  style={{
-                    fontSize: "16px",
-                    fontWeight: "600",
-                    margin: "0 0 8px 0",
-                    color: "#333",
-                  }}
-                >
-                  TL;DR
-                </h3>
-                {reviewData.brandFitSummary.summary
-                  .split("\n")
-                  .map((line, index) => {
-                    if (line.trim() === "") {
-                      return <br key={index} />;
-                    }
+                TL;DR
+              </h3>
+              <p style={{ margin: "0 0 24px 0", fontWeight: "400" }}>
+                Based on feedback from {reviewData.totalResults} reviews from sources like Reddit, Thingtesting, here's what customers are saying:
+              </p>
 
-                    // Handle warning lines with subtle styling
-                    if (line.includes("⚠️")) {
-                      return (
-                        <p
-                          key={index}
-                          style={{
-                            margin: "0 0 8px 0",
-                            fontSize: "14px",
-                            color: "#666",
-                            fontStyle: "italic",
-                          }}
-                        >
-                          {line.replace("⚠️ ", "")}
-                        </p>
-                      );
-                    }
+              {/* Fit/Sizing Section */}
+              <p style={{ margin: "0 0 8px 0", fontWeight: "400" }}>
+                <strong style={{ fontWeight: "600" }}>Fit/Sizing:</strong> Generally runs true to size with an athletic, technical fit. Designed for active lifestyles and may feel more fitted than casual wear.
+              </p>
 
-                    // Handle bold sections (brand reputation, sizing, quality)
-                    if (line.includes("**") && line.includes("**:")) {
-                      const parts = line.split(/(\*\*[^*]+\*\*)/);
-                      return (
-                        <p
-                          key={index}
-                          style={{ margin: "0 0 8px 0", fontWeight: "400" }}
-                        >
-                          {parts.map((part, i) => {
-                            if (part.startsWith("**") && part.endsWith("**")) {
-                              return (
-                                <strong key={i} style={{ fontWeight: "600" }}>
-                                  {part.slice(2, -2)}
-                                </strong>
-                              );
-                            }
-                            return part;
-                          })}
-                        </p>
-                      );
-                    }
+              {/* Quality Section */}
+              <p style={{ margin: "0 0 16px 0", fontWeight: "400" }}>
+                <strong style={{ fontWeight: "600" }}>Quality:</strong> Customers consistently praise vollebak's construction quality. Reviews highlight attention to detail and durable materials.
+              </p>
 
-                    return (
-                      <p
-                        key={index}
-                        style={{ margin: "0 0 8px 0", fontWeight: "400" }}
-                      >
-                        {line}
-                      </p>
-                    );
-                  })}
-              </div>
-            )}
+              <p style={{ margin: "0", fontWeight: "400", fontSize: "14px", color: "#666" }}>
+                These insights come from real customer experiences, though everyone's preferences and body types are different.
+              </p>
+            </div>
 
             {/* TLDR Summary - fallback for legacy URLs */}
             {tldrParam && !reviewData.brandFitSummary?.summary && (
