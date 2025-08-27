@@ -2627,16 +2627,39 @@
                 fromWidget: 'true' // Flag to indicate this came from widget
             });
             
-            // Temporarily disabled: always make fresh API calls to avoid cached data
-            // if (data && data.externalSearchResults) {
-            //     params.set('widgetData', JSON.stringify({
-            //         brandFitSummary: data.externalSearchResults.brandFitSummary,
-            //         reviews: data.externalSearchResults.reviews,
-            //         groupedReviews: data.externalSearchResults.groupedReviews,
-            //         totalResults: data.externalSearchResults.totalResults,
-            //         timestamp: Date.now()
-            //     }));
-            // }
+            // Re-enabled: Pass widget data to avoid duplicate API calls and ensure data consistency
+            if (data && data.externalSearchResults && data.externalSearchResults.reviews && data.externalSearchResults.reviews.length > 0) {
+                try {
+                    const widgetData = {
+                        brandFitSummary: data.externalSearchResults.brandFitSummary,
+                        reviews: data.externalSearchResults.reviews,
+                        groupedReviews: data.externalSearchResults.groupedReviews,
+                        totalResults: data.externalSearchResults.totalResults,
+                        timestamp: Date.now()
+                    };
+                    
+                    // Validate data before passing
+                    if (widgetData.brandFitSummary && widgetData.reviews && widgetData.reviews.length > 0) {
+                        params.set('widgetData', JSON.stringify(widgetData));
+                        console.log('🔗 [PointFour] Successfully passed widget data:', {
+                            hasBrandFitSummary: !!widgetData.brandFitSummary,
+                            reviewCount: widgetData.reviews.length,
+                            totalResults: widgetData.totalResults,
+                            hasGroupedReviews: !!widgetData.groupedReviews
+                        });
+                    } else {
+                        console.warn('🔗 [PointFour] Widget data validation failed, skipping data pass:', {
+                            hasBrandFitSummary: !!widgetData.brandFitSummary,
+                            reviewCount: widgetData.reviews?.length || 0,
+                            hasGroupedReviews: !!widgetData.groupedReviews
+                        });
+                    }
+                } catch (error) {
+                    console.error('🔗 [PointFour] Error preparing widget data:', error);
+                }
+            } else {
+                console.log('🔗 [PointFour] No external search results available, will use API fallback');
+            }
             
             console.log('🔗 [PointFour] Widget URL Debug:', {
                 brandNameUsed: brandName,

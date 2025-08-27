@@ -4,7 +4,7 @@
 console.log('🚀 BACKGROUND SCRIPT STARTING...');
 
 // Use localhost for development, production URL for deployed extension
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'https://pointfour.in';
 console.log('🔧 BACKGROUND SCRIPT LOADED AT:', new Date().toISOString(), 'API_BASE_URL:', API_BASE_URL);
 
 // Test API connection immediately
@@ -334,13 +334,13 @@ async function detectBrand(tabId, domainOrBrand, url, urlExtraction = null, extr
       brandName: domainOrBrand || 'Unknown Brand',
       hasData: false,
       searchType: 'timeout',
-      recommendation: 'Analysis is taking longer than expected. The search is comprehensive and may take up to 45 seconds. Please wait or try refreshing the page.',
+      recommendation: 'Analysis is taking longer than expected. Please try refreshing the page or use our manual search feature.',
       externalSearchResults: null,
       timestamp: Date.now(),
       error: false
     };
     sendBrandDataToTab(tabId, timeoutData);
-  }, 45000); // 45 second timeout (increased from 20)
+  }, 20000); // 20 second timeout
   
   try {
     console.log('🎯 Background: detectBrand called with:', { tabId, domainOrBrand, url, urlExtraction });
@@ -518,9 +518,9 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
     console.log('🔍 API URL:', `${API_BASE_URL}/api/extension/search-reviews`);
     console.log('🔍 Request body:', JSON.stringify(apiRequestData));
     
-    // Add timeout to prevent hanging - increased to allow for comprehensive search
+    // Add timeout to prevent hanging - reduced for better UX
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 40000); // 40 second timeout for comprehensive search
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for better UX
     
     const response = await fetch(`${API_BASE_URL}/api/extension/search-reviews`, {
       method: 'POST',
@@ -598,23 +598,13 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
     
     // Check if it's a timeout or API issue
     let errorMessage = `Unable to load fit information for ${brandName} at this time. Please try again later or manually search for reviews.`;
-    let searchType = 'error';
     
     if (error.name === 'AbortError') {
       errorMessage = `Analysis is taking longer than expected. The search is comprehensive and may take up to 15 seconds. Please try again if needed.`;
-      searchType = 'timeout';
     } else if (error.message.includes('SERPER_API_KEY not found') || error.message.includes('Search API not configured')) {
       errorMessage = `Search API not configured. Please contact support to enable live review search.`;
-      searchType = 'api-config';
     } else if (error.message.includes('403') || error.message.includes('authorization')) {
       errorMessage = `Search API authorization failed. Please check API configuration.`;
-      searchType = 'auth-error';
-    } else if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed to fetch')) {
-      errorMessage = `Development server is not running. Please start the server with 'npm run dev' in the fashion-recommendations directory.`;
-      searchType = 'server-offline';
-    } else if (error.message.includes('localhost') || error.message.includes('3000')) {
-      errorMessage = `Cannot connect to development server. Please ensure the server is running on localhost:3000.`;
-      searchType = 'server-offline';
     }
     
     // Return error data
@@ -622,7 +612,7 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
       brandName,
       category,
       hasData: false,
-      searchType: searchType,
+      searchType: 'error',
       recommendation: errorMessage,
       externalSearchResults: null,
       fitTips: [],

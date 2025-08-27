@@ -304,6 +304,10 @@ function ExtensionReviewsContent() {
       }
 
       // Fallback to API call when no widget data or parsing failed
+      console.log(
+        "🔗 [ExtensionReviews] Making fallback API call to /api/extension/search-reviews"
+      );
+
       const response = await fetch("/api/extension/search-reviews", {
         method: "POST",
         headers: {
@@ -317,10 +321,25 @@ function ExtensionReviewsContent() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch reviews");
+        const errorText = await response.text();
+        console.error("🔗 [ExtensionReviews] API call failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorText: errorText,
+        });
+        throw new Error(
+          `API call failed: ${response.status} ${response.statusText}`
+        );
       }
 
       const data = await response.json();
+      console.log("🔗 [ExtensionReviews] API call successful:", {
+        hasBrandFitSummary: !!data.brandFitSummary,
+        hasReviews: !!data.reviews,
+        reviewCount: data.reviews?.length || 0,
+        hasGroupedReviews: !!data.groupedReviews,
+        totalResults: data.totalResults,
+      });
 
       setReviewData({
         brand: brandName,

@@ -313,6 +313,7 @@ export async function POST(request: NextRequest) {
     const brandData = body.brand;
     const extractedData = body.extractedData;
     const pageData = body.pageData;
+    const fastMode = body.fastMode || false; // Add fast mode for widget
     
     brand = brandData;
     
@@ -888,15 +889,39 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
           variations.push(withSpaces, withoutUnderscores, baseBrandName);
         }
         
+        // Handle brands with special characters like "Réalisation Par" -> also check "realisation"
+        if (base.includes('é') || base.includes('è') || base.includes('à') || base.includes('ç')) {
+          const normalized = base
+            .replace(/é/g, 'e')
+            .replace(/è/g, 'e')
+            .replace(/à/g, 'a')
+            .replace(/ç/g, 'c');
+          variations.push(normalized);
+        }
+        
+        // Handle brands with "Par" suffix (like "Réalisation Par") -> also check just "Réalisation"
+        if (base.includes(' par')) {
+          const withoutPar = base.replace(/\s+par\s*$/i, '');
+          variations.push(withoutPar);
+        }
+        
+        // Handle brands with "US" suffix -> also check without it
+        if (base.includes(' us')) {
+          const withoutUs = base.replace(/\s+us\s*$/i, '');
+          variations.push(withoutUs);
+        }
+        
         return Array.from(new Set(variations)); // Remove duplicates
       };
       
       const brandVariations = createBrandVariations(brandLower);
       console.log(`🔍 BRAND VARIATIONS: Checking for brand "${brand}" using variations:`, brandVariations);
       
-      // STRICT REQUIREMENT: Must mention brand
+      // FLEXIBLE REQUIREMENT: Must mention brand (either in title, snippet, or URL)
       const hasBrandMention = brandVariations.some(variation => 
-        title.includes(variation) || snippet.includes(variation)
+        title.includes(variation) || 
+        snippet.includes(variation) ||
+        (result.link && result.link.toLowerCase().includes(variation))
       );
       
       if (!hasBrandMention) {
@@ -943,7 +968,7 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       );
       console.log(`✅ BRAND MATCH: Found brand mention using variations: ${matchedVariations.join(', ')} in "${result.title}"`);
       
-      // STRICT REQUIREMENT: Must have substantial brand mention (not just passing reference)
+      // FLEXIBLE REQUIREMENT: Must have substantial brand mention (not just passing reference)
       let totalBrandMentions = 0;
       let hasContextualMention = false;
       
@@ -967,13 +992,15 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
             fullText.includes(`${variation}'s`) ||
             fullText.includes(`the ${variation}`) ||
             // Brand mentioned in title is usually substantial
-            title.includes(variation)) {
+            title.includes(variation) ||
+            // Brand in URL is also substantial
+            (result.link && result.link.toLowerCase().includes(variation))) {
           hasContextualMention = true;
         }
       });
       
-      // Must have either multiple brand mentions OR contextual mention
-      const hasSubstantialMention = totalBrandMentions > 1 || hasContextualMention;
+      // More lenient: either multiple brand mentions OR contextual mention OR brand in title/URL
+      const hasSubstantialMention = totalBrandMentions > 1 || hasContextualMention || title.toLowerCase().includes(brandLower);
       
       if (!hasSubstantialMention) {
         console.log(`🚫 SUBSTANCE FILTER: Removing result with only passing brand mention: "${result.title}"`);
@@ -986,9 +1013,38 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
     
     console.log(`🔍 BRAND FILTERING: Reduced from ${allResults.length} to ${brandFilteredResults.length} results`);
 
+    // FALLBACK: If filtering is too aggressive and removed all results, use a more lenient approach
+    let finalResults = brandFilteredResults;
+    if (brandFilteredResults.length === 0 && allResults.length > 0) {
+      console.log('⚠️ FALLBACK: No results passed strict filtering, using lenient filtering...');
+      
+      // More lenient filtering: just check if brand appears anywhere in title, snippet, or URL
+      finalResults = allResults.filter(result => {
+        const title = (result.title || '').toLowerCase();
+        const snippet = (result.snippet || '').toLowerCase();
+        const link = (result.link || '').toLowerCase();
+        const brandLower = brand.toLowerCase();
+        
+        // Check if brand appears anywhere
+        const hasBrandMention = title.includes(brandLower) || 
+                               snippet.includes(brandLower) || 
+                               link.includes(brandLower);
+        
+        if (hasBrandMention) {
+          console.log(`✅ FALLBACK: Keeping result with brand mention: "${result.title}"`);
+          return true;
+        }
+        
+        console.log(`🚫 FALLBACK: Removing result without any brand mention: "${result.title}"`);
+        return false;
+      });
+      
+      console.log(`🔍 FALLBACK FILTERING: Found ${finalResults.length} results with lenient filtering`);
+    }
+
     // Convert all results to Review format and deduplicate (with GPT enhancement)
     console.log('🤖 Starting GPT-enhanced snippet processing...');
-    const formattedReviews = await Promise.all(brandFilteredResults.map(convertToReview));
+    const formattedReviews = await Promise.all(finalResults.map(convertToReview));
     
     // Deduplicate reviews with improved logic
     const uniqueReviews = formattedReviews.filter((review, index, array) => {
