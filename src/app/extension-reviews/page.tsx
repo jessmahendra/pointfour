@@ -60,23 +60,65 @@ interface ReviewData {
 
 // Get favicon for a source
 const getFavicon = (source: string) => {
-  if (source.includes("reddit")) return "https://www.reddit.com/favicon.ico";
-  if (source.includes("substack")) return "https://substack.com/favicon.ico";
-  if (source.includes("youtube")) return "https://www.youtube.com/favicon.ico";
-  if (source.includes("instagram"))
-    return "https://www.instagram.com/favicon.ico";
-  if (source.includes("twitter")) return "https://twitter.com/favicon.ico";
-  if (source.includes("tiktok")) return "https://www.tiktok.com/favicon.ico";
-  if (source.includes("pinterest"))
-    return "https://www.pinterest.com/favicon.ico";
-  if (source.includes("facebook"))
-    return "https://www.facebook.com/favicon.ico";
-  if (source.includes("linkedin"))
-    return "https://www.linkedin.com/favicon.ico";
-  if (source.includes("medium")) return "https://medium.com/favicon.ico";
-  if (source.includes("blog")) return "https://www.google.com/favicon.ico";
-  if (source.includes("forum")) return "https://www.google.com/favicon.ico";
-  return "https://www.google.com/favicon.ico"; // Default favicon
+  const sourceLower = source.toLowerCase();
+
+  // Reddit favicon
+  if (sourceLower.includes("reddit")) {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEE4IDggMCAxIDAgOCAxNkE4IDggMCAwIDAgOCAwem0wIDE0QTYgNiAwIDEgMSA4IDJhNiA2IDAgMCAxIDAgMTJ6IiBmaWxsPSIjRkY0NTAwIi8+CjxwYXRoIGQ9Ik0xMiAxMGEyIDIgMCAxIDEtNCAwIDIgMiAwIDAgMSA0IDB6TTYgMTBhMiAyIDAgMSAxLTQgMCAyIDIgMCAwIDEgNCAweiIgZmlsbD0iI0ZGNDUwMCIvPgo8cGF0aCBkPSJNMTAgMTJhMSAxIDAgMSAxLTIgMCAxIDEgMCAwIDEgMiAweiIgZmlsbD0iI0ZGNDUwMCIvPgo8L3N2Zz4K";
+  }
+
+  // Substack favicon
+  if (sourceLower.includes("substack")) {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEE4IDggMCAxIDAgOCAxNkE4IDggMCAwIDAgOCAwem0wIDE0QTYgNiAwIDEgMSA4IDJhNiA2IDAgMCAxIDAgMTJ6IiBmaWxsPSIjRkY2NDAwIi8+CjxwYXRoIGQ9Ik0xMSA4SDV2Mmg2Vjh6TTExIDExSDV2Mmg2di0yeiIgZmlsbD0iI0ZGRiIvPgo8L3N2Zz4K";
+  }
+
+  // YouTube favicon
+  if (sourceLower.includes("youtube")) {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE1Ljg0IDQuNzJhMS45IDEuOSAwIDAgMC0xLjMyLTEuMzJDNy4xIDMgOCAzIDggM0E4IDggMCAwIDAgMCA4YTggOCAwIDAgMCA4IDggOCA4IDAgMCAwIDgtOEMxNiA4IDE2IDggMTUuODQgNC43MnpNMTAgMTJMMTAgNkw2IDlMMTAgMTJ6IiBmaWxsPSIjRkYwMDAwIi8+Cjwvc3ZnPgo=";
+  }
+
+  // Twitter/X favicon
+  if (sourceLower.includes("twitter") || sourceLower.includes("x")) {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE0LjUgNC4yN0wxMy4yIDMuNzJMMTQuNSAzLjE3VjQuMjdaTTEzLjIgMTIuMjhMMTQuNSAxMS43M1YxMi43OEwxMy4yIDEyLjI4Wk0xMS4yIDUuNzJMMTAuOSA2LjE3TDEwLjUgNS43MkwxMS4yIDUuNzJaTTUuOCAxMC4yN0w2LjEgOS44Mkw2LjUgMTAuMjdMNS44IDEwLjI3Wk0xMi4yIDYuNzJMMTEuOSA3LjE3TDExLjUgNi43MkwxMi4yIDYuNzJaTTcuOCAxMS4yN0w4LjEgMTAuODJMODUgMTEuMjdMNy44IDExLjI3Wk0xMy4yIDcuNzJMMTIuOSA4LjE3TDEyLjUgNy43MkwxMy4yIDcuNzJaTTguOCAxMi4yN0w5LjEgMTEuODJMOS41IDEyLjI3TDguOCAxMi4yN1pNMTQuMiA4LjcyTDEzLjkgOS4xN0wxMy41IDguNzJMMTQuMiA4LjcyWiIgZmlsbD0iIzAwMDAwMCIvPgo8L3N2Zz4K";
+  }
+
+  // Instagram favicon
+  if (sourceLower.includes("instagram")) {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEE4IDggMCAxIDAgOCAxNkE4IDggMCAwIDAgOCAwem0wIDE0QTYgNiAwIDEgMSA4IDJhNiA2IDAgMCAxIDAgMTJ6IiBmaWxsPSIjRjUwN0YzIi8+CjxjaXJjbGUgY3g9IjgiIGN5PSI4IiByPSIyIiBmaWxsPSIjRkZGIi8+CjxjaXJjbGUgY3g9IjEyIiBjeT0iNCIgcj0iMC41IiBmaWxsPSIjRkZGIi8+Cjwvc3ZnPgo=";
+  }
+
+  // TikTok favicon
+  if (sourceLower.includes("tiktok")) {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJIMTF2NmMwIDIuMjEtMS43OSA0LTQgNHMtNC0xLjc5LTQtNFYySDV2NmMwIDMuMzEgMi42OSA2IDYgNnM2LTIuNjkgNi02VjJ6IiBmaWxsPSIjMDAwMDAwIi8+Cjwvc3ZnPgo=";
+  }
+
+  // Pinterest favicon
+  if (sourceLower.includes("pinterest")) {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEE4IDggMCAxIDAgOCAxNkE4IDggMCAwIDAgOCAwem0wIDE0QTYgNiAwIDEgMSA4IDJhNiA2IDAgMCAxIDAgMTJ6IiBmaWxsPSIjRDAwMDAwIi8+CjxwYXRoIGQ9Ik04IDRjLTEuNjYgMC0zIDEuMzQtMyAzIDAgMS4yNy0uNzUgMi4zLTEuNzUgMi43NS0uMjUuMS0uNS0uMjUtLjUtLjVWNGMwLTEuNjYgMS4zNC0zIDMtM3MzIDEuMzQgMyAzdjJjMCAuMjUtLjI1LjYtLjUuNS0xLS40NS0xLjc1LTEuNDgtMS43NS0yLjc1IDAtLjgzLjY3LTEuNSAxLjUtMS41czEuNS42NyAxLjUgMS41djRjMCAuMjUuMjUuNS41LjVzMS41LS4yNSAxLjUtLjVWNHoiIGZpbGw9IiNGRkYiLz4KPC9zdmc+Cg==";
+  }
+
+  // Facebook favicon
+  if (sourceLower.includes("facebook")) {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEE4IDggMCAxIDAgOCAxNkE4IDggMCAwIDAgOCAwem0wIDE0QTYgNiAwIDEgMSA4IDJhNiA2IDAgMCAxIDAgMTJ6IiBmaWxsPSIjMTg3N0YyIi8+CjxwYXRoIGQ9Ik0xMS4zIDhIMTAuM1Y2LjVjMC0uMzMuMjctLjYuNi0uNmgxLjR2LTEuNWgtMS40Yy0xLjE2IDAtMi4xLjk0LTIuMSAyLjFWN2gtMS4xYy0uMjIgMC0uNC4xOC0uNC40djEuMmMwIC4yMi4xOC40LjQuNGgxLjF2NC4zYzAgLjIyLjE4LjQuNC40aDEuMmMuMjIgMCAuNC0uMTguNC0uNFY4LjRoMS4xYy4yMiAwIC40LS4xOC40LS40VjcuNGMwLS4yMi0uMTgtLjQtLjQtLjRIMTEuM1oiIGZpbGw9IiNGRkYiLz4KPC9zdmc+Cg==";
+  }
+
+  // LinkedIn favicon
+  if (sourceLower.includes("linkedin")) {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEE4IDggMCAxIDAgOCAxNkE4IDggMCAwIDAgOCAwem0wIDE0QTYgNiAwIDEgMSA4IDJhNiA2IDAgMCAxIDAgMTJ6IiBmaWxsPSIjMDA3N0I1Ii8+CjxwYXRoIGQ9Ik0xMi4xIDUuN0gxMS4xVjQuN2MwLS4yMi4xOC0uNC40LS40aDEuNmMtLjIyIDAtLjQuMTgtLjQuNFY1LjdaTTExLjEgMTIuM1Y5LjNjMC0uMjIuMTgtLjQuNC0uNGgxLjJjLjIyIDAgLjQuMTguNC40djMuMWMwIC4yMi0uMTguNC0uNC40aC0xLjJjLS4yMiAwLS40LS4xOC0uNC0uNFpNMTAgMTIuM1Y5LjNjMC0uMjIuMTgtLjQuNC0uNGgxLjJjLjIyIDAgLjQuMTguNC40djMuMWMwIC4yMi0uMTguNC0uNC40aC0xLjJjLS4yMiAwLS40LS4xOC0uNC0uNFpNOSAxMi4zVjkuM2MwLS4yMi4xOC0uNC40LS40aDEuMmMuMjIgMCAuNC4xOC40LjR2My4xYzAgLjIyLS4xOC40LS40LjRIMTBDOS43OCAxMi43IDkuNiAxMi41MiA5LjYgMTIuM1Y5LjNjMC0uMjIuMTgtLjQuNC0uNGgxLjJjLjIyIDAgLjQuMTguNC40djMuMWMwIC4yMi0uMTguNC0uNC40aC0xLjJjLS4yMiAwLS40LS4xOC0uNC0uNFoiIGZpbGw9IiNGRkYiLz4KPC9zdmc+Cg==";
+  }
+
+  // Medium favicon
+  if (sourceLower.includes("medium")) {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEE4IDggMCAxIDAgOCAxNkE4IDggMCAwIDAgOCAwem0wIDE0QTYgNiAwIDEgMSA4IDJhNiA2IDAgMCAxIDAgMTJ6IiBmaWxsPSIjMDAwMDAwIi8+CjxwYXRoIGQ9Ik0xMS4yIDUuN0gxMS4xVjQuN2MwLS4yMi4xOC0uNC40LS40aDEuNmMtLjIyIDAtLjQuMTgtLjQuNFY1LjdaTTExLjEgMTIuM1Y5LjNjMC0uMjIuMTgtLjQuNC0uNGgxLjJjLjIyIDAgLjQuMTguNC40djMuMWMwIC4yMi0uMTguNC0uNC40aC0xLjJjLS4yMiAwLS40LS4xOC0uNC0uNFpNMTAgMTIuM1Y5LjNjMC0uMjIuMTgtLjQuNC0uNGgxLjJjLjIyIDAgLjQuMTguNC40djMuMWMwIC4yMi0uMTguNC0uNC40aC0xLjJjLS4yMiAwLS40LS4xOC0uNC0uNFpNOSAxMi4zVjkuM2MwLS4yMi4xOC0uNC40LS40aDEuMmMuMjIgMCAuNC4xOC40LjR2My4xYzAgLjIyLS4xOC40LS40LjRIMTBDOS43OCAxMi43IDkuNiAxMi41MiA5LjYgMTIuM1Y5LjNjMC0uMjIuMTgtLjQuNC0uNGgxLjJjLjIyIDAgLjQuMTguNC40djMuMWMwIC4yMi0uMTguNC0uNC40aC0xLjJjLS4yMiAwLS40LS4xOC0uNC0uNFoiIGZpbGw9IiNGRkYiLz4KPC9zdmc+Cg==";
+  }
+
+  // Blog/Forum favicon
+  if (sourceLower.includes("blog") || sourceLower.includes("forum")) {
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEE4IDggMCAxIDAgOCAxNkE4IDggMCAwIDAgOCAwem0wIDE0QTYgNiAwIDEgMSA4IDJhNiA2IDAgMCAxIDAgMTJ6IiBmaWxsPSIjNjc3Njg0Ii8+CjxwYXRoIGQ9Ik0xMS41IDQuNUg0LjV2N2g3di03em0tNiA2VjUuNWg1djVoLTV6IiBmaWxsPSIjRkZGIi8+Cjwvc3ZnPgo=";
+  }
+
+  // Default favicon for unknown sources
+  return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiByeD0iMiIgZmlsbD0iI0Y0NEE0NCIvPgo8L3N2Zz4K";
 };
 
 // Get source display name
@@ -96,14 +138,69 @@ const getSourceName = (source: string) => {
   return source;
 };
 
+// Function to prioritize fit and quality information in snippets
+const prioritizeFitAndQuality = (snippet: string, tags: string[] = []) => {
+  if (!snippet) return snippet;
+
+  // Split snippet into sentences or bullet points
+  const parts = snippet.split(/[.!?]/).filter((part) => part.trim().length > 0);
+
+  // Keywords that indicate fit and quality information
+  const fitKeywords = [
+    "fit",
+    "fits",
+    "sizing",
+    "size",
+    "large",
+    "small",
+    "true to size",
+    "runs",
+    "athletic",
+    "comfortable",
+  ];
+  const qualityKeywords = [
+    "quality",
+    "materials",
+    "construction",
+    "durable",
+    "premium",
+    "excellent",
+    "amazing",
+    "incredible",
+    "top-notch",
+  ];
+
+  // Separate fit/quality parts from other parts
+  const fitQualityParts: string[] = [];
+  const otherParts: string[] = [];
+
+  parts.forEach((part) => {
+    const lowerPart = part.toLowerCase();
+    const hasFitKeyword = fitKeywords.some((keyword) =>
+      lowerPart.includes(keyword)
+    );
+    const hasQualityKeyword = qualityKeywords.some((keyword) =>
+      lowerPart.includes(keyword)
+    );
+
+    if (hasFitKeyword || hasQualityKeyword) {
+      fitQualityParts.push(part.trim());
+    } else {
+      otherParts.push(part.trim());
+    }
+  });
+
+  // Reconstruct snippet with fit/quality first
+  const prioritizedParts = [...fitQualityParts, ...otherParts];
+  return prioritizedParts.join(". ") + (snippet.endsWith(".") ? "" : ".");
+};
+
 function ExtensionReviewsContent() {
   const searchParams = useSearchParams();
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [loading, setLoading] = useState(false); // Set to false for demo
   const [error, setError] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(["substack"]) // Substack section expanded by default for demo
-  );
+  // All sections are now always expanded - no state needed
   const [showMoreCards, setShowMoreCards] = useState<Record<string, boolean>>(
     {}
   );
@@ -389,15 +486,7 @@ function ExtensionReviewsContent() {
     fetchReviews();
   }, [brandName, itemName, fetchReviews]);
 
-  const toggleSection = (section: string) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(section)) {
-      newExpanded.delete(section);
-    } else {
-      newExpanded.add(section);
-    }
-    setExpandedSections(newExpanded);
-  };
+  // All sections are now always expanded - no toggle needed
 
   const toggleShowMore = (section: string) => {
     setShowMoreCards((prev) => ({
@@ -407,13 +496,14 @@ function ExtensionReviewsContent() {
   };
 
   const categoryNames: Record<string, string> = {
-    primary: "Substack",
+    primary: "Forums and Newsletters",
     community: "Community Forums",
-    blogs: "Fashion blogs",
-    videos: "Video reviews",
+    blogs: "Fashion Blogs",
+    videos: "Video Reviews",
     social: "Social Media",
     publications: "Fashion Publications",
     other: "Other Sources",
+    substack: "Substack",
   };
 
   if (loading) {
@@ -574,9 +664,9 @@ function ExtensionReviewsContent() {
       {/* Main Content */}
       <div
         style={{
-          maxWidth: "1200px",
+          maxWidth: "50%",
           margin: "0 auto",
-          padding: "80px 24px 40px",
+          padding: "80px 80px 40px",
         }}
       >
         {/* Brand Header */}
@@ -606,12 +696,12 @@ function ExtensionReviewsContent() {
             <h2
               style={{
                 fontSize: "20px",
-                fontWeight: "700",
+                fontWeight: "600",
                 color: "#333",
                 margin: "0 0 8px 0",
               }}
             >
-              Fit review
+              Fit Review
             </h2>
 
             <p
@@ -631,10 +721,10 @@ function ExtensionReviewsContent() {
               <div
                 style={{
                   margin: "0 0 20px 0",
-                  padding: "20px",
-                  backgroundColor: "#f9f8f6",
-                  border: "1px solid #e9ded5",
-                  borderRadius: "8px",
+                  padding: "0",
+                  backgroundColor: "transparent",
+                  border: "none",
+                  borderRadius: "0",
                   fontSize: "15px",
                   lineHeight: "1.6",
                   color: "#333",
@@ -713,10 +803,10 @@ function ExtensionReviewsContent() {
               <div
                 style={{
                   margin: "0 0 20px 0",
-                  padding: "20px",
-                  backgroundColor: "#f9f8f6",
-                  border: "1px solid #e9ded5",
-                  borderRadius: "8px",
+                  padding: "0",
+                  backgroundColor: "transparent",
+                  border: "none",
+                  borderRadius: "0",
                   fontSize: "15px",
                   lineHeight: "1.6",
                   color: "#333",
@@ -746,11 +836,10 @@ function ExtensionReviewsContent() {
             ([category, reviews]) => {
               if (!reviews || reviews.length === 0) return null;
 
-              const isExpanded = expandedSections.has(category);
               const visibleReviews = showMoreCards[category]
                 ? reviews
-                : reviews.slice(0, 6);
-              const hasMoreReviews = reviews.length > 6;
+                : reviews.slice(0, 3);
+              const hasMoreReviews = reviews.length > 3;
 
               return (
                 <div
@@ -762,194 +851,185 @@ function ExtensionReviewsContent() {
                     overflow: "visible",
                   }}
                 >
-                  <button
-                    onClick={() => toggleSection(category)}
+                  <div
                     style={{
-                      width: "100%",
-                      padding: "20px 24px",
-                      backgroundColor: "transparent",
-                      border: "none",
-                      borderBottom: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      transition: "background-color 0.2s",
-                    }}
-                    onMouseOver={(e) => {
-                      (
-                        e.currentTarget as HTMLButtonElement
-                      ).style.backgroundColor = "transparent";
-                    }}
-                    onMouseOut={(e) => {
-                      (
-                        e.currentTarget as HTMLButtonElement
-                      ).style.backgroundColor = "transparent";
+                      padding: "12px 0",
+                      marginBottom: "8px",
                     }}
                   >
-                    <div style={{ textAlign: "left" }}>
-                      <h3
-                        style={{
-                          fontSize: "18px",
-                          fontWeight: "600",
-                          color: "#333",
-                          margin: "0 0 4px 0",
-                        }}
-                      >
-                        {categoryNames[category]}
-                      </h3>
-                      <p
-                        style={{
-                          fontSize: "13px",
-                          color: "#666",
-                          margin: 0,
-                        }}
-                      >
-                        {reviews.length} reviews
-                      </p>
-                    </div>
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                    <h3
                       style={{
-                        transform: isExpanded ? "rotate(180deg)" : "rotate(0)",
-                        transition: "transform 0.2s",
-                        color: "#666",
-                        flexShrink: 0,
+                        fontSize: "18px",
+                        fontWeight: "600",
+                        color: "#333",
+                        margin: "0 0 4px 0",
                       }}
                     >
-                      <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                  </button>
+                      {categoryNames[category]}
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: "13px",
+                        color: "#666",
+                        margin: 0,
+                      }}
+                    >
+                      {reviews.length} reviews
+                    </p>
+                  </div>
 
-                  {isExpanded && (
-                    <div style={{ padding: "0" }}>
-                      {/* Cards Grid - 3 columns */}
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(3, 1fr)",
-                          gap: "16px",
-                          marginBottom: hasMoreReviews ? "24px" : "0",
-                        }}
-                      >
-                        {visibleReviews.map((review, index) => (
-                          <div
-                            key={index}
+                  <div style={{ padding: "0", marginTop: "0" }}>
+                    {/* Cards Grid - 3 columns */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(3, 1fr)",
+                        gap: "16px",
+                        marginBottom: "0",
+                      }}
+                    >
+                      {visibleReviews.map((review, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            padding: "16px",
+                            backgroundColor: "#FFFFFF",
+                            borderRadius: "8px",
+                            border: "1px solid #E7DED6",
+                            display: "flex",
+                            flexDirection: "column",
+                            height: "100%",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                          }}
+                          onClick={() => {
+                            if (review.url && review.url !== "#") {
+                              window.open(review.url, "_blank");
+                            }
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.transform =
+                              "translateY(-2px)";
+                            e.currentTarget.style.boxShadow =
+                              "0 4px 12px rgba(0,0,0,0.1)";
+                            e.currentTarget.style.borderColor = "#D4C5B8";
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "none";
+                            e.currentTarget.style.borderColor = "#E7DED6";
+                          }}
+                        >
+                          {/* Review Title - Limited to 2 lines */}
+                          <h4
                             style={{
-                              padding: "16px",
-                              backgroundColor: "transparent",
-                              borderRadius: "0",
-                              border: "none",
-                              display: "flex",
-                              flexDirection: "column",
-                              height: "100%",
+                              fontSize: "14px",
+                              fontWeight: "600",
+                              color: "#333",
+                              margin: "0 0 4px 0",
+                              lineHeight: "1.4",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              wordBreak: "break-word",
+                              maxHeight: "calc(1.4em * 2)",
                             }}
                           >
-                            {/* Review Title */}
-                            <h4
-                              style={{
-                                fontSize: "14px",
-                                fontWeight: "600",
-                                color: "#333",
-                                margin: "0 0 8px 0",
-                                lineHeight: "1.4",
-                                flex: 1,
-                              }}
-                            >
-                              {review.title}
-                            </h4>
+                            {review.title}
+                          </h4>
 
-                            {/* Review Content */}
-                            <p
-                              style={{
-                                fontSize: "13px",
-                                color: "#333",
-                                margin: "0 0 12px 0",
-                                lineHeight: "1.4",
-                                flex: 1,
-                              }}
-                            >
-                              {review.snippet}
-                            </p>
-
-                            {/* Source with Favicon - Perplexity Style */}
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                marginTop: "auto",
-                              }}
-                            >
-                              <img
-                                src={getFavicon(review.source)}
-                                alt=""
-                                style={{
-                                  width: "16px",
-                                  height: "16px",
-                                  borderRadius: "2px",
-                                }}
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display =
-                                    "none";
-                                }}
-                              />
-                              <span
-                                style={{
-                                  fontSize: "11px",
-                                  color: "#666",
-                                  fontWeight: "400",
-                                }}
-                              >
-                                {getSourceName(review.source)}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* View More Button */}
-                      {hasMoreReviews && (
-                        <div style={{ textAlign: "left" }}>
-                          <button
-                            onClick={() => toggleShowMore(category)}
+                          {/* Review Content - Prioritize fit review summaries */}
+                          <p
                             style={{
-                              padding: "8px 16px",
-                              backgroundColor: "transparent",
-                              border: "none",
-                              borderRadius: "0",
-                              color: "#666",
                               fontSize: "13px",
-                              cursor: "pointer",
-                              transition: "all 0.2s",
-                              textDecoration: "underline",
-                            }}
-                            onMouseOver={(e) => {
-                              (
-                                e.currentTarget as HTMLButtonElement
-                              ).style.backgroundColor = "transparent";
-                            }}
-                            onMouseOut={(e) => {
-                              (
-                                e.currentTarget as HTMLButtonElement
-                              ).style.backgroundColor = "transparent";
+                              color: "#333",
+                              margin: "0 0 12px 0",
+                              lineHeight: "1.4",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 5,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              wordBreak: "break-word",
+                              maxHeight: "calc(1.4em * 5)",
                             }}
                           >
-                            {showMoreCards[category]
-                              ? "Show less"
-                              : "View more"}
-                          </button>
+                            {prioritizeFitAndQuality(
+                              review.snippet,
+                              review.tags
+                            )}
+                          </p>
+
+                          {/* Source with Favicon - Perplexity Style */}
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              marginTop: "auto",
+                            }}
+                          >
+                            <img
+                              src={getFavicon(review.source)}
+                              alt=""
+                              style={{
+                                width: "16px",
+                                height: "16px",
+                                borderRadius: "2px",
+                              }}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display =
+                                  "none";
+                              }}
+                            />
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                color: "#666",
+                                fontWeight: "400",
+                              }}
+                            >
+                              {getSourceName(review.source)}
+                            </span>
+                          </div>
                         </div>
-                      )}
+                      ))}
                     </div>
-                  )}
+
+                    {/* View More Button */}
+                    {hasMoreReviews && (
+                      <div style={{ textAlign: "left", marginTop: "20px" }}>
+                        <button
+                          onClick={() => toggleShowMore(category)}
+                          style={{
+                            padding: "8px 16px",
+                            backgroundColor: "transparent",
+                            border: "none",
+                            borderRadius: "0",
+                            color: "#666",
+                            fontSize: "13px",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            textDecoration: "underline",
+                          }}
+                          onMouseOver={(e) => {
+                            (
+                              e.currentTarget as HTMLButtonElement
+                            ).style.backgroundColor = "transparent";
+                          }}
+                          onMouseOut={(e) => {
+                            (
+                              e.currentTarget as HTMLButtonElement
+                            ).style.backgroundColor = "transparent";
+                          }}
+                        >
+                          {showMoreCards[category] ? "Show less" : "View more"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             }

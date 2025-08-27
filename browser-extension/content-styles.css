@@ -111,6 +111,7 @@
   background: #F8F7F4 !important; /* Light beige background for clean readability */
   background-color: #F8F7F4 !important; /* Ensure background-color is also set */
   border-radius: 0 0 12px 12px;
+  text-align: left;
 }
 
 /* Loading spinner */
@@ -146,6 +147,7 @@
   font-weight: 600;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
   color: #9F513A; /* Burnt orange title color */
+  text-align: left;
 }
 
 .pointfour-fit-info {
@@ -202,6 +204,7 @@
     line-height: 1.4;
     font-size: 13px;
     color: #2D2D2D;
+    text-align: left;
 }
 
 .pointfour-bullet-list li:before {
@@ -257,6 +260,7 @@
     padding: 0;
     border-bottom: 1px solid #E5E5E5;
     padding-bottom: 4px;
+    text-align: left;
 }
 
 /* Remove old paragraph styling */
@@ -290,8 +294,7 @@
   color: #A0613A; /* Warm orangey brown - slightly lighter than main heading */
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-align: left;
 }
 
 .pointfour-quality-info p {
@@ -412,6 +415,7 @@
   font-weight: 600;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
   color: #A0613A; /* Warm orangey brown to match other headings */
+  text-align: left;
 }
 
 .pointfour-fit-tips ul {
