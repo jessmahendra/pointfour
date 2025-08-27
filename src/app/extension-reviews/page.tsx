@@ -211,6 +211,8 @@ function ExtensionReviewsContent() {
   const itemName = searchParams.get("item") || "";
   const fromWidget = searchParams.get("fromWidget") === "true";
   const widgetDataParam = searchParams.get("widgetData");
+  const storageKey = searchParams.get("storageKey");
+  const useStorage = searchParams.get("useStorage") === "true";
   const tldrParam = searchParams.get("tldr") || "";
 
   const fetchReviews = useCallback(async () => {
@@ -219,16 +221,68 @@ function ExtensionReviewsContent() {
       setError(null);
 
       // If coming from widget with data, use that instead of making a new API call
-      if (fromWidget && widgetDataParam) {
+      if (fromWidget && (widgetDataParam || (useStorage && storageKey))) {
         try {
-          const widgetData = JSON.parse(widgetDataParam);
-          console.log("🔗 [ExtensionReviews] Using widget data:", widgetData);
+          let widgetData;
+
+          if (useStorage && storageKey) {
+            // Get data from sessionStorage
+            const storedData = sessionStorage.getItem(storageKey);
+            if (storedData) {
+              widgetData = JSON.parse(storedData);
+              console.log(
+                "🔗 [ExtensionReviews] Retrieved data from sessionStorage:",
+                storageKey
+              );
+              // Clean up the stored data
+              sessionStorage.removeItem(storageKey);
+            } else {
+              throw new Error("No data found in sessionStorage");
+            }
+          } else if (widgetDataParam) {
+            // Parse data from URL parameter
+            widgetData = JSON.parse(widgetDataParam);
+          } else {
+            throw new Error("No widget data available");
+          }
+          console.log("🔗 [ExtensionReviews] Using widget data:", {
+            brand: brandName,
+            hasBrandFitSummary: !!widgetData.brandFitSummary,
+            brandFitSummarySources: widgetData.brandFitSummary?.sources,
+            reviewCount: widgetData.reviews?.length || 0,
+            totalResults: widgetData.totalResults,
+            hasGroupedReviews: !!widgetData.groupedReviews,
+            groupedReviewCounts: widgetData.groupedReviews
+              ? Object.fromEntries(
+                  Object.entries(widgetData.groupedReviews).map(
+                    ([key, reviews]) => [key, (reviews as Review[]).length]
+                  )
+                )
+              : null,
+          });
 
           // Transform widget data to match expected format
           const transformedData: ReviewData = {
             brand: brandName,
             itemName: itemName,
-            brandFitSummary: widgetData.brandFitSummary,
+            brandFitSummary: widgetData.brandFitSummary || {
+              summary: `Based on ${
+                widgetData.totalResults || widgetData.reviews?.length || 0
+              } reviews from multiple sources`,
+              confidence: "medium" as const,
+              sources: (() => {
+                // Extract unique sources from reviews
+                if (widgetData.reviews && widgetData.reviews.length > 0) {
+                  const sources = [
+                    ...new Set(widgetData.reviews.map((r: Review) => r.source)),
+                  ];
+                  return sources.slice(0, 5); // Limit to 5 sources for display
+                }
+                return ["Reddit", "Fashion forums", "Reviews"];
+              })(),
+              totalResults:
+                widgetData.totalResults || widgetData.reviews?.length || 0,
+            },
             reviews: widgetData.reviews || [],
             groupedReviews: widgetData.groupedReviews || {
               // Fallback to client-side grouping if server grouping not available
@@ -239,26 +293,55 @@ function ExtensionReviewsContent() {
                     r.source?.includes("substack")
                 ) || [],
               community:
-                widgetData.reviews?.filter((r: Review) =>
-                  r.source?.includes("community")
+                widgetData.reviews?.filter(
+                  (r: Review) =>
+                    r.source?.includes("community") ||
+                    r.source?.includes("forum")
                 ) || [],
               blogs:
-                widgetData.reviews?.filter((r: Review) =>
-                  r.source?.includes("blog")
+                widgetData.reviews?.filter(
+                  (r: Review) =>
+                    r.source?.includes("blog") || r.source?.includes("medium")
                 ) || [],
               videos:
-                widgetData.reviews?.filter((r: Review) =>
-                  r.source?.includes("youtube")
+                widgetData.reviews?.filter(
+                  (r: Review) =>
+                    r.source?.includes("youtube") || r.source?.includes("video")
                 ) || [],
               social:
-                widgetData.reviews?.filter((r: Review) =>
-                  r.source?.includes("social")
+                widgetData.reviews?.filter(
+                  (r: Review) =>
+                    r.source?.includes("social") ||
+                    r.source?.includes("instagram") ||
+                    r.source?.includes("twitter") ||
+                    r.source?.includes("tiktok")
                 ) || [],
               publications:
-                widgetData.reviews?.filter((r: Review) =>
-                  r.source?.includes("publication")
+                widgetData.reviews?.filter(
+                  (r: Review) =>
+                    r.source?.includes("publication") ||
+                    r.source?.includes("vogue") ||
+                    r.source?.includes("magazine")
                 ) || [],
-              other: widgetData.reviews || [],
+              other:
+                widgetData.reviews?.filter(
+                  (r: Review) =>
+                    !r.source?.includes("reddit") &&
+                    !r.source?.includes("substack") &&
+                    !r.source?.includes("community") &&
+                    !r.source?.includes("forum") &&
+                    !r.source?.includes("blog") &&
+                    !r.source?.includes("medium") &&
+                    !r.source?.includes("youtube") &&
+                    !r.source?.includes("video") &&
+                    !r.source?.includes("social") &&
+                    !r.source?.includes("instagram") &&
+                    !r.source?.includes("twitter") &&
+                    !r.source?.includes("tiktok") &&
+                    !r.source?.includes("publication") &&
+                    !r.source?.includes("vogue") &&
+                    !r.source?.includes("magazine")
+                ) || [],
             },
             totalResults: (() => {
               // Use groupedReviews as single source of truth for count consistency
@@ -292,6 +375,21 @@ function ExtensionReviewsContent() {
             timestamp: widgetData.timestamp,
           };
 
+          // Validate the transformed data
+          console.log("🔗 [ExtensionReviews] Transformed data validation:", {
+            hasBrandFitSummary: !!transformedData.brandFitSummary,
+            brandFitSummarySources: transformedData.brandFitSummary?.sources,
+            sourcesLength:
+              transformedData.brandFitSummary?.sources?.length || 0,
+            reviewCount: transformedData.reviews?.length || 0,
+            totalResults: transformedData.totalResults,
+            groupedReviewCounts: Object.fromEntries(
+              Object.entries(transformedData.groupedReviews).map(
+                ([key, reviews]) => [key, (reviews as Review[]).length]
+              )
+            ),
+          });
+
           setReviewData(transformedData);
           setLoading(false);
           return;
@@ -300,6 +398,22 @@ function ExtensionReviewsContent() {
             "🔗 [ExtensionReviews] Failed to parse widget data, falling back to API:",
             e
           );
+
+          // If sessionStorage failed, try to clean up any remaining keys
+          if (useStorage && storageKey) {
+            try {
+              sessionStorage.removeItem(storageKey);
+              console.log(
+                "🔗 [ExtensionReviews] Cleaned up sessionStorage key:",
+                storageKey
+              );
+            } catch (cleanupError) {
+              console.warn(
+                "🔗 [ExtensionReviews] Failed to cleanup sessionStorage:",
+                cleanupError
+              );
+            }
+          }
         }
       }
 
@@ -354,6 +468,7 @@ function ExtensionReviewsContent() {
           social: [],
           publications: [],
           other: [],
+          substack: [],
         },
         totalResults: data.totalResults || 0,
         timestamp: Date.now(),
@@ -517,14 +632,14 @@ function ExtensionReviewsContent() {
   };
 
   const categoryNames: Record<string, string> = {
-    primary: "Forums and Newsletters",
-    community: "Community Forums",
+    primary: "Newsletters & Forums",
+    community: "Community Discussions",
     blogs: "Fashion Blogs",
     videos: "Video Reviews",
     social: "Social Media",
     publications: "Fashion Publications",
     other: "Other Sources",
-    substack: "Substack",
+    substack: "Substack Newsletters",
   };
 
   if (loading) {
@@ -733,8 +848,30 @@ function ExtensionReviewsContent() {
               }}
             >
               {reviewData.totalResults}+ sources including{" "}
-              {reviewData.brandFitSummary?.sources?.slice(0, 3).join(", ") ||
-                "Reddit, fashion forums, reviews"}
+              {(() => {
+                // Try to get sources from brandFitSummary first
+                if (
+                  reviewData.brandFitSummary?.sources &&
+                  reviewData.brandFitSummary.sources.length > 0
+                ) {
+                  return reviewData.brandFitSummary.sources
+                    .slice(0, 3)
+                    .join(", ");
+                }
+
+                // Fallback: extract sources from actual reviews
+                if (reviewData.reviews && reviewData.reviews.length > 0) {
+                  const sources = [
+                    ...new Set(reviewData.reviews.map((r) => r.source)),
+                  ];
+                  if (sources.length > 0) {
+                    return sources.slice(0, 3).join(", ");
+                  }
+                }
+
+                // Final fallback
+                return "Reddit, fashion forums, reviews";
+              })()}
             </p>
 
             {/* TLDR Section */}

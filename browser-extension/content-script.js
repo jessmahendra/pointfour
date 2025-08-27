@@ -2627,16 +2627,59 @@
                 fromWidget: 'true' // Flag to indicate this came from widget
             });
             
-            // Temporarily disabled: always make fresh API calls to avoid cached data
-            // if (data && data.externalSearchResults) {
-            //     params.set('widgetData', JSON.stringify({
-            //         brandFitSummary: data.externalSearchResults.brandFitSummary,
-            //         reviews: data.externalSearchResults.reviews,
-            //         groupedReviews: data.externalSearchResults.groupedReviews,
-            //         totalResults: data.externalSearchResults.totalResults,
-            //         timestamp: Date.now()
-            //     }));
-            // }
+            // Enable widget data transfer for better performance and data consistency
+            if (data && data.externalSearchResults) {
+                // Create optimized widget data to avoid URL length issues
+                const widgetData = {
+                    brandFitSummary: data.externalSearchResults.brandFitSummary,
+                    reviews: (data.externalSearchResults.reviews || []).map(review => ({
+                        // Only send essential fields to reduce URL size
+                        title: review.title?.substring(0, 100) || '',
+                        snippet: review.snippet?.substring(0, 150) || '', // Truncate snippet
+                        url: review.url || '',
+                        source: review.source || '',
+                        tags: review.tags?.slice(0, 3) || [], // Limit tags
+                        confidence: review.confidence || 'low',
+                        brandLevel: review.brandLevel || false,
+                        // Remove fullContent to reduce size significantly
+                        // fullContent: review.fullContent
+                    })),
+                    groupedReviews: data.externalSearchResults.groupedReviews,
+                    totalResults: data.externalSearchResults.totalResults,
+                    timestamp: Date.now()
+                };
+                
+                // Check if the data would be too large for URL
+                const dataString = JSON.stringify(widgetData);
+                const estimatedUrlLength = dataString.length * 1.3; // URL encoding increases size
+                
+                if (estimatedUrlLength > 8000) { // Conservative limit
+                    console.warn('🔗 [PointFour] Widget data too large for URL:', {
+                        estimatedSize: Math.round(estimatedUrlLength),
+                        reviewCount: widgetData.reviews?.length || 0,
+                        willUseFallback: true
+                    });
+                    
+                    // Store data in sessionStorage instead
+                    const storageKey = `pointfour_widget_data_${Date.now()}`;
+                    sessionStorage.setItem(storageKey, dataString);
+                    params.set('storageKey', storageKey);
+                    params.set('useStorage', 'true');
+                    
+                    console.log('🔗 [PointFour] Using sessionStorage for large data:', storageKey);
+                } else {
+                    params.set('widgetData', dataString);
+                    console.log('🔗 [PointFour] Added widget data to URL:', {
+                        hasBrandFitSummary: !!widgetData.brandFitSummary,
+                        reviewCount: widgetData.reviews?.length || 0,
+                        totalResults: widgetData.totalResults,
+                        hasGroupedReviews: !!widgetData.groupedReviews,
+                        estimatedUrlSize: Math.round(estimatedUrlLength)
+                    });
+                }
+            } else {
+                console.log('🔗 [PointFour] No external search results available for widget data');
+            }
             
             console.log('🔗 [PointFour] Widget URL Debug:', {
                 brandNameUsed: brandName,
