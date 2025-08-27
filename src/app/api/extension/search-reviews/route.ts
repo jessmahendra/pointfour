@@ -2325,6 +2325,7 @@ function generateDetailedSummary(analysis: AnalysisResult, results: Review[], br
   };
   
   // Generate brand reputation context
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const generateBrandReputation = (brandName: string) => {
     const brandLower = brandName.toLowerCase();
     

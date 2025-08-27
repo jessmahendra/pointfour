@@ -3,7 +3,6 @@
 import { Suspense } from "react";
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 
 interface Review {
   title: string;
@@ -58,36 +57,6 @@ interface ReviewData {
   pageUrl?: string;
 }
 
-// Get favicon for a source
-const getFavicon = (source: string) => {
-  const sourceLower = source.toLowerCase();
-
-  // Reddit favicon
-  if (sourceLower.includes("reddit")) {
-    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEE4IDggMCAxIDAgOCAxNkE4IDggMCAwIDAgOCAwem0wIDE0QTYgNiAwIDEgMSA4IDJhNiA2IDAgMCAxIDAgMTJ6IiBmaWxsPSIjRkY0NTAwIi8+CjxwYXRoIGQ9Ik0xMiAxMGEyIDIgMCAxIDEtNCAwIDIgMiAwIDAgMSA0IDB6TTYgMTBhMiAyIDAgMSAxLTQgMCAyIDIgMCAwIDEgNCAweiIgZmlsbD0iI0ZGNDUwMCIvPgo8cGF0aCBkPSJNMTAgMTJhMSAxIDAgMSAxLTIgMCAxIDEgMCAwIDEgMiAweiIgZmlsbD0iI0ZGNDUwMCIvPgo8L3N2Zz4K";
-  }
-
-  // Substack favicon
-  if (sourceLower.includes("substack")) {
-    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMEE4IDggMCAxIDAgOCAxNkE4IDggMCAwIDAgOCAwem0wIDE0QTYgNiAwIDEgMSA4IDJhNiA2IDAgMCAxIDAgMTJ6IiBmaWxsPSIjRkY2NDAwIi8+CjxwYXRoIGQ9Ik0xMSA4SDV2Mmg2Vjh6TTExIDExSDV2Mmg2di0yeiIgZmlsbD0iI0ZGRiIvPgo8L3N2Zz4K";
-  }
-
-  // YouTube favicon
-  if (sourceLower.includes("youtube")) {
-    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE1Ljg0IDQuNzJhMS45IDEuOSAwIDAgMC0xLjMyLTEuMzJDNy4xIDMgOCAzIDggM0E4IDggMCAwIDAgMCA4YTggOCAwIDAgMCA4IDggOCA4IDAgMCAwIDgtOEMxNiA4IDE2IDggMTUuODQgNC43MnpNMTAgMTJMMTAgNkw2IDlMMTAgMTJ6IiBmaWxsPSIjRkYwMDAwIi8+Cjwvc3ZnPgo=";
-  }
-
-  // Default favicon for unknown sources
-  return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiByeD0iMiIgZmlsbD0iI0Y0NEE0NCIvPgo8L3N2Zz4K";
-};
-
-// Get source display name
-const getSourceName = (source: string) => {
-  if (source.includes("reddit")) return "Reddit";
-  if (source.includes("substack")) return "Substack";
-  if (source.includes("youtube")) return "YouTube";
-  return source;
-};
 
 function ExtensionReviewsContent() {
   const searchParams = useSearchParams();

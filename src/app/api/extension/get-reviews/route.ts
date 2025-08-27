@@ -2,7 +2,7 @@ import { airtableService } from '@/lib/airtable';
 
 // Helper function to calculate brand-item relevance score for ranking reviews
 function calculateBrandItemRelevanceScore(
-  review: any, 
+  review: { brandName?: string; itemName?: string; fitComments?: string; fitRating?: number }, 
   targetBrand: string, 
   targetItemName?: string
 ): number {
