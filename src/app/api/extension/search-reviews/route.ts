@@ -10,6 +10,24 @@ const openai = new OpenAI({
   timeout: 30000, // 30 second timeout
 });
 
+// GPT-5 Testing Configuration
+const ENABLE_GPT5_TESTING = process.env.ENABLE_GPT5_TESTING === 'true';
+const GPT5_TEST_PERCENTAGE = parseInt(process.env.GPT5_TEST_PERCENTAGE || '10') || 10;
+
+// Debug: Log all environment variables to see what's loaded
+console.log('🔍 ENVIRONMENT DEBUG:', {
+  NODE_ENV: process.env.NODE_ENV,
+  ENABLE_GPT5_TESTING: process.env.ENABLE_GPT5_TESTING,
+  GPT5_TEST_PERCENTAGE: process.env.GPT5_TEST_PERCENTAGE,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'SET' : 'NOT SET'
+});
+
+console.log('🧪 GPT-5 TESTING CONFIG:', {
+  enabled: ENABLE_GPT5_TESTING,
+  testPercentage: GPT5_TEST_PERCENTAGE,
+  model: 'gpt-5-mini'
+});
+
 interface SerperResult {
   title?: string;
   snippet?: string;
@@ -299,10 +317,77 @@ export async function OPTIONS() {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const brand = searchParams.get('brand');
+    const searchType = searchParams.get('searchType') || 'all';
+    const enableExternalSearch = searchParams.get('enableExternalSearch') === 'true';
+    const itemName = searchParams.get('itemName') || '';
+    const category = searchParams.get('category') || 'general';
+    
+    if (!brand) {
+      return NextResponse.json({ error: 'Brand name is required' }, { status: 400 });
+    }
+    
+    console.log(`\n🎯 GET REQUEST RECEIVED:`);
+    console.log(`   Brand: ${brand}`);
+    console.log(`   SearchType: ${searchType}`);
+    console.log(`   Item: ${itemName}`);
+    console.log(`   Category: ${category}`);
+    console.log(`   EnableExternalSearch: ${enableExternalSearch}\n`);
+    
+    // For GET requests, we'll use a simplified approach with external search
+    if (enableExternalSearch) {
+      // This will trigger the same logic as POST but with GET parameters
+      const mockBody = {
+        brand: brand,
+        extractedData: {},
+        pageData: {},
+        fastMode: true
+      };
+      
+      // Convert to NextRequest-like object for the POST function
+      const mockRequest = {
+        json: async () => mockBody
+      } as any;
+      
+      // Call the existing POST logic and get the response
+      const response = await POST(mockRequest as NextRequest);
+      
+      // Add GPT model summary for GET requests
+      console.log('\n' + '='.repeat(80));
+      console.log('🎯 GPT MODEL SUMMARY FOR GET REQUEST:');
+      console.log('='.repeat(80));
+      console.log(`📱 Brand: ${brand}`);
+      console.log(`🤖 Model Used: ${response?.modelUsed || 'Unknown'}`);
+      console.log(`🧪 Was GPT-5 Test: ${response?.isGPT5Test ? 'YES' : 'NO'}`);
+      console.log(`📊 Results Analyzed: ${response?.totalResults || 'Unknown'} total`);
+      console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
+      console.log('='.repeat(80) + '\n');
+      
+      return response;
+    }
+    
+    return NextResponse.json({ 
+      message: 'GET request received, but external search is required for analysis',
+      brand: brand,
+      searchType: searchType
+    });
+    
+  } catch (error) {
+    console.error('❌ GET REQUEST ERROR:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error.message 
+    }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -597,7 +682,24 @@ export async function POST(request: NextRequest) {
     const directFitAdvice = extractDirectFitAdvice(extractedData);
     
     // Analyze results for patterns based on product category using enhanced data
-    const analysis = await analyzeResultsWithGPT5(prioritizedForGPT, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem, directFitAdvice);
+    let analysis: AnalysisResult;
+    
+    let modelUsed = '';
+    let isGPT5Test = false;
+    
+    if (ENABLE_GPT5_TESTING && Math.random() * 100 < GPT5_TEST_PERCENTAGE) {
+      // Use GPT-5 test function for a percentage of requests
+      console.log(`🧪 GPT-5 TESTING: Using GPT-5 test function for ${enhancedBrand} (${GPT5_TEST_PERCENTAGE}% chance)`);
+      modelUsed = 'gpt-5-mini';
+      isGPT5Test = true;
+      analysis = await analyzeResultsWithGPT5Test(prioritizedForGPT, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem, directFitAdvice);
+    } else {
+      // Use existing GPT-4o-mini function (legacy function)
+      console.log(`🤖 GPT-4o-mini: Using existing GPT-4o-mini function for ${enhancedBrand}`);
+      modelUsed = 'gpt-4o-mini';
+      isGPT5Test = false;
+      analysis = await analyzeResultsWithGPT4o(prioritizedForGPT, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem, directFitAdvice);
+    }
     
     // Debug: Log the analysis object
     console.log('🔍 ANALYSIS DEBUG: Full analysis object:', JSON.stringify(analysis, null, 2));
@@ -605,6 +707,17 @@ export async function POST(request: NextRequest) {
     console.log('🔍 ANALYSIS DEBUG: Has fit?', !!analysis.fit);
     console.log('🔍 ANALYSIS DEBUG: Has quality?', !!analysis.quality);
     console.log('🔍 ANALYSIS DEBUG: Has materials?', !!analysis.materials);
+    
+    // 🎯 GPT MODEL SUMMARY - ALWAYS AT THE BOTTOM FOR EASY VIEWING
+    console.log('\n' + '='.repeat(80));
+    console.log('🎯 GPT MODEL SUMMARY FOR THIS REQUEST:');
+    console.log('='.repeat(80));
+    console.log(`📱 Brand: ${enhancedBrand}`);
+    console.log(`🤖 Model Used: ${modelUsed}`);
+    console.log(`🧪 Was GPT-5 Test: ${isGPT5Test ? 'YES' : 'NO'}`);
+    console.log(`📊 Results Analyzed: ${prioritizedForGPT.length} out of ${allResults.length} total`);
+    console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
+    console.log('='.repeat(80) + '\n');
     
     // Create structured sections
     const sections: Record<string, {
@@ -1525,9 +1638,9 @@ function calculateConfidence(result: SerperResult): "high" | "medium" | "low" {
   return 'low';
 }
 
-// GPT-5 powered analysis function
-async function analyzeResultsWithGPT5(results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general', itemName: string = '', isSpecificItem: boolean = false, directFitAdvice?: DirectFitAdvice): Promise<AnalysisResult> {
-  console.log(`🤖 GPT-5 ANALYSIS: Starting AI analysis for ${brand} with ${results.length} results`);
+// GPT-4o-mini powered analysis function (LEGACY - renamed for clarity)
+async function analyzeResultsWithGPT4o(results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general', itemName: string = '', isSpecificItem: boolean = false, directFitAdvice?: DirectFitAdvice): Promise<AnalysisResult> {
+  console.log(`🤖 GPT-4o-mini: Starting AI analysis for ${brand} with ${results.length} results`);
   
   if (results.length === 0) {
     return {};
@@ -1694,6 +1807,181 @@ IMPORTANT GUIDELINES:
     return analyzeResultsRuleBased(results, brand, category, itemName, isSpecificItem, directFitAdvice);
   }
 }
+
+// NEW: GPT-5 Test Function with Smart Fallback
+async function analyzeResultsWithGPT5Test(
+  results: SerperResult[], 
+  brand: string, 
+  category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general', 
+  itemName: string = '', 
+  isSpecificItem: boolean = false, 
+  directFitAdvice?: DirectFitAdvice
+): Promise<AnalysisResult> {
+  
+  console.log(`🧪 GPT-5 TEST: Starting test analysis for ${brand} with ${results.length} results`);
+  
+  if (results.length === 0) {
+    console.log('🧪 GPT-5 TEST: No results to analyze, returning empty');
+    return {};
+  }
+  
+  // SAFETY: Only use 3-5 reviews for testing (reduce rate limit risk)
+  const testResults = results.slice(0, 3);
+  console.log(`🧪 GPT-5 TEST: Using ${testResults.length} reviews for testing (reduced from ${results.length})`);
+  
+  // Try GPT-5 up to 3 times with exponential backoff
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      console.log(`🧪 GPT-5 TEST: Attempt ${attempt}/3 with ${testResults.length} reviews`);
+      
+      // Call actual GPT-5 (not the legacy function)
+      const result = await callActualGPT5(testResults, brand, category, itemName, isSpecificItem, directFitAdvice);
+      
+      if (result && Object.keys(result).length > 0) {
+        console.log(`✅ GPT-5 TEST: Success on attempt ${attempt}`);
+        console.log(`🧪 GPT-5 TEST: Result sections:`, Object.keys(result));
+        return result;
+      } else {
+        console.warn(`⚠️ GPT-5 TEST: Attempt ${attempt} returned empty result`);
+      }
+      
+    } catch (error) {
+      console.warn(`⚠️ GPT-5 TEST: Attempt ${attempt} failed:`, error.message);
+      
+      // If rate limited, wait before retry with exponential backoff
+      if (error.message.includes('429') || error.message.includes('rate limit')) {
+        const waitTime = 2000 * Math.pow(2, attempt - 1); // 2s, 4s, 8s
+        console.log(`⏳ GPT-5 TEST: Rate limited, waiting ${waitTime}ms before retry`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+      
+      // If it's the last attempt, don't wait
+      if (attempt < 3) {
+        const waitTime = 1000 * attempt; // 1s, 2s
+        console.log(`⏳ GPT-5 TEST: Waiting ${waitTime}ms before retry`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+  
+  // All GPT-5 attempts failed, fallback to GPT-4o
+  console.log('🔄 GPT-5 TEST: All attempts failed, falling back to GPT-4o');
+  return analyzeResultsWithGPT4o(results, brand, category, itemName, isSpecificItem, directFitAdvice);
+}
+
+// NEW: Actual GPT-5 API call function
+async function callActualGPT5(
+  results: SerperResult[], 
+  brand: string, 
+  category: string, 
+  itemName: string, 
+  isSpecificItem: boolean, 
+  directFitAdvice?: DirectFitAdvice
+): Promise<AnalysisResult> {
+  
+  console.log(`🚀 GPT-5: Making actual GPT-5 API call for ${brand}`);
+  
+  // Prepare review data for GPT-5 (same logic as legacy function)
+  const reviewTexts = results.map((result, index) => {
+    const source = extractSourceName(result.link || '');
+    return `Review ${index + 1} (${source}): ${result.title || ''} - ${result.snippet || ''}`;
+  }).join('\n\n');
+  
+  const itemContext = isSpecificItem && itemName ? 
+    `\nFocus specifically on reviews about the "${itemName}" item from ${brand}.` : 
+    `\nAnalyze reviews about ${brand} products in general.`;
+  
+  const categoryContext = category !== 'general' ? 
+    `\nThis is a ${category} brand, so focus on ${category}-specific aspects.` : '';
+    
+  const directFitContext = directFitAdvice?.hasDirectAdvice ? 
+    `\n\nIMPORTANT: Direct fit advice found on product page: "${directFitAdvice.advice.join(', ')}". This should take priority over conflicting review analysis.` : '';
+  
+  // Create the same prompt structure as legacy function
+  const prompt = `You are a fashion expert analyzing customer reviews to provide structured insights. Your goal is to extract useful insights even from limited data.
+
+Brand: ${brand}
+Category: ${category}${itemContext}${categoryContext}${directFitContext}
+
+Reviews to analyze:
+${reviewTexts}
+
+Please analyze these reviews and return a JSON object with the following structure:
+{
+  "fit": {
+    "recommendation": "Clear, specific fit advice based on the reviews",
+    "confidence": "low|medium|high",
+    "evidence": ["Direct quotes from reviews supporting this assessment"]
+  },
+  "quality": {
+    "recommendation": "Quality assessment based on customer feedback",
+    "confidence": "low|medium|high", 
+    "evidence": ["Direct quotes about quality or general customer experiences"]
+  },
+  "materials": {
+    "composition": ["List of materials mentioned"],
+    "confidence": "low|medium|high",
+    "evidence": ["Quotes mentioning materials or fabric"]
+  },
+  "overallConfidence": "low|medium|high"
+}
+
+IMPORTANT: Return ONLY valid JSON, no markdown formatting.`;
+
+  try {
+    // ACTUAL GPT-5 API call
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5-mini", // ACTUAL GPT-5 model
+      messages: [
+        {
+          role: "system",
+          content: "You are a fashion expert who analyzes customer reviews to provide structured insights. Always return valid JSON and be specific and actionable in your analysis."
+        },
+        {
+          role: "user", 
+          content: prompt
+        }
+      ],
+      max_tokens: 1500, // Reduced for testing
+      temperature: 0.3
+    });
+
+    console.log(`🚀 GPT-5: Response received, content length: ${completion.choices?.[0]?.message?.content?.length || 0}`);
+    
+    const aiResponse = completion.choices[0]?.message?.content;
+    if (!aiResponse) {
+      console.log('🚀 GPT-5: No response content received');
+      return {};
+    }
+
+    // Parse JSON response
+    try {
+      let cleanResponse = aiResponse.trim();
+      
+      // Remove markdown code blocks if present
+      if (cleanResponse.startsWith('```json')) {
+        cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanResponse.startsWith('```')) {
+        cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const analysisResult = JSON.parse(cleanResponse);
+      console.log(`🚀 GPT-5: Successfully parsed JSON response with sections:`, Object.keys(analysisResult));
+      return analysisResult;
+      
+    } catch (parseError) {
+      console.error('🚀 GPT-5: Failed to parse JSON response:', parseError);
+      console.log('🚀 GPT-5: Raw response:', aiResponse.substring(0, 300));
+      return {};
+    }
+    
+  } catch (error) {
+    console.error('🚀 GPT-5: API call failed:', error);
+    throw error; // Re-throw to let the test function handle retries
+  }
+}
+
+// REMOVED: Duplicate function definition
 
 // Renamed original function as fallback
 function analyzeResultsRuleBased(results: SerperResult[], brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general' = 'general', itemName: string = '', isSpecificItem: boolean = false, directFitAdvice?: DirectFitAdvice): AnalysisResult {

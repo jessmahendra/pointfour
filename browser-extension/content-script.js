@@ -1268,6 +1268,30 @@
   }
 
   // ========================================
+  // BRAND CLEANING
+  // ========================================
+  
+  function cleanBrandName(brandName) {
+      if (!brandName) return brandName;
+      
+      let clean = brandName.trim();
+      
+      // Remove location suffixes
+      clean = clean.replace(/\s*\|\s*(?:UK|US|CA|AU|EU|GB|United Kingdom|United States|Canada|Australia|Europe|Great Britain)/i, '');
+      clean = clean.replace(/\s*-\s*(?:UK|US|CA|AU|EU|GB|United Kingdom|United States|Canada|Australia|Europe|Great Britain)/i, '');
+      clean = clean.replace(/\s*:\s*(?:UK|US|CA|AU|EU|GB|United Kingdom|United States|Canada|Australia|Europe|Great Britain)/i, '');
+      
+      // Remove common website suffixes
+      clean = clean.replace(/\s*\.(?:com|co\.uk|net|org|io|shop|store|boutique)/i, '');
+      
+      // Remove extra whitespace
+      clean = clean.replace(/\s+/g, ' ').trim();
+      
+      console.log(`[PointFour] Brand name cleaned: "${brandName}" → "${clean}"`);
+      return clean;
+  }
+  
+  // ========================================
   // BRAND DETECTION
   // ========================================
   
@@ -1307,8 +1331,13 @@
       
       for (const [key, value] of Object.entries(metaTags)) {
           if (value && value.length > 1 && value.length < 50) { // Reasonable brand name length
-              detectedBrand = value.replace('@', '').trim();
-              console.log(`[PointFour] Brand detected from ${key}:`, detectedBrand);
+              // Clean brand name by removing location suffixes
+              let cleanBrand = value.replace('@', '').trim();
+              cleanBrand = cleanBrand.replace(/\s*\|\s*(?:UK|US|CA|AU|EU|GB|United Kingdom|United States|Canada|Australia|Europe|Great Britain)/i, '');
+              cleanBrand = cleanBrand.replace(/\s*-\s*(?:UK|US|CA|AU|EU|GB|United Kingdom|United States|Canada|Australia|Europe|Great Britain)/i, '');
+              
+              detectedBrand = cleanBrand;
+              console.log(`[PointFour] Brand detected from ${key}:`, detectedBrand, '(cleaned from:', value, ')');
               break;
           }
       }
@@ -3214,6 +3243,8 @@ function extractProductImageFromPage() {
           currentBrand = detectBrandFromPage();
           
           if (currentBrand) {
+              // Clean the brand name before using it
+              currentBrand = cleanBrandName(currentBrand);
               console.log('[PointFour] Initializing for brand:', currentBrand);
               
               // Enhanced page type detection

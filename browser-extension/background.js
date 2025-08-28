@@ -92,6 +92,7 @@ const BRAND_PATTERNS = {
   'rohe.co': { name: 'Rohe', category: 'fashion-clothing', subcategory: 'contemporary' },
   'evergoods.us': { name: 'Evergoods', category: 'bags-luggage', subcategory: 'technical-bags' },
   'cos.com': { name: 'COS', category: 'fashion-clothing', subcategory: 'contemporary' },
+  'arket.com': { name: 'Arket', category: 'fashion-clothing', subcategory: 'contemporary' },
   'whistles.co.uk': { name: 'Whistles', category: 'fashion-clothing', subcategory: 'contemporary' },
   'reiss.com': { name: 'Reiss', category: 'fashion-clothing', subcategory: 'contemporary' },
   'tedbaker.com': { name: 'Ted Baker', category: 'fashion-clothing', subcategory: 'contemporary' },
@@ -515,19 +516,34 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
     
     // Use the working search-reviews endpoint for brands that should show fit advice
     console.log('🔍 Making API call to search-reviews endpoint for brand:', brandName, 'category:', category);
-    console.log('🔍 API URL:', `${API_BASE_URL}/api/extension/search-reviews`);
-    console.log('🔍 Request body:', JSON.stringify(apiRequestData));
+    
+    // Build query parameters for GET request
+    const params = new URLSearchParams({
+      brand: brandName,
+      searchType: 'all',
+      enableExternalSearch: 'true'
+    });
+    
+    if (apiRequestData.itemName) {
+      params.append('itemName', apiRequestData.itemName);
+    }
+    
+    if (apiRequestData.category) {
+      params.append('category', apiRequestData.category);
+    }
+    
+    const apiUrl = `${API_BASE_URL}/api/extension/search-reviews?${params.toString()}`;
+    console.log('🔍 API URL:', apiUrl);
     
     // Add timeout to prevent hanging - increased to allow for comprehensive search
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 40000); // 40 second timeout for comprehensive search
     
-    const response = await fetch(`${API_BASE_URL}/api/extension/search-reviews`, {
-      method: 'POST',
+    const response = await fetch(apiUrl, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(apiRequestData),
       signal: controller.signal
     });
     

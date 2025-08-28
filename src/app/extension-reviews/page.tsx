@@ -422,17 +422,26 @@ function ExtensionReviewsContent() {
         "🔗 [ExtensionReviews] Making fallback API call to /api/extension/search-reviews"
       );
 
-      const response = await fetch("/api/extension/search-reviews", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          brand: brandName,
-          itemName: itemName || "",
-          enableExternalSearch: true,
-        }),
+      // Build query parameters for GET request
+      const params = new URLSearchParams({
+        brand: brandName,
+        searchType: "all",
+        enableExternalSearch: "true",
       });
+
+      if (itemName) {
+        params.append("itemName", itemName);
+      }
+
+      const response = await fetch(
+        `/api/extension/search-reviews?${params.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
