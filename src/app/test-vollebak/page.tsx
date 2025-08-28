@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 export default function TestVollebakPage() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -352,9 +353,11 @@ export default function TestVollebakPage() {
                           marginTop: "auto",
                         }}
                       >
-                        <img
+                        <Image
                           src={review.favicon}
                           alt=""
+                          width={16}
+                          height={16}
                           style={{
                             width: "16px",
                             height: "16px",
@@ -569,9 +572,11 @@ export default function TestVollebakPage() {
                           marginTop: "auto",
                         }}
                       >
-                        <img
+                        <Image
                           src={review.favicon}
                           alt=""
+                          width={16}
+                          height={16}
                           style={{
                             width: "16px",
                             height: "16px",

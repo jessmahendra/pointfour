@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import NextImage from "next/image";
 
 interface UserItem {
   id: string;
@@ -648,10 +649,12 @@ export default function StylePageContent({
                     </div>
                   </div>
                 )}
-                <img
+                <NextImage
                   key={productInfo.imageUrl} // Force re-render when imageUrl changes
                   src={productInfo.imageUrl}
                   alt={`${productInfo.brand} ${productInfo.itemName}`}
+                  width={300}
+                  height={300}
                   style={{
                     width: "100%",
                     maxWidth: "300px",

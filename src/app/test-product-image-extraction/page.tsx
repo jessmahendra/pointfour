@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useProductImageExtraction } from "@/lib/useProductImageExtraction";
+import Image from "next/image";
 
 export default function TestProductImageExtraction() {
   const [pageUrl, setPageUrl] = useState("");
@@ -153,9 +154,11 @@ export default function TestProductImageExtraction() {
               backgroundColor: "#f8f9fa",
             }}
           >
-            <img
+            <Image
               src={extractedImage.src}
               alt={extractedImage.alt || "Product image"}
+              width={400}
+              height={400}
               style={{
                 maxWidth: "100%",
                 maxHeight: "400px",
@@ -212,9 +215,11 @@ export default function TestProductImageExtraction() {
                 <div
                   style={{ display: "flex", alignItems: "center", gap: "12px" }}
                 >
-                  <img
+                  <Image
                     src={candidate.src}
                     alt={candidate.alt || "Candidate image"}
+                    width={80}
+                    height={80}
                     style={{
                       width: "80px",
                       height: "80px",

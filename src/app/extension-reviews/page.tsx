@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Review {
   title: string;
@@ -59,7 +60,6 @@ interface ReviewData {
 }
 
 // Get favicon for a source
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getFavicon = (source: string) => {
   const sourceLower = source.toLowerCase();
 
@@ -123,7 +123,6 @@ const getFavicon = (source: string) => {
 };
 
 // Get source display name
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getSourceName = (source: string) => {
   if (source.includes("reddit")) return "Reddit";
   if (source.includes("substack")) return "Substack";
@@ -141,7 +140,7 @@ const getSourceName = (source: string) => {
 };
 
 // Function to prioritize fit and quality information in snippets
-const prioritizeFitAndQuality = (snippet: string, tags: string[] = []) => {
+const prioritizeFitAndQuality = (snippet: string) => {
   if (!snippet) return snippet;
 
   // Split snippet into sentences or bullet points
@@ -488,7 +487,14 @@ function ExtensionReviewsContent() {
     } finally {
       setLoading(false);
     }
-  }, [brandName, itemName, fromWidget, widgetDataParam]);
+  }, [
+    brandName,
+    itemName,
+    fromWidget,
+    widgetDataParam,
+    storageKey,
+    useStorage,
+  ]);
 
   useEffect(() => {
     if (!brandName) {
@@ -1123,10 +1129,7 @@ function ExtensionReviewsContent() {
                               maxHeight: "calc(1.4em * 5)",
                             }}
                           >
-                            {prioritizeFitAndQuality(
-                              review.snippet,
-                              review.tags
-                            )}
+                            {prioritizeFitAndQuality(review.snippet)}
                           </p>
 
                           {/* Source with Favicon - Perplexity Style */}
@@ -1138,9 +1141,11 @@ function ExtensionReviewsContent() {
                               marginTop: "auto",
                             }}
                           >
-                            <img
+                            <Image
                               src={getFavicon(review.source)}
                               alt=""
+                              width={16}
+                              height={16}
                               style={{
                                 width: "16px",
                                 height: "16px",
