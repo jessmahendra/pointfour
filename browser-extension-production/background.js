@@ -92,6 +92,7 @@ const BRAND_PATTERNS = {
   'rohe.co': { name: 'Rohe', category: 'fashion-clothing', subcategory: 'contemporary' },
   'evergoods.us': { name: 'Evergoods', category: 'bags-luggage', subcategory: 'technical-bags' },
   'cos.com': { name: 'COS', category: 'fashion-clothing', subcategory: 'contemporary' },
+  'arket.com': { name: 'Arket', category: 'fashion-clothing', subcategory: 'contemporary' },
   'whistles.co.uk': { name: 'Whistles', category: 'fashion-clothing', subcategory: 'contemporary' },
   'reiss.com': { name: 'Reiss', category: 'fashion-clothing', subcategory: 'contemporary' },
   'tedbaker.com': { name: 'Ted Baker', category: 'fashion-clothing', subcategory: 'contemporary' },
@@ -334,13 +335,13 @@ async function detectBrand(tabId, domainOrBrand, url, urlExtraction = null, extr
       brandName: domainOrBrand || 'Unknown Brand',
       hasData: false,
       searchType: 'timeout',
-      recommendation: 'Analysis is taking longer than expected. Please try refreshing the page or use our manual search feature.',
+      recommendation: 'Analysis is taking longer than expected. The search is comprehensive and may take up to 45 seconds. Please wait or try refreshing the page.',
       externalSearchResults: null,
       timestamp: Date.now(),
       error: false
     };
     sendBrandDataToTab(tabId, timeoutData);
-  }, 20000); // 20 second timeout
+  }, 45000); // 45 second timeout (increased from 20)
   
   try {
     console.log('🎯 Background: detectBrand called with:', { tabId, domainOrBrand, url, urlExtraction });
@@ -515,19 +516,34 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
     
     // Use the working search-reviews endpoint for brands that should show fit advice
     console.log('🔍 Making API call to search-reviews endpoint for brand:', brandName, 'category:', category);
-    console.log('🔍 API URL:', `${API_BASE_URL}/api/extension/search-reviews`);
-    console.log('🔍 Request body:', JSON.stringify(apiRequestData));
     
-    // Add timeout to prevent hanging - reduced for better UX
+    // Build query parameters for GET request
+    const params = new URLSearchParams({
+      brand: brandName,
+      searchType: 'all',
+      enableExternalSearch: 'true'
+    });
+    
+    if (apiRequestData.itemName) {
+      params.append('itemName', apiRequestData.itemName);
+    }
+    
+    if (apiRequestData.category) {
+      params.append('category', apiRequestData.category);
+    }
+    
+    const apiUrl = `${API_BASE_URL}/api/extension/search-reviews?${params.toString()}`;
+    console.log('🔍 API URL:', apiUrl);
+    
+    // Add timeout to prevent hanging - increased to allow for comprehensive search
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for better UX
+    const timeoutId = setTimeout(() => controller.abort(), 40000); // 40 second timeout for comprehensive search
     
-    const response = await fetch(`${API_BASE_URL}/api/extension/search-reviews`, {
-      method: 'POST',
+    const response = await fetch(apiUrl, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(apiRequestData),
       signal: controller.signal
     });
     
@@ -598,13 +614,23 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
     
     // Check if it's a timeout or API issue
     let errorMessage = `Unable to load fit information for ${brandName} at this time. Please try again later or manually search for reviews.`;
+    let searchType = 'error';
     
     if (error.name === 'AbortError') {
       errorMessage = `Analysis is taking longer than expected. The search is comprehensive and may take up to 15 seconds. Please try again if needed.`;
+      searchType = 'timeout';
     } else if (error.message.includes('SERPER_API_KEY not found') || error.message.includes('Search API not configured')) {
       errorMessage = `Search API not configured. Please contact support to enable live review search.`;
+      searchType = 'api-config';
     } else if (error.message.includes('403') || error.message.includes('authorization')) {
       errorMessage = `Search API authorization failed. Please check API configuration.`;
+      searchType = 'auth-error';
+    } else if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('Failed to fetch')) {
+      errorMessage = `Development server is not running. Please start the server with 'npm run dev' in the fashion-recommendations directory.`;
+      searchType = 'server-offline';
+    } else if (error.message.includes('localhost') || error.message.includes('3000')) {
+      errorMessage = `Cannot connect to development server. Please ensure the server is running on localhost:3000.`;
+      searchType = 'server-offline';
     }
     
     // Return error data
@@ -612,7 +638,7 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
       brandName,
       category,
       hasData: false,
-      searchType: 'error',
+      searchType: searchType,
       recommendation: errorMessage,
       externalSearchResults: null,
       fitTips: [],

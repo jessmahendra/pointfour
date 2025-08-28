@@ -88,6 +88,13 @@
   let detectionScore = 0;
   let analysisTimeoutId = null;
 
+  // Add loading state tracking
+let currentLoadingPhase = 'initial';
+let hasShownFinalData = false;
+let loadingStartTime = Date.now();
+let lastDataQuality = 0; // Track the quality of data received
+let dataUpdateCount = 0; // Count how many times we've received data
+
   // ========================================
   // INTELLIGENT DETECTION
   // ========================================
@@ -1797,6 +1804,13 @@
       
       console.log('[PointFour] Creating widget...');
       
+          // Reset loading state
+    currentLoadingPhase = 'initial';
+    hasShownFinalData = false;
+    loadingStartTime = Date.now();
+    lastDataQuality = 0;
+    dataUpdateCount = 0;
+      
       widgetContainer = document.createElement('div');
       widgetContainer.id = 'pointfour-widget';
       widgetContainer.className = 'pointfour-widget pointfour-loading';
@@ -1825,7 +1839,7 @@
           <div class="pointfour-content">
               <div class="pointfour-loading-spinner">
                   <div class="pointfour-spinner"></div>
-                  <p>Analyzing fit data...</p>
+                  <p>Initializing analysis...</p>
               </div>
           </div>
       `;
@@ -1884,9 +1898,30 @@
     const contentDiv = widgetContainer.querySelector('.pointfour-content');
     if (!contentDiv) return;
     
+    // Log all data updates for debugging
+    console.log('🔄 [PointFour] updateWidgetContent called with data:', {
+        hasData: !!data,
+        error: data?.error,
+        brandName: data?.brandName,
+        hasReviews: !!data?.externalSearchResults?.reviews,
+        reviewsCount: data?.externalSearchResults?.reviews?.length || 0,
+        hasStructuredData: !!data?.externalSearchResults?.brandFitSummary?.sections,
+        sectionsCount: data?.externalSearchResults?.brandFitSummary?.sections ? Object.keys(data.externalSearchResults.brandFitSummary.sections).length : 0,
+        recommendation: data?.recommendation?.substring(0, 100) + '...' || 'N/A',
+        currentLoadingPhase,
+        hasShownFinalData,
+        elapsed: Date.now() - loadingStartTime
+    });
+    
     // Keep loading state if we're still processing
     if (isProcessing && !data) {
         console.log('[PointFour] Still processing, maintaining loading state');
+        return;
+    }
+    
+    // If we've already shown final data, don't show intermediate states
+    if (hasShownFinalData && data && !data.error) {
+        console.log('[PointFour] Final data already shown, ignoring intermediate update');
         return;
     }
     
@@ -1902,6 +1937,7 @@
                 <small>${data.error === true ? 'Please try refreshing the page' : data.error}</small>
             </div>
         `;
+        hasShownFinalData = true;
     } else if (data && data.status === 'no_data') {
         contentDiv.innerHTML = `
             <div class="pointfour-no-data">
@@ -1909,6 +1945,7 @@
                 <small>We're working on adding more brands!</small>
             </div>
         `;
+        hasShownFinalData = true;
     } else if (data) {
         // Handle the actual data structure from background script
         console.log('🔍 DEBUGGING: Complete data object received from background:', JSON.stringify(data, null, 2));
@@ -1955,6 +1992,126 @@
             reviewsLength: data.externalSearchResults?.reviews?.length || 0,
             dataStructure: Object.keys(data)
         });
+        
+        // Check if this is complete data that should be shown
+        // We want to show progressive loading until we have comprehensive data
+        const hasReviews = data.externalSearchResults?.reviews && data.externalSearchResults.reviews.length > 0;
+        const hasStructuredAnalysis = data.externalSearchResults?.brandFitSummary?.sections && 
+                                    Object.keys(data.externalSearchResults.brandFitSummary.sections).length > 0;
+        const hasRecommendation = data.recommendation && 
+                                 data.recommendation !== 'Analyzing fit information...' &&
+                                 data.recommendation.length > 50;
+        
+        // Calculate data quality score (0-100)
+        let dataQuality = 0;
+        if (hasReviews) dataQuality += 30;
+        if (hasStructuredAnalysis) dataQuality += 40;
+        if (hasRecommendation) dataQuality += 30;
+        
+        // Data is complete if we have reviews AND either structured analysis OR a good recommendation
+        const isCompleteData = hasReviews && (hasStructuredAnalysis || hasRecommendation);
+        
+        // Track data quality progression
+        dataUpdateCount++;
+        const qualityImproved = dataQuality > lastDataQuality;
+        lastDataQuality = dataQuality;
+        
+        console.log('🔍 LOADING STATE DEBUG:', {
+            hasReviews,
+            hasStructuredAnalysis,
+            hasRecommendation,
+            isCompleteData,
+            dataQuality,
+            qualityImproved,
+            dataUpdateCount,
+            elapsed: Date.now() - loadingStartTime,
+            currentPhase: currentLoadingPhase,
+            reviewsCount: data.externalSearchResults?.reviews?.length || 0,
+            sectionsCount: data.externalSearchResults.brandFitSummary?.sections ? Object.keys(data.externalSearchResults.brandFitSummary.sections).length : 0,
+            recommendationLength: data.recommendation?.length || 0
+        });
+        
+        // If this is the first data update and it's not complete, always show progressive loading
+        if (dataUpdateCount === 1 && !isCompleteData) {
+            console.log('🔄 [PointFour] First data update received but incomplete, showing progressive loading');
+            // Continue to progressive loading logic below
+        } else if (dataUpdateCount > 1 && !qualityImproved && !isCompleteData) {
+            // If we've received multiple updates but quality hasn't improved, keep showing current state
+            console.log('🔄 [PointFour] Multiple data updates but no quality improvement, maintaining current state');
+            return;
+        }
+        
+        // If this isn't complete data yet, show progressive loading
+        if (!isCompleteData && !data.error) {
+            const elapsed = Date.now() - loadingStartTime;
+            
+            if (elapsed < 5000) {
+                // First 5 seconds: Searching
+                if (currentLoadingPhase !== 'searching') {
+                    currentLoadingPhase = 'searching';
+                    contentDiv.innerHTML = `
+                        <div class="pointfour-results">
+                            <h3>${brandName}</h3>
+                            <div class="pointfour-fit-info">
+                                <div class="pointfour-loading-spinner">
+                                    <div class="pointfour-spinner"></div>
+                                    <p>Searching for reviews and fit information...</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else if (elapsed < 15000) {
+                // 5-15 seconds: Collating
+                if (currentLoadingPhase !== 'collating') {
+                    currentLoadingPhase = 'collating';
+                    contentDiv.innerHTML = `
+                        <div class="pointfour-results">
+                            <h3>${brandName}</h3>
+                            <div class="pointfour-fit-info">
+                                <div class="pointfour-loading-spinner">
+                                    <div class="pointfour-spinner"></div>
+                                    <p>Collating reviews and analyzing patterns...</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else if (elapsed < 30000) {
+                // 15-30 seconds: Analyzing
+                if (currentLoadingPhase !== 'analyzing') {
+                    currentLoadingPhase = 'analyzing';
+                    contentDiv.innerHTML = `
+                        <div class="pointfour-results">
+                            <h3>${brandName}</h3>
+                            <div class="pointfour-fit-info">
+                                <div class="pointfour-loading-spinner">
+                                    <div class="pointfour-spinner"></div>
+                                    <p>Analyzing reviews and generating insights...</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                // Over 30 seconds: Final processing
+                if (currentLoadingPhase !== 'finalizing') {
+                    currentLoadingPhase = 'finalizing';
+                    contentDiv.innerHTML = `
+                        <div class="pointfour-results">
+                            <h3>${brandName}</h3>
+                            <div class="pointfour-fit-info">
+                                <div class="pointfour-loading-spinner">
+                                    <div class="pointfour-spinner"></div>
+                                    <p>Finalizing analysis and preparing insights...</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            return;
+        }
         
         // Smart summary detection - check multiple locations
         const findBestSummary = () => {
@@ -2915,6 +3072,10 @@
         `;
         
         contentDiv.innerHTML = content;
+        
+        // Mark that we've shown final data
+        hasShownFinalData = true;
+        console.log('[PointFour] Final data rendered, marked as shown');
         
         // Add event listener for Style button
         const styleButton = contentDiv.querySelector('#pointfour-style-btn');

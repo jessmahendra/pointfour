@@ -88,6 +88,13 @@
   let detectionScore = 0;
   let analysisTimeoutId = null;
 
+  // Add loading state tracking
+let currentLoadingPhase = 'initial';
+let hasShownFinalData = false;
+let loadingStartTime = Date.now();
+let lastDataQuality = 0; // Track the quality of data received
+let dataUpdateCount = 0; // Count how many times we've received data
+
   // ========================================
   // INTELLIGENT DETECTION
   // ========================================
@@ -1268,6 +1275,30 @@
   }
 
   // ========================================
+  // BRAND CLEANING
+  // ========================================
+  
+  function cleanBrandName(brandName) {
+      if (!brandName) return brandName;
+      
+      let clean = brandName.trim();
+      
+      // Remove location suffixes
+      clean = clean.replace(/\s*\|\s*(?:UK|US|CA|AU|EU|GB|United Kingdom|United States|Canada|Australia|Europe|Great Britain)/i, '');
+      clean = clean.replace(/\s*-\s*(?:UK|US|CA|AU|EU|GB|United Kingdom|United States|Canada|Australia|Europe|Great Britain)/i, '');
+      clean = clean.replace(/\s*:\s*(?:UK|US|CA|AU|EU|GB|United Kingdom|United States|Canada|Australia|Europe|Great Britain)/i, '');
+      
+      // Remove common website suffixes
+      clean = clean.replace(/\s*\.(?:com|co\.uk|net|org|io|shop|store|boutique)/i, '');
+      
+      // Remove extra whitespace
+      clean = clean.replace(/\s+/g, ' ').trim();
+      
+      console.log(`[PointFour] Brand name cleaned: "${brandName}" → "${clean}"`);
+      return clean;
+  }
+  
+  // ========================================
   // BRAND DETECTION
   // ========================================
   
@@ -1307,8 +1338,13 @@
       
       for (const [key, value] of Object.entries(metaTags)) {
           if (value && value.length > 1 && value.length < 50) { // Reasonable brand name length
-              detectedBrand = value.replace('@', '').trim();
-              console.log(`[PointFour] Brand detected from ${key}:`, detectedBrand);
+              // Clean brand name by removing location suffixes
+              let cleanBrand = value.replace('@', '').trim();
+              cleanBrand = cleanBrand.replace(/\s*\|\s*(?:UK|US|CA|AU|EU|GB|United Kingdom|United States|Canada|Australia|Europe|Great Britain)/i, '');
+              cleanBrand = cleanBrand.replace(/\s*-\s*(?:UK|US|CA|AU|EU|GB|United Kingdom|United States|Canada|Australia|Europe|Great Britain)/i, '');
+              
+              detectedBrand = cleanBrand;
+              console.log(`[PointFour] Brand detected from ${key}:`, detectedBrand, '(cleaned from:', value, ')');
               break;
           }
       }
@@ -1768,6 +1804,13 @@
       
       console.log('[PointFour] Creating widget...');
       
+          // Reset loading state
+    currentLoadingPhase = 'initial';
+    hasShownFinalData = false;
+    loadingStartTime = Date.now();
+    lastDataQuality = 0;
+    dataUpdateCount = 0;
+      
       widgetContainer = document.createElement('div');
       widgetContainer.id = 'pointfour-widget';
       widgetContainer.className = 'pointfour-widget pointfour-loading';
@@ -1796,7 +1839,7 @@
           <div class="pointfour-content">
               <div class="pointfour-loading-spinner">
                   <div class="pointfour-spinner"></div>
-                  <p>Analyzing fit data...</p>
+                  <p>Initializing analysis...</p>
               </div>
           </div>
       `;
@@ -1855,9 +1898,30 @@
     const contentDiv = widgetContainer.querySelector('.pointfour-content');
     if (!contentDiv) return;
     
+    // Log all data updates for debugging
+    console.log('🔄 [PointFour] updateWidgetContent called with data:', {
+        hasData: !!data,
+        error: data?.error,
+        brandName: data?.brandName,
+        hasReviews: !!data?.externalSearchResults?.reviews,
+        reviewsCount: data?.externalSearchResults?.reviews?.length || 0,
+        hasStructuredData: !!data?.externalSearchResults?.brandFitSummary?.sections,
+        sectionsCount: data?.externalSearchResults?.brandFitSummary?.sections ? Object.keys(data.externalSearchResults.brandFitSummary.sections).length : 0,
+        recommendation: data?.recommendation?.substring(0, 100) + '...' || 'N/A',
+        currentLoadingPhase,
+        hasShownFinalData,
+        elapsed: Date.now() - loadingStartTime
+    });
+    
     // Keep loading state if we're still processing
     if (isProcessing && !data) {
         console.log('[PointFour] Still processing, maintaining loading state');
+        return;
+    }
+    
+    // If we've already shown final data, don't show intermediate states
+    if (hasShownFinalData && data && !data.error) {
+        console.log('[PointFour] Final data already shown, ignoring intermediate update');
         return;
     }
     
@@ -1873,6 +1937,7 @@
                 <small>${data.error === true ? 'Please try refreshing the page' : data.error}</small>
             </div>
         `;
+        hasShownFinalData = true;
     } else if (data && data.status === 'no_data') {
         contentDiv.innerHTML = `
             <div class="pointfour-no-data">
@@ -1880,6 +1945,7 @@
                 <small>We're working on adding more brands!</small>
             </div>
         `;
+        hasShownFinalData = true;
     } else if (data) {
         // Handle the actual data structure from background script
         console.log('🔍 DEBUGGING: Complete data object received from background:', JSON.stringify(data, null, 2));
@@ -1926,6 +1992,126 @@
             reviewsLength: data.externalSearchResults?.reviews?.length || 0,
             dataStructure: Object.keys(data)
         });
+        
+        // Check if this is complete data that should be shown
+        // We want to show progressive loading until we have comprehensive data
+        const hasReviews = data.externalSearchResults?.reviews && data.externalSearchResults.reviews.length > 0;
+        const hasStructuredAnalysis = data.externalSearchResults?.brandFitSummary?.sections && 
+                                    Object.keys(data.externalSearchResults.brandFitSummary.sections).length > 0;
+        const hasRecommendation = data.recommendation && 
+                                 data.recommendation !== 'Analyzing fit information...' &&
+                                 data.recommendation.length > 50;
+        
+        // Calculate data quality score (0-100)
+        let dataQuality = 0;
+        if (hasReviews) dataQuality += 30;
+        if (hasStructuredAnalysis) dataQuality += 40;
+        if (hasRecommendation) dataQuality += 30;
+        
+        // Data is complete if we have reviews AND either structured analysis OR a good recommendation
+        const isCompleteData = hasReviews && (hasStructuredAnalysis || hasRecommendation);
+        
+        // Track data quality progression
+        dataUpdateCount++;
+        const qualityImproved = dataQuality > lastDataQuality;
+        lastDataQuality = dataQuality;
+        
+        console.log('🔍 LOADING STATE DEBUG:', {
+            hasReviews,
+            hasStructuredAnalysis,
+            hasRecommendation,
+            isCompleteData,
+            dataQuality,
+            qualityImproved,
+            dataUpdateCount,
+            elapsed: Date.now() - loadingStartTime,
+            currentPhase: currentLoadingPhase,
+            reviewsCount: data.externalSearchResults?.reviews?.length || 0,
+            sectionsCount: data.externalSearchResults.brandFitSummary?.sections ? Object.keys(data.externalSearchResults.brandFitSummary.sections).length : 0,
+            recommendationLength: data.recommendation?.length || 0
+        });
+        
+        // If this is the first data update and it's not complete, always show progressive loading
+        if (dataUpdateCount === 1 && !isCompleteData) {
+            console.log('🔄 [PointFour] First data update received but incomplete, showing progressive loading');
+            // Continue to progressive loading logic below
+        } else if (dataUpdateCount > 1 && !qualityImproved && !isCompleteData) {
+            // If we've received multiple updates but quality hasn't improved, keep showing current state
+            console.log('🔄 [PointFour] Multiple data updates but no quality improvement, maintaining current state');
+            return;
+        }
+        
+        // If this isn't complete data yet, show progressive loading
+        if (!isCompleteData && !data.error) {
+            const elapsed = Date.now() - loadingStartTime;
+            
+            if (elapsed < 5000) {
+                // First 5 seconds: Searching
+                if (currentLoadingPhase !== 'searching') {
+                    currentLoadingPhase = 'searching';
+                    contentDiv.innerHTML = `
+                        <div class="pointfour-results">
+                            <h3>${brandName}</h3>
+                            <div class="pointfour-fit-info">
+                                <div class="pointfour-loading-spinner">
+                                    <div class="pointfour-spinner"></div>
+                                    <p>Searching for reviews and fit information...</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else if (elapsed < 15000) {
+                // 5-15 seconds: Collating
+                if (currentLoadingPhase !== 'collating') {
+                    currentLoadingPhase = 'collating';
+                    contentDiv.innerHTML = `
+                        <div class="pointfour-results">
+                            <h3>${brandName}</h3>
+                            <div class="pointfour-fit-info">
+                                <div class="pointfour-loading-spinner">
+                                    <div class="pointfour-spinner"></div>
+                                    <p>Collating reviews and analyzing patterns...</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else if (elapsed < 30000) {
+                // 15-30 seconds: Analyzing
+                if (currentLoadingPhase !== 'analyzing') {
+                    currentLoadingPhase = 'analyzing';
+                    contentDiv.innerHTML = `
+                        <div class="pointfour-results">
+                            <h3>${brandName}</h3>
+                            <div class="pointfour-fit-info">
+                                <div class="pointfour-loading-spinner">
+                                    <div class="pointfour-spinner"></div>
+                                    <p>Analyzing reviews and generating insights...</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                // Over 30 seconds: Final processing
+                if (currentLoadingPhase !== 'finalizing') {
+                    currentLoadingPhase = 'finalizing';
+                    contentDiv.innerHTML = `
+                        <div class="pointfour-results">
+                            <h3>${brandName}</h3>
+                            <div class="pointfour-fit-info">
+                                <div class="pointfour-loading-spinner">
+                                    <div class="pointfour-spinner"></div>
+                                    <p>Finalizing analysis and preparing insights...</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            return;
+        }
         
         // Smart summary detection - check multiple locations
         const findBestSummary = () => {
@@ -2627,38 +2813,58 @@
                 fromWidget: 'true' // Flag to indicate this came from widget
             });
             
-            // Re-enabled: Pass widget data to avoid duplicate API calls and ensure data consistency
-            if (data && data.externalSearchResults && data.externalSearchResults.reviews && data.externalSearchResults.reviews.length > 0) {
-                try {
-                    const widgetData = {
-                        brandFitSummary: data.externalSearchResults.brandFitSummary,
-                        reviews: data.externalSearchResults.reviews,
-                        groupedReviews: data.externalSearchResults.groupedReviews,
-                        totalResults: data.externalSearchResults.totalResults,
-                        timestamp: Date.now()
-                    };
+            // Enable widget data transfer for better performance and data consistency
+            if (data && data.externalSearchResults) {
+                // Create optimized widget data to avoid URL length issues
+                const widgetData = {
+                    brandFitSummary: data.externalSearchResults.brandFitSummary,
+                    reviews: (data.externalSearchResults.reviews || []).map(review => ({
+                        // Only send essential fields to reduce URL size
+                        title: review.title?.substring(0, 100) || '',
+                        snippet: review.snippet?.substring(0, 150) || '', // Truncate snippet
+                        url: review.url || '',
+                        source: review.source || '',
+                        tags: review.tags?.slice(0, 3) || [], // Limit tags
+                        confidence: review.confidence || 'low',
+                        brandLevel: review.brandLevel || false,
+                        // Remove fullContent to reduce size significantly
+                        // fullContent: review.fullContent
+                    })),
+                    groupedReviews: data.externalSearchResults.groupedReviews,
+                    totalResults: data.externalSearchResults.totalResults,
+                    timestamp: Date.now()
+                };
+                
+                // Check if the data would be too large for URL
+                const dataString = JSON.stringify(widgetData);
+                const estimatedUrlLength = dataString.length * 1.3; // URL encoding increases size
+                
+                if (estimatedUrlLength > 8000) { // Conservative limit
+                    console.warn('🔗 [PointFour] Widget data too large for URL:', {
+                        estimatedSize: Math.round(estimatedUrlLength),
+                        reviewCount: widgetData.reviews?.length || 0,
+                        willUseFallback: true
+                    });
                     
-                    // Validate data before passing
-                    if (widgetData.brandFitSummary && widgetData.reviews && widgetData.reviews.length > 0) {
-                        params.set('widgetData', JSON.stringify(widgetData));
-                        console.log('🔗 [PointFour] Successfully passed widget data:', {
-                            hasBrandFitSummary: !!widgetData.brandFitSummary,
-                            reviewCount: widgetData.reviews.length,
-                            totalResults: widgetData.totalResults,
-                            hasGroupedReviews: !!widgetData.groupedReviews
-                        });
-                    } else {
-                        console.warn('🔗 [PointFour] Widget data validation failed, skipping data pass:', {
-                            hasBrandFitSummary: !!widgetData.brandFitSummary,
-                            reviewCount: widgetData.reviews?.length || 0,
-                            hasGroupedReviews: !!widgetData.groupedReviews
-                        });
-                    }
-                } catch (error) {
-                    console.error('🔗 [PointFour] Error preparing widget data:', error);
+                    // Store data in sessionStorage instead
+                    const storageKey = `pointfour_widget_data_${Date.now()}`;
+                    sessionStorage.setItem(storageKey, dataString);
+                    params.set('storageKey', storageKey);
+                    params.set('useStorage', 'true');
+                    
+                    console.log('🔗 [PointFour] Using sessionStorage for large data:', storageKey);
+                } else {
+                    params.set('widgetData', dataString);
+                    console.log('🔗 [PointFour] Added widget data to URL:', {
+                        hasBrandFitSummary: !!widgetData.brandFitSummary,
+                        reviewCount: widgetData.reviews?.length || 0,
+                        totalResults: widgetData.totalResults,
+                        hasGroupedReviews: !!widgetData.groupedReviews,
+                        estimatedUrlSize: Math.round(estimatedUrlLength)
+                    });
                 }
             } else {
-                console.log('🔗 [PointFour] No external search results available, will use API fallback');
+                console.log('🔗 [PointFour] No external search results available for widget data');
             }
             
             console.log('🔗 [PointFour] Widget URL Debug:', {
@@ -2866,6 +3072,10 @@
         `;
         
         contentDiv.innerHTML = content;
+        
+        // Mark that we've shown final data
+        hasShownFinalData = true;
+        console.log('[PointFour] Final data rendered, marked as shown');
         
         // Add event listener for Style button
         const styleButton = contentDiv.querySelector('#pointfour-style-btn');
@@ -3194,6 +3404,8 @@ function extractProductImageFromPage() {
           currentBrand = detectBrandFromPage();
           
           if (currentBrand) {
+              // Clean the brand name before using it
+              currentBrand = cleanBrandName(currentBrand);
               console.log('[PointFour] Initializing for brand:', currentBrand);
               
               // Enhanced page type detection

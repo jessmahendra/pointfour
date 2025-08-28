@@ -1960,7 +1960,7 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting.`;
           content: prompt
         }
       ],
-      max_tokens: 1500, // Reduced for testing
+      max_completion_tokens: 1500, // Reduced for testing - GPT-5 uses max_completion_tokens
       temperature: 0.3
     });
 
