@@ -1349,27 +1349,6 @@ function ExtensionReviewsContent() {
                   </div>
 
                   <div style={{ padding: "0", marginTop: "0" }}>
-                    {/* Priority Notice */}
-                    {itemName && (
-                      <div
-                        style={{
-                          marginBottom: "16px",
-                          padding: "12px",
-                          backgroundColor: "#F8F7F4",
-                          border: "1px solid #E7DED6",
-                          borderRadius: "6px",
-                          fontSize: "13px",
-                          color: "#666",
-                        }}
-                      >
-                        <strong>📋 Review Priority:</strong> Item-specific
-                        reviews are shown first, followed by category-specific,
-                        then brand-general reviews. This helps you quickly find
-                        the most relevant feedback for the item you&apos;re
-                        viewing.
-                      </div>
-                    )}
-
                     {/* Cards Grid - 3 columns */}
                     <div
                       style={{
