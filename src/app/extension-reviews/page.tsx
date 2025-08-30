@@ -367,6 +367,12 @@ function ExtensionReviewsContent() {
   const [showMoreCards, setShowMoreCards] = useState<Record<string, boolean>>(
     {}
   );
+  // Filter state for review types
+  const [activeFilters, setActiveFilters] = useState<string[]>([
+    "item-specific",
+    "category-specific", 
+    "brand-general"
+  ]); // All filters active by default
 
   const brandName = searchParams.get("brand") || "Vollebak"; // Default to Vollebak for demo
   const itemName = searchParams.get("item") || "";
@@ -808,6 +814,19 @@ function ExtensionReviewsContent() {
     }));
   };
 
+  const toggleFilter = (filterType: string) => {
+    setActiveFilters((prev) => {
+      const isActive = prev.includes(filterType);
+      if (isActive) {
+        // If it's the last active filter, don't allow removal (keep at least one)
+        if (prev.length === 1) return prev;
+        return prev.filter((f) => f !== filterType);
+      } else {
+        return [...prev, filterType];
+      }
+    });
+  };
+
   const categoryNames: Record<string, string> = {
     primary: "Newsletters & Forums",
     community: "Community Discussions",
@@ -1239,17 +1258,38 @@ function ExtensionReviewsContent() {
                     color: "#F3F4F6",
                     textColor: "#374151",
                   },
-                ].map(({ type, label, count, color, textColor }) => (
-                  <div
-                    key={type}
-                    style={{
-                      backgroundColor: color,
-                      border: `1px solid ${textColor}20`,
-                      borderRadius: "6px",
-                      padding: "12px",
-                      textAlign: "center",
-                    }}
-                  >
+                ].map(({ type, label, count, color, textColor }) => {
+                  const isActive = activeFilters.includes(type);
+                  const isDisabled = activeFilters.length === 1 && isActive;
+                  
+                  return (
+                    <div
+                      key={type}
+                      onClick={() => !isDisabled && toggleFilter(type)}
+                      style={{
+                        backgroundColor: isActive ? color : "#F9F9F9",
+                        border: `2px solid ${isActive ? textColor : "#D1D5DB"}`,
+                        borderRadius: "6px",
+                        padding: "12px",
+                        textAlign: "center",
+                        cursor: isDisabled ? "not-allowed" : "pointer",
+                        opacity: isActive ? 1 : 0.6,
+                        transition: "all 0.2s ease",
+                        userSelect: "none",
+                      }}
+                      onMouseOver={(e) => {
+                        if (!isDisabled) {
+                          e.currentTarget.style.transform = "translateY(-1px)";
+                          e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!isDisabled) {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "none";
+                        }
+                      }}
+                    >
                     <div
                       style={{
                         fontSize: "20px",
@@ -1270,7 +1310,8 @@ function ExtensionReviewsContent() {
                       {label}
                     </div>
                   </div>
-                ));
+                  );
+                });
               })()}
             </div>
 
@@ -1306,10 +1347,20 @@ function ExtensionReviewsContent() {
                 );
               }
 
+              // Filter reviews based on active filters
+              const filteredReviews = prioritizedReviews.filter((review) => {
+                // If no relevance data, show by default
+                if (!review.relevance) return true;
+                return activeFilters.includes(review.relevance.type);
+              });
+
+              // Hide section if no reviews match the filter
+              if (filteredReviews.length === 0) return null;
+
               const visibleReviews = showMoreCards[category]
-                ? prioritizedReviews
-                : prioritizedReviews.slice(0, 3);
-              const hasMoreReviews = reviews.length > 3;
+                ? filteredReviews
+                : filteredReviews.slice(0, 3);
+              const hasMoreReviews = filteredReviews.length > 3;
 
               return (
                 <div
@@ -1344,7 +1395,7 @@ function ExtensionReviewsContent() {
                         margin: 0,
                       }}
                     >
-                      {reviews.length} reviews
+                      {filteredReviews.length} of {reviews.length} reviews
                     </p>
                   </div>
 
