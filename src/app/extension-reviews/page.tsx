@@ -977,7 +977,7 @@ function ExtensionReviewsContent() {
       {/* Main Content */}
       <div
         style={{
-          maxWidth: "50%",
+          maxWidth: "48rem",
           margin: "0 auto",
           padding: "80px 80px 40px",
         }}

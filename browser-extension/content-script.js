@@ -2773,7 +2773,7 @@ let dataUpdateCount = 0; // Count how many times we've received data
                     <h4>Fit Analysis:</h4>
                     <ul class="pointfour-bullet-list">
                         ${fitAnalysisBullets.map(bullet => `<li>${bullet}</li>`).join('')}
-                        ${structuredData?.fit?.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.fit.confidence.toUpperCase()}</li>` : ''}
+                        ${structuredData?.fit?.confidence === 'low' ? `<li class="pointfour-source">Confidence: ${structuredData.fit.confidence.toUpperCase()}</li>` : ''}
                     </ul>
                 </div>
             `;
@@ -2819,7 +2819,7 @@ let dataUpdateCount = 0; // Count how many times we've received data
                     <ul class="pointfour-bullet-list">
                         ${lines.map(line => `<li>${line.trim()}</li>`).join('')}
                         ${qualityQuotesHTML}
-                        ${structuredData.qualityMaterials.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.qualityMaterials.confidence.toUpperCase()}</li>` : ''}
+                        ${structuredData.qualityMaterials.confidence === 'low' ? `<li class="pointfour-source">Confidence: ${structuredData.qualityMaterials.confidence.toUpperCase()}</li>` : ''}
                     </ul>
                 </div>
             `;
@@ -2842,7 +2842,7 @@ let dataUpdateCount = 0; // Count how many times we've received data
                         <ul class="pointfour-bullet-list">
                             <li>${qualityInsights.recommendation}</li>
                             ${qualityQuotesHTML}
-                            ${qualityInsights.confidence ? `<li class="pointfour-source">Confidence: ${qualityInsights.confidence.toUpperCase()}</li>` : ''}
+                            ${qualityInsights.confidence === 'low' ? `<li class="pointfour-source">Confidence: ${qualityInsights.confidence.toUpperCase()}</li>` : ''}
                         </ul>
                     </div>
                 `;
@@ -2862,7 +2862,7 @@ let dataUpdateCount = 0; // Count how many times we've received data
                         <ul class="pointfour-bullet-list">
                             <li>${structuredData.quality.recommendation}</li>
                             ${qualityQuotesHTML}
-                            ${structuredData.quality.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.quality.confidence.toUpperCase()}</li>` : ''}
+                            ${structuredData.quality.confidence === 'low' ? `<li class="pointfour-source">Confidence: ${structuredData.quality.confidence.toUpperCase()}</li>` : ''}
                         </ul>
                     </div>
                 `;
@@ -2885,7 +2885,7 @@ let dataUpdateCount = 0; // Count how many times we've received data
                     <ul class="pointfour-bullet-list">
                         <li>${structuredData.washCare.recommendation}</li>
                         ${careQuotesHTML}
-                        ${structuredData.washCare.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.washCare.confidence.toUpperCase()}</li>` : ''}
+                        ${structuredData.washCare.confidence === 'low' ? `<li class="pointfour-source">Confidence: ${structuredData.washCare.confidence.toUpperCase()}</li>` : ''}
                     </ul>
                 </div>
             `;
@@ -2899,7 +2899,7 @@ let dataUpdateCount = 0; // Count how many times we've received data
         if (structuredData?.confidence && totalReviews > 0) {
             content += `
                 <div class="pointfour-confidence">
-                    <small>Based on ${totalReviews} review${totalReviews === 1 ? '' : 's'} • ${structuredData.confidence.toUpperCase()} confidence</small>
+                    <small>Based on ${totalReviews} review${totalReviews === 1 ? '' : 's'}${structuredData.confidence === 'low' ? ` • ${structuredData.confidence.toUpperCase()} confidence` : ''}</small>
                 </div>
             `;
         } else if (totalReviews > 0) {
