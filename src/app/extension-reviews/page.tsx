@@ -15,6 +15,11 @@ interface Review {
   confidence: "high" | "medium" | "low";
   brandLevel: boolean;
   fullContent: string;
+  relevance?: {
+    type: "item-specific" | "category-specific" | "brand-general";
+    relevance: "high" | "medium" | "low";
+    confidence: "high" | "medium" | "low";
+  };
 }
 
 interface FitSection {
@@ -194,6 +199,163 @@ const prioritizeFitAndQuality = (snippet: string) => {
   // Reconstruct snippet with fit/quality first
   const prioritizedParts = [...fitQualityParts, ...otherParts];
   return prioritizedParts.join(". ") + (snippet.endsWith(".") ? "" : ".");
+};
+
+// Function to classify review relevance (item-specific, category-specific, or brand-general)
+const classifyReviewRelevance = (
+  review: Review,
+  itemName: string,
+  brandName: string
+) => {
+  if (!review || !itemName || !brandName) {
+    return { type: "brand-general", relevance: "medium", confidence: "low" };
+  }
+
+  const text = `${review.title || ""} ${review.snippet || ""} ${
+    review.fullContent || ""
+  }`.toLowerCase();
+  const itemLower = itemName.toLowerCase();
+  const brandLower = brandName.toLowerCase();
+
+  // Check if review mentions the specific item
+  const hasItemMention = itemLower
+    .split(" ")
+    .some((word) => word.length > 3 && text.includes(word));
+
+  if (hasItemMention) {
+    return { type: "item-specific", relevance: "high", confidence: "high" };
+  }
+
+  // Check if review mentions the product category
+  const detectProductCategory = (itemName: string) => {
+    const lower = itemName.toLowerCase();
+    if (
+      lower.includes("jacket") ||
+      lower.includes("coat") ||
+      lower.includes("blazer") ||
+      lower.includes("cardigan") ||
+      lower.includes("hoodie")
+    )
+      return "outerwear";
+    if (
+      lower.includes("shirt") ||
+      lower.includes("blouse") ||
+      lower.includes("sweater") ||
+      lower.includes("top") ||
+      lower.includes("t-shirt")
+    )
+      return "tops";
+    if (
+      lower.includes("pant") ||
+      lower.includes("jean") ||
+      lower.includes("short") ||
+      lower.includes("legging")
+    )
+      return "bottoms";
+    if (
+      lower.includes("shoe") ||
+      lower.includes("boot") ||
+      lower.includes("sneaker")
+    )
+      return "shoes";
+    if (
+      lower.includes("bag") ||
+      lower.includes("backpack") ||
+      lower.includes("handbag")
+    )
+      return "bags";
+    return "general";
+  };
+
+  const category = detectProductCategory(itemName);
+  const categoryKeywords = {
+    tops: [
+      "top",
+      "shirt",
+      "blouse",
+      "sweater",
+      "jumper",
+      "t-shirt",
+      "tshirt",
+      "polo",
+      "tank",
+      "crop",
+      "bodysuit",
+    ],
+    bottoms: [
+      "pant",
+      "trouser",
+      "jean",
+      "short",
+      "legging",
+      "jogger",
+      "chino",
+      "slack",
+    ],
+    outerwear: [
+      "jacket",
+      "coat",
+      "blazer",
+      "cardigan",
+      "hoodie",
+      "sweatshirt",
+      "vest",
+    ],
+    shoes: [
+      "shoe",
+      "boot",
+      "sneaker",
+      "heel",
+      "sandal",
+      "loafer",
+      "oxford",
+      "footwear",
+    ],
+    bags: ["bag", "handbag", "purse", "backpack", "tote", "clutch", "wallet"],
+  };
+
+  if (category !== "general" && categoryKeywords[category]) {
+    const hasCategoryMention = categoryKeywords[category].some((keyword) =>
+      text.includes(keyword)
+    );
+
+    if (hasCategoryMention) {
+      return {
+        type: "category-specific",
+        relevance: "medium",
+        confidence: "medium",
+      };
+    }
+  }
+
+  // Default to brand-general
+  return { type: "brand-general", relevance: "low", confidence: "low" };
+};
+
+// Function to prioritize reviews based on relevance
+const prioritizeReviews = (
+  reviews: Review[],
+  itemName: string,
+  brandName: string
+): Review[] => {
+  if (!reviews || reviews.length === 0) return [];
+
+  const categorizedReviews = reviews.map((review) => {
+    const relevance = classifyReviewRelevance(review, itemName, brandName);
+    return { ...review, relevance };
+  });
+
+  // Sort by relevance: item-specific > category-specific > brand-general
+  const relevanceOrder: Record<string, number> = {
+    "item-specific": 3,
+    "category-specific": 2,
+    "brand-general": 1,
+  };
+
+  return categorizedReviews.sort(
+    (a, b) =>
+      relevanceOrder[b.relevance.type] - relevanceOrder[a.relevance.type]
+  ) as Review[];
 };
 
 function ExtensionReviewsContent() {
@@ -1003,15 +1165,150 @@ function ExtensionReviewsContent() {
           </div>
         )}
 
+        {/* Review Summary and Distribution */}
+        {itemName && (
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E7DED6",
+              borderRadius: "8px",
+              padding: "20px",
+              marginBottom: "24px",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "16px",
+                fontWeight: "600",
+                color: "#333",
+                margin: "0 0 12px 0",
+              }}
+            >
+              📊 Review Analysis for: {itemName}
+            </h3>
+
+            {/* Review Distribution */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                gap: "16px",
+                marginBottom: "16px",
+              }}
+            >
+              {(() => {
+                const allReviews = Object.values(
+                  reviewData.groupedReviews
+                ).flat();
+                const prioritized = prioritizeReviews(
+                  allReviews,
+                  itemName,
+                  brandName
+                );
+                const distribution = {
+                  "item-specific": prioritized.filter(
+                    (r) => r.relevance?.type === "item-specific"
+                  ).length,
+                  "category-specific": prioritized.filter(
+                    (r) => r.relevance?.type === "category-specific"
+                  ).length,
+                  "brand-general": prioritized.filter(
+                    (r) => r.relevance?.type === "brand-general"
+                  ).length,
+                };
+
+                return [
+                  {
+                    type: "item-specific",
+                    label: "🎯 Item-Specific",
+                    count: distribution["item-specific"],
+                    color: "#E8F5E8",
+                    textColor: "#166534",
+                  },
+                  {
+                    type: "category-specific",
+                    label: "🏷️ Category-Specific",
+                    count: distribution["category-specific"],
+                    color: "#FEF3C7",
+                    textColor: "#92400E",
+                  },
+                  {
+                    type: "brand-general",
+                    label: "🏢 Brand-General",
+                    count: distribution["brand-general"],
+                    color: "#F3F4F6",
+                    textColor: "#374151",
+                  },
+                ].map(({ type, label, count, color, textColor }) => (
+                  <div
+                    key={type}
+                    style={{
+                      backgroundColor: color,
+                      border: `1px solid ${textColor}20`,
+                      borderRadius: "6px",
+                      padding: "12px",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "20px",
+                        fontWeight: "600",
+                        color: textColor,
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {count}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: textColor,
+                        fontWeight: "500",
+                      }}
+                    >
+                      {label}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+
+            <p
+              style={{
+                fontSize: "13px",
+                color: "#666",
+                margin: "0",
+                lineHeight: "1.5",
+              }}
+            >
+              <strong>How this works:</strong> We analyze each review to
+              determine if it mentions your specific item, the product category,
+              or just the brand in general. Item-specific reviews are most
+              relevant and shown first.
+            </p>
+          </div>
+        )}
+
         {/* Reviews Sections - Perplexity Style */}
         <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
           {Object.entries(reviewData.groupedReviews).map(
             ([category, reviews]) => {
               if (!reviews || reviews.length === 0) return null;
 
+              // Prioritize reviews if we have an item name
+              let prioritizedReviews = reviews;
+              if (itemName && brandName) {
+                prioritizedReviews = prioritizeReviews(
+                  reviews,
+                  itemName,
+                  brandName
+                );
+              }
+
               const visibleReviews = showMoreCards[category]
-                ? reviews
-                : reviews.slice(0, 3);
+                ? prioritizedReviews
+                : prioritizedReviews.slice(0, 3);
               const hasMoreReviews = reviews.length > 3;
 
               return (
@@ -1052,6 +1349,27 @@ function ExtensionReviewsContent() {
                   </div>
 
                   <div style={{ padding: "0", marginTop: "0" }}>
+                    {/* Priority Notice */}
+                    {itemName && (
+                      <div
+                        style={{
+                          marginBottom: "16px",
+                          padding: "12px",
+                          backgroundColor: "#F8F7F4",
+                          border: "1px solid #E7DED6",
+                          borderRadius: "6px",
+                          fontSize: "13px",
+                          color: "#666",
+                        }}
+                      >
+                        <strong>📋 Review Priority:</strong> Item-specific
+                        reviews are shown first, followed by category-specific,
+                        then brand-general reviews. This helps you quickly find
+                        the most relevant feedback for the item you&apos;re
+                        viewing.
+                      </div>
+                    )}
+
                     {/* Cards Grid - 3 columns */}
                     <div
                       style={{
@@ -1093,25 +1411,74 @@ function ExtensionReviewsContent() {
                             e.currentTarget.style.borderColor = "#E7DED6";
                           }}
                         >
-                          {/* Review Title - Limited to 2 lines */}
-                          <h4
+                          {/* Review Title and Relevance Badge */}
+                          <div
                             style={{
-                              fontSize: "14px",
-                              fontWeight: "600",
-                              color: "#333",
-                              margin: "0 0 4px 0",
-                              lineHeight: "1.4",
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              wordBreak: "break-word",
-                              maxHeight: "calc(1.4em * 2)",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-start",
+                              marginBottom: "4px",
                             }}
                           >
-                            {review.title}
-                          </h4>
+                            <h4
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                color: "#333",
+                                margin: "0",
+                                lineHeight: "1.4",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                wordBreak: "break-word",
+                                maxHeight: "calc(1.4em * 2)",
+                                flex: 1,
+                                marginRight: "8px",
+                              }}
+                            >
+                              {review.title}
+                            </h4>
+
+                            {/* Relevance Badge */}
+                            {review.relevance && (
+                              <span
+                                style={{
+                                  fontSize: "10px",
+                                  padding: "2px 6px",
+                                  borderRadius: "10px",
+                                  fontWeight: "500",
+                                  whiteSpace: "nowrap",
+                                  ...(review.relevance.type === "item-specific"
+                                    ? {
+                                        backgroundColor: "#E8F5E8",
+                                        color: "#166534",
+                                        border: "1px solid #BBF7D0",
+                                      }
+                                    : review.relevance.type ===
+                                      "category-specific"
+                                    ? {
+                                        backgroundColor: "#FEF3C7",
+                                        color: "#92400E",
+                                        border: "1px solid #FDE68A",
+                                      }
+                                    : {
+                                        backgroundColor: "#F3F4F6",
+                                        color: "#374151",
+                                        border: "1px solid #D1D5DB",
+                                      }),
+                                }}
+                              >
+                                {review.relevance.type === "item-specific"
+                                  ? "🎯 Item"
+                                  : review.relevance.type ===
+                                    "category-specific"
+                                  ? "🏷️ Category"
+                                  : "🏢 Brand"}
+                              </span>
+                            )}
+                          </div>
 
                           {/* Review Content - Prioritize fit review summaries */}
                           <p

@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "build:extension": "node build-extension.js",
-    "friend": "cd fashion-recommendations && node build-extension.js"
+    "friend": "node build-extension.js"
   },
   "dependencies": {
     "@types/airtable": "^0.10.0",

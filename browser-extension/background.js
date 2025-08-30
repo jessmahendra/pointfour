@@ -4,7 +4,7 @@
 console.log('🚀 BACKGROUND SCRIPT STARTING...');
 
 // Use localhost for development, production URL for deployed extension
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'https://www.pointfour.in';
 console.log('🔧 BACKGROUND SCRIPT LOADED AT:', new Date().toISOString(), 'API_BASE_URL:', API_BASE_URL);
 
 // Test API connection immediately

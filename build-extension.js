@@ -9,7 +9,7 @@ import archiver from 'archiver';
 // Configuration
 const SOURCE_DIR = './browser-extension';
 const BUILD_DIR = './browser-extension-production';
-const PRODUCTION_URL = 'https://pointfour.in';
+const PRODUCTION_URL = 'https://www.pointfour.in';
 const LOCALHOST_URL = 'http://localhost:3000';
 
 // Files that need URL replacement
@@ -87,9 +87,13 @@ function updateManifest() {
     console.log('📋 Updating manifest.json...');
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
     
-    // Update version to indicate it's a production build
-    manifest.version = `${manifest.version}`;
-    manifest.description = `${manifest.description} (Production Build)`;
+    // Increment version for Chrome Web Store update
+    const currentVersion = parseInt(manifest.version);
+    const newVersion = currentVersion + 1;
+    manifest.version = newVersion.toString();
+    
+    console.log(`📈 Version incremented: ${currentVersion} → ${newVersion}`);
+    manifest.description = `${manifest.description} (Production Build v${newVersion})`;
     
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
   }

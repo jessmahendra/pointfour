@@ -1200,6 +1200,13 @@ let dataUpdateCount = 0; // Count how many times we've received data
               itemProcessor: (match) => match[1].replace(/-/g, ' ')
           },
           
+          // Sezane - /en-en/product/item-name/color
+          'sezane.com': {
+              pattern: /\/[^\/]+\/product\/([^\/\?]+)/,
+              brandName: 'Sezane',
+              itemProcessor: (match) => match[1].replace(/-/g, ' ').trim()
+          },
+          
           // Shopify-based stores - generic pattern
           'generic_shopify': {
               pattern: /\/products\/([^\/\?]+)/,
@@ -1549,13 +1556,117 @@ let dataUpdateCount = 0; // Count how many times we've received data
     } : null;
   }
 
+  // Function to classify review relevance for better display (copied from popup.js)
+  function classifyReviewRelevance(review, itemName, brandName) {
+    if (!itemName || itemName === 'Unknown Item') {
+      return { isItemSpecific: false, relevance: 'low' };
+    }
+    
+    const text = `${review.title} ${review.snippet} ${review.fullContent || ''}`.toLowerCase();
+    const itemWords = itemName.toLowerCase().split(' ').filter(word => word.length > 2);
+    const brandWords = brandName.toLowerCase().split(' ').filter(word => word.length > 2);
+    
+    // Check for exact item name matches
+    const hasExactItemMatch = itemWords.some(word => text.includes(word));
+    const hasExactBrandMatch = brandWords.some(word => text.includes(word));
+    
+    // Check for fit/sizing keywords
+    const hasFitKeywords = review.tags.some(tag => 
+      tag.toLowerCase().includes('fit') || 
+      tag.toLowerCase().includes('size') ||
+      tag.toLowerCase().includes('sizing')
+    );
+    
+    // Check for quality keywords
+    const hasQualityKeywords = review.tags.some(tag => 
+      tag.toLowerCase().includes('quality') || 
+      tag.toLowerCase().includes('durable') ||
+      tag.toLowerCase().includes('material') ||
+      tag.toLowerCase().includes('fabric') ||
+      tag.toLowerCase().includes('excellent') ||
+      tag.toLowerCase().includes('cheap')
+    );
+    
+    // Determine relevance
+    if (hasExactItemMatch && hasExactBrandMatch && (hasFitKeywords || hasQualityKeywords)) {
+      return { isItemSpecific: true, relevance: 'high' };
+    } else if ((hasExactItemMatch || hasExactBrandMatch) && (hasFitKeywords || hasQualityKeywords)) {
+      return { isItemSpecific: true, relevance: 'medium' };
+    } else if (hasFitKeywords || hasQualityKeywords) {
+      return { isItemSpecific: false, relevance: 'medium' };
+    } else {
+      return { isItemSpecific: false, relevance: 'low' };
+    }
+  }
+
   function extractRelevantQuotes(data, section = null, sectionClaim = null) {
     if (!data.externalSearchResults?.reviews || !section || !sectionClaim) {
         return [];
     }
     
-    const reviews = data.externalSearchResults.reviews;
+    let reviews = data.externalSearchResults.reviews;
     const quotes = [];
+    
+    // ENHANCEMENT: Filter and prioritize reviews based on relevance
+    const urlExtraction = window.pointFourURLExtraction;
+    const brandName = data.brandName || currentBrand;
+    const itemName = urlExtraction?.itemName;
+    
+    console.log('🔍 [PointFour] Quote extraction with differentiation:', {
+        totalReviews: reviews.length,
+        hasItemName: !!itemName,
+        itemName: itemName,
+        brandName: brandName
+    });
+    
+    if (itemName && brandName) {
+        // Separate item-specific from general brand reviews
+        const itemSpecificReviews = reviews.filter(r => 
+            r.tags.some(tag => 
+                tag.toLowerCase().includes('fit') || 
+                tag.toLowerCase().includes('size') ||
+                tag.toLowerCase().includes('quality') ||
+                tag.toLowerCase().includes('material') ||
+                tag.toLowerCase().includes('fabric')
+            ) &&
+            !r.brandLevel
+        );
+        
+        const generalBrandReviews = reviews.filter(r => 
+            r.brandLevel || !r.tags.some(tag => 
+                tag.toLowerCase().includes('fit') || 
+                tag.toLowerCase().includes('size') ||
+                tag.toLowerCase().includes('quality') ||
+                tag.toLowerCase().includes('material') ||
+                tag.toLowerCase().includes('fabric')
+            )
+        );
+        
+        // Classify and sort reviews by relevance
+        const classifiedReviews = reviews.map(review => ({
+            ...review,
+            relevance: classifyReviewRelevance(review, itemName, brandName)
+        }));
+        
+        // Sort by relevance: item-specific high > item-specific medium > general medium > general low
+        classifiedReviews.sort((a, b) => {
+            if (a.relevance.isItemSpecific && !b.relevance.isItemSpecific) return -1;
+            if (!a.relevance.isItemSpecific && b.relevance.isItemSpecific) return 1;
+            
+            const relevanceOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+            return relevanceOrder[b.relevance.relevance] - relevanceOrder[a.relevance.relevance];
+        });
+        
+        // Use sorted reviews prioritizing item-specific content
+        reviews = classifiedReviews;
+        
+        console.log('🔍 [PointFour] Review prioritization results:', {
+            itemSpecificCount: itemSpecificReviews.length,
+            generalBrandCount: generalBrandReviews.length,
+            highRelevanceCount: classifiedReviews.filter(r => r.relevance.relevance === 'high').length,
+            itemSpecificHighCount: classifiedReviews.filter(r => r.relevance.isItemSpecific && r.relevance.relevance === 'high').length
+        });
+    }
     
     // Helper function to detect if text sounds like a genuine user review
     const isUserReview = (text) => {
@@ -2533,68 +2644,156 @@ let dataUpdateCount = 0; // Count how many times we've received data
                 ${qualityBadge}
         `;
         
-        // FIT SECTION - Always show if we have fit data or general recommendation
-        if (structuredData?.fit) {
-            const fitQuotes = extractRelevantQuotes(data, 'fit', structuredData.fit.recommendation);
-            let fitQuotesHTML = '';
-            if (fitQuotes.length > 0) {
-                fitQuotesHTML = fitQuotes.map(quote => 
-                    `<li class="pointfour-quote">"${quote.text}"</li>`
-                ).join('');
+        // SIMPLIFIED FIT SECTION - Single section with clear item vs brand bullet points
+        const urlExtraction = window.pointFourURLExtraction;
+        const itemName = urlExtraction?.itemName;
+        
+        // Extract item-specific reviews
+        let itemSpecificFitReviews = [];
+        if (data.externalSearchResults?.reviews && itemName) {
+            itemSpecificFitReviews = data.externalSearchResults.reviews.filter(r => {
+                const reviewText = (r.title + ' ' + r.snippet + ' ' + (r.fullContent || '')).toLowerCase();
+                const itemWords = itemName.toLowerCase().split(' ').filter(word => word.length > 2);
+                const mentionsItem = itemWords.some(word => reviewText.includes(word));
+                const hasFitTags = r.tags.some(tag => 
+                    tag.toLowerCase().includes('fit') || tag.toLowerCase().includes('size')
+                );
+                return mentionsItem && hasFitTags && !r.brandLevel;
+            });
+        }
+        
+        console.log('🔍 [PointFour] Review analysis:', {
+            itemName,
+            totalReviews: data.externalSearchResults?.reviews?.length || 0,
+            itemSpecificCount: itemSpecificFitReviews.length,
+            hasStructuredData: !!structuredData?.fit,
+            hasRecommendation: !!recommendation
+        });
+        
+        // Debug: Check first few reviews for item mention detection
+        if (data.externalSearchResults?.reviews && itemName) {
+            console.log('🔍 [PointFour] Debug - First 3 reviews for item detection:');
+            data.externalSearchResults.reviews.slice(0, 3).forEach((r, i) => {
+                const reviewText = (r.title + ' ' + r.snippet + ' ' + (r.fullContent || '')).toLowerCase();
+                const itemWords = itemName.toLowerCase().split(' ').filter(word => word.length > 2);
+                const mentionsItem = itemWords.some(word => reviewText.includes(word));
+                const hasFitTags = r.tags.some(tag => 
+                    tag.toLowerCase().includes('fit') || tag.toLowerCase().includes('size')
+                );
+                console.log(`Review ${i + 1}:`, {
+                    title: r.title?.substring(0, 50),
+                    snippet: r.snippet?.substring(0, 100),
+                    tags: r.tags,
+                    brandLevel: r.brandLevel,
+                    mentionsItem,
+                    hasFitTags,
+                    itemWords,
+                    matchesFilter: mentionsItem && hasFitTags && !r.brandLevel
+                });
+            });
+        }
+        
+        // Build fit analysis bullet points
+        let fitAnalysisBullets = [];
+        
+        // Add item-specific insights first - consolidated summary
+        if (itemSpecificFitReviews.length > 0) {
+            // Analyze and consolidate item-specific reviews
+            const fitTerms = [];
+            const sizeRecommendations = [];
+            
+            itemSpecificFitReviews.forEach(r => {
+                const text = (r.snippet + ' ' + (r.fullContent || '')).toLowerCase();
+                
+                // Extract fit characteristics
+                if (text.includes('runs small') || text.includes('size up')) {
+                    sizeRecommendations.push('runs small');
+                } else if (text.includes('runs large') || text.includes('size down')) {
+                    sizeRecommendations.push('runs large');
+                } else if (text.includes('true to size') || text.includes('fits as expected')) {
+                    sizeRecommendations.push('true to size');
+                }
+                
+                // Extract other fit details
+                if (text.includes('tight') || text.includes('snug')) fitTerms.push('tight fit');
+                if (text.includes('loose') || text.includes('roomy')) fitTerms.push('loose fit');
+                if (text.includes('comfortable')) fitTerms.push('comfortable');
+            });
+            
+            // Create consolidated summary
+            let consolidatedSummary = `📍 ${itemName}: `;
+            
+            // Determine most common size recommendation
+            const sizeFreq = {};
+            sizeRecommendations.forEach(rec => sizeFreq[rec] = (sizeFreq[rec] || 0) + 1);
+            const mostCommonSize = Object.keys(sizeFreq).reduce((a, b) => sizeFreq[a] > sizeFreq[b] ? a : b, 'true to size');
+            
+            if (mostCommonSize === 'runs small') {
+                consolidatedSummary += 'Tends to run small, consider sizing up';
+            } else if (mostCommonSize === 'runs large') {
+                consolidatedSummary += 'Tends to run large, consider sizing down';
+            } else {
+                consolidatedSummary += 'Generally true to size';
             }
             
+            // Add fit characteristics if available
+            if (fitTerms.length > 0) {
+                const uniqueTerms = [...new Set(fitTerms)];
+                consolidatedSummary += `, ${uniqueTerms.slice(0, 2).join(' and ')}`;
+            }
+            
+            consolidatedSummary += ` (based on ${itemSpecificFitReviews.length} review${itemSpecificFitReviews.length === 1 ? '' : 's'})`;
+            
+            fitAnalysisBullets.push(consolidatedSummary);
+        }
+        
+        // Add brand-level insights
+        if (structuredData?.fit) {
+            fitAnalysisBullets.push(`🏷️ ${brandName} general sizing: ${structuredData.fit.recommendation}`);
+        } else if (recommendation !== 'Analyzing fit information...' && totalReviews > 0) {
+            const fitKeywords = ['runs small', 'runs large', 'true to size', 'size up', 'size down', 'tight', 'loose', 'fits'];
+            const hasFitInfo = fitKeywords.some(keyword => recommendation.toLowerCase().includes(keyword));
+            if (hasFitInfo) {
+                fitAnalysisBullets.push(`🏷️ ${brandName} general sizing: ${recommendation}`);
+            }
+        }
+        
+        // Add quotes from most relevant reviews
+        const fitQuotes = extractRelevantQuotes(data, 'fit', structuredData?.fit?.recommendation || recommendation);
+        if (fitQuotes.length > 0) {
+            fitQuotes.slice(0, 2).forEach(quote => {
+                fitAnalysisBullets.push(`"${quote.text}"`);
+            });
+        }
+        
+        // Show fit analysis if we have any insights
+        if (fitAnalysisBullets.length > 0) {
             content += `
                 <div class="pointfour-fit-info">
                     <h4>Fit Analysis:</h4>
                     <ul class="pointfour-bullet-list">
-                        <li>${structuredData.fit.recommendation}</li>
-                        ${fitQuotesHTML}
-                        ${structuredData.fit.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.fit.confidence.toUpperCase()}</li>` : ''}
+                        ${fitAnalysisBullets.map(bullet => `<li>${bullet}</li>`).join('')}
+                        ${structuredData?.fit?.confidence ? `<li class="pointfour-source">Confidence: ${structuredData.fit.confidence.toUpperCase()}</li>` : ''}
                     </ul>
                 </div>
             `;
-        } else if (recommendation !== 'Analyzing fit information...' && totalReviews > 0) {
-            // Fallback: try to extract fit info from the general recommendation
-            const fitKeywords = ['runs small', 'runs large', 'true to size', 'size up', 'size down', 'tight', 'loose', 'fits'];
-            const hasFitInfo = fitKeywords.some(keyword => recommendation.toLowerCase().includes(keyword));
-            
-            if (hasFitInfo) {
-                const fitQuotes = extractRelevantQuotes(data, 'fit', recommendation);
-                let fitQuotesHTML = '';
-                if (fitQuotes.length > 0) {
-                    fitQuotesHTML = fitQuotes.map(quote => 
-                        `<li class="pointfour-quote">"${quote.text}"</li>`
-                    ).join('');
-                }
-                
-                content += `
-                    <div class="pointfour-fit-info">
-                        <h4>Fit Analysis:</h4>
-                        <ul class="pointfour-bullet-list">
-                            <li>${recommendation}</li>
-                            ${fitQuotesHTML}
-                        </ul>
-                    </div>
-                `;
-            } else {
-                // Show general summary under brand name if no specific fit data
-                // Don't show quotes for general summaries unless they're very specific
-                content += `
-                    <div class="pointfour-fit-info">
-                        <h4>Analysis Summary:</h4>
-                        <ul class="pointfour-bullet-list">
-                            <li>${recommendation}</li>
-                        </ul>
-                    </div>
-                `;
-            }
         } else if (totalReviews > 0) {
-            // Show basic info when we have reviews but no detailed analysis
+            // Fallback when we have reviews but no specific fit info
             content += `
                 <div class="pointfour-fit-info">
                     <h4>Fit Analysis:</h4>
                     <ul class="pointfour-bullet-list">
                         <li>Analysis in progress. Found ${totalReviews} review${totalReviews === 1 ? '' : 's'} for ${brandName}.</li>
+                    </ul>
+                </div>
+            `;
+        } else {
+            // No data available
+            content += `
+                <div class="pointfour-fit-info">
+                    <h4>Fit Analysis:</h4>
+                    <ul class="pointfour-bullet-list">
+                        <li>No fit information available yet. Check back later for updates!</li>
                     </ul>
                 </div>
             `;
