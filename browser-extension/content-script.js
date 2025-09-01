@@ -1034,7 +1034,8 @@ let dataUpdateCount = 0; // Count how many times we've received data
           'zara.com',
           'roheframes.com',
           'cos.com',
-          'everlane.com'
+          'everlane.com',
+          '24s.com'
       ];
       const isWhitelisted = whitelistDomains.some(d => hostname === d || hostname.endsWith('.' + d));
 
@@ -1055,7 +1056,12 @@ let dataUpdateCount = 0; // Count how many times we've received data
                                    hostname.includes('boutique') ||
                                    hostname.includes('fashion') ||
                                    hostname.includes('clothing') ||
-                                   hostname.includes('apparel');
+                                   hostname.includes('apparel') ||
+                                   hostname.includes('luxury') ||
+                                   hostname.includes('designer') ||
+                                   hostname.includes('online') ||
+                                   hostname.includes('retail') ||
+                                   hostname.includes('market');
       
       // Skip pages that are definitely not shopping pages
       const excludePatterns = [
@@ -1078,17 +1084,19 @@ let dataUpdateCount = 0; // Count how many times we've received data
       // - Domain is whitelisted
       // - OR we meet hostname e-commerce indicators 
       // - OR we have high confidence
+      // - OR we have decent score (≥4) for sites without obvious e-commerce domains
       // - OR we have strong product signals (product indicators + price elements)
       const hasStrongProductSignals = (detection.productElementsCount >= 3 && detection.hasPriceElements);
+      const hasDecentScore = detection.score >= 4;
       
       if (
           isWhitelisted ||
-          (detection.isFashionSite && (hasEcommerceIndicators || detection.isHighConfidence || hasStrongProductSignals))
+          (detection.isFashionSite && (hasEcommerceIndicators || detection.isHighConfidence || hasDecentScore || hasStrongProductSignals))
       ) {
-          console.log(`[PointFour] Fashion site verified! (Score: ${detection.score}, E-commerce: ${hasEcommerceIndicators}, Whitelist: ${isWhitelisted}, StrongSignals: ${hasStrongProductSignals})`);
+          console.log(`[PointFour] Fashion site verified! (Score: ${detection.score}, E-commerce: ${hasEcommerceIndicators}, Whitelist: ${isWhitelisted}, DecentScore: ${hasDecentScore}, StrongSignals: ${hasStrongProductSignals})`);
           return true;
       } else {
-          console.log(`[PointFour] Not a verified fashion site (Score: ${detection.score}, E-commerce: ${hasEcommerceIndicators}, Whitelist: ${isWhitelisted})`);
+          console.log(`[PointFour] Not a verified fashion site (Score: ${detection.score}, E-commerce: ${hasEcommerceIndicators}, Whitelist: ${isWhitelisted}, DecentScore: ${hasDecentScore})`);
           return false;
       }
   }
@@ -1207,6 +1215,101 @@ let dataUpdateCount = 0; // Count how many times we've received data
               itemProcessor: (match) => match[1].replace(/-/g, ' ').trim()
           },
           
+          // Net-a-Porter - marketplace site, extract brand from URL structure
+          'net-a-porter.com': {
+              pattern: /\/[^\/]+\/shop\/product\/([^\/]+)\/([^\/\?]+)/,
+              brandName: 'MARKETPLACE', // Special flag to indicate we need to extract brand from page content
+              itemProcessor: (match) => match[2].replace(/-/g, ' ').trim(),
+              brandFromURL: (match) => match[1].replace(/-/g, ' '), // Extract brand from first capture group
+              marketplace: true
+          },
+          
+          // Mytheresa - marketplace site - multiple URL patterns to handle different structures
+          'mytheresa.com': {
+              patterns: [
+                  // Pattern 1: /fr-fr/femme/toteme/ballerines-en-daim-p01100329
+                  /\/[^\/]+\/(?:femme|homme|enfant)\/([^\/]+)\/([^\/\?]+)-p\d+/,
+                  // Pattern 2: /fr-fr/toteme/ballerines-en-daim-p01100329 (no gender)  
+                  /\/[^\/]+\/([^\/]+)\/([^\/\?]+)-p\d+/,
+                  // Pattern 3: Generic fallback for any p-number pattern
+                  /\/([^\/\?]+)-p\d+/
+              ],
+              brandName: 'MARKETPLACE',
+              itemProcessor: (match, patternIndex) => {
+                  if (patternIndex === 0) return match[2].replace(/-/g, ' ').trim(); // femme/homme pattern
+                  if (patternIndex === 1) return match[2].replace(/-/g, ' ').trim(); // no gender pattern
+                  return match[1].replace(/-.*$/, '').replace(/-/g, ' ').trim(); // fallback - remove p-number and everything after
+              },
+              brandFromURL: (match, patternIndex) => {
+                  if (patternIndex === 0) return match[1]; // Extract brand after gender
+                  if (patternIndex === 1) return match[1]; // Extract brand directly
+                  return null; // Fallback pattern doesn't extract brand from URL
+              },
+              marketplace: true
+          },
+          
+          // Farfetch - marketplace site - simplified approach
+          'farfetch.com': {
+              patterns: [
+                  // Simple pattern: extract everything between /shopping/gender/ and -item-
+                  /\/shopping\/(?:women|men|kids)\/(.+)-item-\d+/
+              ],
+              brandName: 'MARKETPLACE',
+              itemProcessor: (match, patternIndex) => {
+                  // Extract item from full string like "patagonia-fleece-texture-zip-up-jacket"
+                  const fullString = match[1];
+                  const parts = fullString.split('-');
+                  // Assume first part is brand, rest is item
+                  return parts.slice(1).join(' ').trim();
+              },
+              brandFromURL: (match, patternIndex) => {
+                  // Extract brand from "patagonia-fleece-texture-zip-up-jacket"
+                  const fullString = match[1];
+                  const firstPart = fullString.split('-')[0];
+                  console.log('🔗 [PointFour] Farfetch brand extraction from:', fullString, '-> brand:', firstPart);
+                  return firstPart;
+              },
+              marketplace: true
+          },
+          
+          // Mr Porter - marketplace site  
+          'mrporter.com': {
+              patterns: [
+                  // Pattern: /en-gb/mens/product/golden-goose/ball-star-distressed-leather-sneakers/1234567890123456
+                  /\/[^\/]+\/(?:mens|womens)\/product\/([^\/]+)\/([^\/]+)\/\d+/,
+                  // Fallback pattern
+                  /\/product\/([^\/]+)\/([^\/]+)/
+              ],
+              brandName: 'MARKETPLACE',
+              itemProcessor: (match, patternIndex) => {
+                  return match[2].replace(/-/g, ' ').trim(); // Second capture group is item
+              },
+              brandFromURL: (match, patternIndex) => {
+                  const brand = match[1].replace(/-/g, ' ').trim(); // First capture group is brand
+                  console.log('🔗 [PointFour] Mr Porter brand extraction:', brand);
+                  return brand;
+              },
+              marketplace: true
+          },
+
+          // Mr Porter alternative domain
+          'mr-porter.com': {
+              patterns: [
+                  /\/[^\/]+\/(?:mens|womens)\/product\/([^\/]+)\/([^\/]+)\/\d+/,
+                  /\/product\/([^\/]+)\/([^\/]+)/
+              ],
+              brandName: 'MARKETPLACE', 
+              itemProcessor: (match, patternIndex) => {
+                  return match[2].replace(/-/g, ' ').trim();
+              },
+              brandFromURL: (match, patternIndex) => {
+                  const brand = match[1].replace(/-/g, ' ').trim();
+                  console.log('🔗 [PointFour] Mr Porter (.com) brand extraction:', brand);
+                  return brand;
+              },
+              marketplace: true
+          },
+          
           // Shopify-based stores - generic pattern
           'generic_shopify': {
               pattern: /\/products\/([^\/\?]+)/,
@@ -1223,26 +1326,81 @@ let dataUpdateCount = 0; // Count how many times we've received data
       console.log('🔗 [PointFour] Site config found for', hostname, ':', !!siteConfig);
       
       if (siteConfig) {
-          console.log('🔗 [PointFour] Testing pattern:', siteConfig.pattern);
-          const match = pathname.match(siteConfig.pattern);
-          console.log('🔗 [PointFour] Pattern match result:', match);
+          console.log('🔗 [PointFour] Site config found for', hostname);
+          
+          let match = null;
+          let matchedPatternIndex = -1;
+          
+          // Handle multiple patterns for sites like Mytheresa
+          if (siteConfig.patterns) {
+              console.log('🔗 [PointFour] Testing multiple patterns:', siteConfig.patterns.length);
+              for (let i = 0; i < siteConfig.patterns.length; i++) {
+                  const pattern = siteConfig.patterns[i];
+                  console.log(`🔗 [PointFour] Testing pattern ${i}:`, pattern);
+                  match = pathname.match(pattern);
+                  if (match) {
+                      matchedPatternIndex = i;
+                      console.log(`🔗 [PointFour] Pattern ${i} matched:`, match);
+                      break;
+                  }
+              }
+          } else if (siteConfig.pattern) {
+              console.log('🔗 [PointFour] Testing single pattern:', siteConfig.pattern);
+              match = pathname.match(siteConfig.pattern);
+              matchedPatternIndex = 0;
+          }
+          
+          console.log('🔗 [PointFour] Final match result:', match, 'patternIndex:', matchedPatternIndex);
           
           if (match) {
-              const itemName = siteConfig.itemProcessor(match);
+              const itemName = siteConfig.itemProcessor ? siteConfig.itemProcessor(match, matchedPatternIndex) : match[1];
               console.log('🔗 [PointFour] Processed item name:', itemName);
               
               if (itemName) {
-                  console.log('🔗 [PointFour] ✅ URL extraction successful:', {
-                      brand: siteConfig.brandName,
-                      item: itemName,
-                      source: 'site_specific'
-                  });
-                  return {
-                      brand: siteConfig.brandName,
-                      itemName: itemName,
-                      confidence: 'high',
-                      source: 'url_pattern'
-                  };
+                  // Handle marketplace sites specially
+                  if (siteConfig.marketplace && siteConfig.brandName === 'MARKETPLACE') {
+                      // Try to extract brand from URL if brandFromURL function exists
+                      let extractedBrand = null;
+                      if (siteConfig.brandFromURL) {
+                          const rawBrand = siteConfig.brandFromURL(match, matchedPatternIndex);
+                          console.log('🔗 [PointFour] Raw extracted brand from URL:', rawBrand);
+                          
+                          // Validate extracted brand - filter out category terms
+                          const categoryTerms = ['femme', 'homme', 'woman', 'man', 'women', 'men', 'kids', 'enfant', 'child'];
+                          if (rawBrand && !categoryTerms.includes(rawBrand.toLowerCase())) {
+                              extractedBrand = rawBrand;
+                              console.log('🔗 [PointFour] Validated brand from URL:', extractedBrand);
+                          } else {
+                              console.log('🔗 [PointFour] Rejected category term as brand:', rawBrand);
+                          }
+                      }
+                      
+                      console.log('🔗 [PointFour] ✅ Marketplace item extraction:', {
+                          brand: extractedBrand,
+                          item: itemName,
+                          marketplace: hostname,
+                          source: 'marketplace_pattern'
+                      });
+                      return {
+                          brand: extractedBrand, // Use extracted brand or null for fallback
+                          itemName: itemName,
+                          confidence: 'high',
+                          source: 'marketplace_pattern',
+                          marketplace: hostname
+                      };
+                  } else {
+                      console.log('🔗 [PointFour] ✅ URL extraction successful:', {
+                          brand: siteConfig.brandName,
+                          item: itemName,
+                          source: 'site_specific'
+                      });
+                      return {
+                          brand: siteConfig.brandName,
+                          itemName: itemName,
+                          confidence: 'high',
+                          source: 'url_pattern'
+                      };
+                  }
               }
           }
       }
@@ -1306,6 +1464,256 @@ let dataUpdateCount = 0; // Count how many times we've received data
   }
   
   // ========================================
+  // PRODUCT CATEGORY DETECTION
+  // ========================================
+  
+  function detectCategoryFromItemName(itemName = '') {
+      if (!itemName) return { category: 'unknown', confidence: 'low', score: 0 };
+      
+      console.log('[PointFour] Fallback category detection from item name:', itemName);
+      
+      const lowerItemName = itemName.toLowerCase();
+      
+      // Simple keyword matching for quick category detection
+      const categoryKeywords = {
+          footwear: [
+              'sneaker', 'sneakers', 'shoe', 'shoes', 'boot', 'boots', 'sandal', 'sandals',
+              'heel', 'heels', 'flat', 'flats', 'loafer', 'loafers', 'oxford', 'oxfords',
+              'pump', 'pumps', 'stiletto', 'stilettos', 'wedge', 'wedges', 'clog', 'clogs',
+              'moccasin', 'moccasins', 'trainer', 'trainers', 'runner', 'runners',
+              'ballerina', 'ballerinas', 'espadrille', 'espadrilles', 'slip-on', 'slip-ons'
+          ],
+          tops: [
+              'shirt', 'blouse', 'sweater', 'cardigan', 'jacket', 'coat', 'blazer',
+              'vest', 'hoodie', 'sweatshirt', 't-shirt', 'tank', 'camisole',
+              'crop top', 'tunic', 'polo', 'button-down', 'top'
+          ],
+          bottoms: [
+              'pants', 'trouser', 'trousers', 'jean', 'jeans', 'short', 'shorts',
+              'legging', 'leggings', 'skirt', 'dress', 'overall', 'overalls',
+              'jumpsuit', 'romper', 'culotte', 'culottes', 'palazzo'
+          ],
+          accessories: [
+              'bag', 'purse', 'wallet', 'belt', 'scarf', 'hat', 'jewelry',
+              'watch', 'bracelet', 'necklace', 'earring', 'earrings', 'ring',
+              'brooch', 'headband', 'tie', 'bow tie', 'cufflink', 'cufflinks',
+              'sunglasses', 'glove', 'gloves', 'mitten', 'mittens', 'clutch',
+              'handbag', 'backpack', 'tote', 'crossbody'
+          ]
+      };
+      
+      for (const [category, keywords] of Object.entries(categoryKeywords)) {
+          for (const keyword of keywords) {
+              if (lowerItemName.includes(keyword)) {
+                  console.log(`[PointFour] Fallback detected '${category}' from keyword '${keyword}' in '${itemName}'`);
+                  return {
+                      category: category,
+                      confidence: 'medium',
+                      score: 1,
+                      reasoning: `Detected from item name keyword: '${keyword}'`
+                  };
+              }
+          }
+      }
+      
+      console.log('[PointFour] Fallback could not determine category from item name:', itemName);
+      return { category: 'unknown', confidence: 'low', score: 0 };
+  }
+
+  function filterReviewsByCategory(reviews, detectedCategory, itemName = '') {
+      if (!reviews || !Array.isArray(reviews) || !detectedCategory) {
+          return reviews;
+      }
+      
+      console.log('[PointFour] Filtering reviews by category:', detectedCategory, 'for item:', itemName);
+      
+      // Define category-specific keywords for review filtering
+      const categoryFilters = {
+          footwear: {
+              include: [
+                  'shoe', 'boot', 'sneaker', 'sandal', 'heel', 'flat', 'loafer',
+                  'oxford', 'pump', 'stiletto', 'wedge', 'clog', 'moccasin',
+                  'trainer', 'runner', 'athletic', 'dress shoe', 'casual shoe',
+                  'ankle boot', 'knee boot', 'combat boot', 'chelsea boot',
+                  'ballerina', 'ballet flat', 'espadrille', 'slip-on',
+                  'footwear', 'sole', 'lace', 'strap', 'arch support', 'heel height',
+                  'toe box', 'insole', 'outsole', 'sizing', 'width', 'comfortable to walk'
+              ],
+              exclude: [
+                  'shirt', 'top', 'blouse', 'sweater', 'cardigan', 'jacket', 'coat',
+                  'dress', 'skirt', 'pants', 'trouser', 'jean', 'short', 'legging',
+                  'sleeve', 'collar', 'button', 'zipper', 'pocket', 'waist', 'hem'
+              ]
+          },
+          tops: {
+              include: [
+                  'shirt', 'top', 'blouse', 'sweater', 'cardigan', 'jacket', 'coat',
+                  'blazer', 'vest', 'hoodie', 'sweatshirt', 't-shirt', 'tank top',
+                  'camisole', 'crop top', 'tunic', 'polo', 'button-down',
+                  'sleeve', 'collar', 'neckline', 'shoulder', 'chest', 'armpit',
+                  'length', 'fit around chest', 'arm length', 'sleeve length'
+              ],
+              exclude: [
+                  'shoe', 'boot', 'sneaker', 'sandal', 'heel', 'flat',
+                  'pants', 'trouser', 'jean', 'short', 'legging', 'skirt', 'dress',
+                  'bag', 'purse', 'wallet', 'belt', 'scarf', 'hat', 'jewelry'
+              ]
+          },
+          bottoms: {
+              include: [
+                  'pants', 'trouser', 'jean', 'short', 'legging', 'skirt', 'dress',
+                  'overall', 'jumpsuit', 'romper', 'culotte', 'palazzo',
+                  'waist', 'hip', 'thigh', 'leg', 'inseam', 'rise', 'hem',
+                  'length', 'fit around waist', 'leg length', 'crotch', 'seat'
+              ],
+              exclude: [
+                  'shoe', 'boot', 'sneaker', 'sandal', 'heel', 'flat',
+                  'shirt', 'top', 'blouse', 'sweater', 'cardigan', 'jacket',
+                  'bag', 'purse', 'wallet', 'belt', 'scarf', 'hat', 'jewelry'
+              ]
+          },
+          accessories: {
+              include: [
+                  'bag', 'purse', 'wallet', 'belt', 'scarf', 'hat', 'jewelry',
+                  'watch', 'bracelet', 'necklace', 'earring', 'ring', 'brooch',
+                  'hair accessory', 'headband', 'tie', 'bow tie', 'cufflink',
+                  'sunglasses', 'glove', 'mitten', 'clutch', 'handbag', 'backpack',
+                  'tote', 'messenger bag', 'crossbody', 'shoulder bag'
+              ],
+              exclude: [
+                  'shoe', 'boot', 'sneaker', 'sandal', 'heel', 'flat',
+                  'shirt', 'top', 'blouse', 'sweater', 'cardigan', 'jacket',
+                  'pants', 'trouser', 'jean', 'short', 'legging', 'skirt', 'dress'
+              ]
+          }
+      };
+      
+      const filter = categoryFilters[detectedCategory.category];
+      if (!filter) {
+          console.log('[PointFour] No filter found for category:', detectedCategory.category);
+          return reviews;
+      }
+      
+      const filteredReviews = reviews.filter(review => {
+          const reviewText = `${review.title || ''} ${review.snippet || ''} ${review.fullContent || ''}`.toLowerCase();
+          
+          // Check if review contains category-specific keywords
+          const hasIncludeKeywords = filter.include.some(keyword => reviewText.includes(keyword));
+          const hasExcludeKeywords = filter.exclude.some(keyword => reviewText.includes(keyword));
+          
+          // Prioritize item name mentions
+          let mentionsItem = false;
+          if (itemName) {
+              const itemWords = itemName.toLowerCase().split(' ').filter(word => word.length > 2);
+              mentionsItem = itemWords.some(word => reviewText.includes(word));
+          }
+          
+          // If review mentions the specific item, always include (high relevance)
+          if (mentionsItem) {
+              return true;
+          }
+          
+          // Otherwise, use category filtering
+          return hasIncludeKeywords && !hasExcludeKeywords;
+      });
+      
+      console.log('[PointFour] Category filtering results:', {
+          category: detectedCategory.category,
+          originalCount: reviews.length,
+          filteredCount: filteredReviews.length,
+          filterRatio: Math.round((filteredReviews.length / reviews.length) * 100) + '%'
+      });
+      
+      return filteredReviews;
+  }
+  
+  function detectProductCategory(itemName = '', pageContent = '', url = '') {
+      console.log('[PointFour] Detecting product category for:', itemName);
+      
+      // Combine all text sources for analysis
+      const analysisText = `${itemName} ${pageContent} ${url}`.toLowerCase();
+      
+      // Define category keywords with priority scoring
+      const categoryKeywords = {
+          footwear: {
+              keywords: [
+                  'sneakers', 'shoes', 'boots', 'sandals', 'heels', 'flats', 'loafers', 
+                  'oxfords', 'pumps', 'stilettos', 'wedges', 'clogs', 'moccasins',
+                  'trainers', 'runners', 'athletic shoes', 'dress shoes', 'casual shoes',
+                  'ankle boots', 'knee boots', 'combat boots', 'chelsea boots',
+                  'ballerinas', 'ballet flats', 'espadrilles', 'slip-ons',
+                  'footwear', 'chaussures', 'scarpe', 'zapatos', 'schuhe'
+              ],
+              score: 0
+          },
+          tops: {
+              keywords: [
+                  'shirt', 't-shirt', 'tshirt', 'blouse', 'top', 'sweater', 'jumper',
+                  'cardigan', 'hoodie', 'sweatshirt', 'pullover', 'vest', 'tank',
+                  'camisole', 'tunic', 'polo', 'henley', 'crop top', 'bodysuit',
+                  'blazer', 'jacket', 'coat', 'outerwear', 'windbreaker', 'parka',
+                  'bomber', 'denim jacket', 'leather jacket', 'suit jacket'
+              ],
+              score: 0
+          },
+          bottoms: {
+              keywords: [
+                  'pants', 'trousers', 'jeans', 'chinos', 'shorts', 'skirt', 'dress',
+                  'leggings', 'joggers', 'sweatpants', 'cargo pants', 'wide-leg',
+                  'skinny jeans', 'straight jeans', 'bootcut', 'flare jeans',
+                  'mini skirt', 'maxi skirt', 'pencil skirt', 'a-line skirt',
+                  'midi dress', 'maxi dress', 'mini dress', 'shift dress', 'wrap dress'
+              ],
+              score: 0
+          },
+          accessories: {
+              keywords: [
+                  'bag', 'handbag', 'purse', 'backpack', 'tote', 'clutch', 'crossbody',
+                  'wallet', 'belt', 'scarf', 'hat', 'cap', 'beanie', 'sunglasses',
+                  'jewelry', 'necklace', 'bracelet', 'earrings', 'ring', 'watch',
+                  'gloves', 'mittens', 'tie', 'bowtie', 'pocket square', 'cufflinks'
+              ],
+              score: 0
+          }
+      };
+      
+      // Score each category based on keyword matches
+      for (const [category, data] of Object.entries(categoryKeywords)) {
+          for (const keyword of data.keywords) {
+              if (analysisText.includes(keyword)) {
+                  data.score += 1;
+                  console.log(`[PointFour] Category ${category} +1 for "${keyword}"`);
+              }
+          }
+      }
+      
+      // Find the highest scoring category
+      let detectedCategory = 'clothing'; // Default fallback
+      let maxScore = 0;
+      
+      for (const [category, data] of Object.entries(categoryKeywords)) {
+          if (data.score > maxScore) {
+              maxScore = data.score;
+              detectedCategory = category;
+          }
+      }
+      
+      // Special handling for footwear to be more specific
+      if (detectedCategory === 'footwear') {
+          detectedCategory = 'shoes';
+      }
+      
+      console.log(`[PointFour] Detected category: "${detectedCategory}" (score: ${maxScore})`);
+      
+      // Return both category and confidence
+      return {
+          category: detectedCategory,
+          confidence: maxScore > 0 ? 'high' : 'low',
+          score: maxScore
+      };
+  }
+
+  // ========================================
   // BRAND DETECTION
   // ========================================
   
@@ -1333,13 +1741,19 @@ let dataUpdateCount = 0; // Count how many times we've received data
           window.pointFourURLExtraction = urlExtraction;
       }
       
-      // Method 1: Check meta tags
+      // Check if this is a known marketplace site
+      const knownMarketplaces = ['net-a-porter.com', 'mytheresa.com', 'farfetch.com', 'ssense.com', 'mrporter.com', 'mr-porter.com', 'matchesfashion.com'];
+      const hostname = window.location.hostname.replace('www.', '').toLowerCase();
+      const isMarketplace = knownMarketplaces.includes(hostname);
+      
+      // Method 1: Check meta tags (skip og:site_name for marketplaces)
       const metaTags = {
-          'og:site_name': document.querySelector('meta[property="og:site_name"]')?.content,
+          // Skip og:site_name for marketplaces as it returns the marketplace name
+          'og:site_name': !isMarketplace ? document.querySelector('meta[property="og:site_name"]')?.content : null,
           'og:brand': document.querySelector('meta[property="og:brand"]')?.content,
           'product:brand': document.querySelector('meta[property="product:brand"]')?.content,
           'twitter:site': document.querySelector('meta[name="twitter:site"]')?.content,
-          'application-name': document.querySelector('meta[name="application-name"]')?.content,
+          'application-name': !isMarketplace ? document.querySelector('meta[name="application-name"]')?.content : null,
           'author': document.querySelector('meta[name="author"]')?.content
       };
       
@@ -1393,30 +1807,127 @@ let dataUpdateCount = 0; // Count how many times we've received data
           }
       }
       
-      // Method 3: Check common brand selectors
+      // Method 3: Check common brand selectors (enhanced for marketplaces)
       if (!detectedBrand) {
-          const selectors = [
+          let selectors = [
               '[itemprop="brand"]',
               '[data-brand]',
               '.brand-name',
               '.product-brand',
               '.designer-name',
-              '.vendor',
-              '.manufacturer',
-              'h1 .brand',
-              '.product-info .brand',
-              '[class*="product-brand"]',
-              '[class*="brand-title"]'
           ];
+          
+          // Add marketplace-specific selectors for better brand detection
+          if (isMarketplace) {
+              selectors = [
+                  // High priority: Look for brand name that appears before item name
+                  'h1:first-of-type', // Primary h1 often contains brand
+                  'h2:first-of-type', // Sometimes brand is in h2
+                  '[class*="product"] h1', // Product section h1
+                  '[class*="product"] h2', // Product section h2
+                  '.product-brand', // Specific brand class
+                  '.brand-name', // Direct brand name class
+                  '[data-testid*="brand"]',
+                  '[class*="brand"]',
+                  '[class*="designer"]',
+                  '[data-brand-name]',
+                  'h1 a', // Brand links in product titles
+                  '.breadcrumb a:nth-child(2)', // Second breadcrumb is often brand
+                  '.breadcrumb a[href*="designers"]', // Designer/brand links in breadcrumbs
+                  '.breadcrumb a[href*="brand"]', // Brand links in breadcrumbs
+                  // Standard selectors as fallback
+                  ...selectors
+              ];
+              console.log('[PointFour] Using enhanced marketplace brand selectors for:', hostname);
+          } else {
+              // Add standard selectors for non-marketplace sites
+              selectors = [
+                  ...selectors,
+                  '.vendor',
+                  '.manufacturer',
+                  'h1 .brand',
+                  '.product-info .brand',
+                  '[class*="product-brand"]',
+                  '[class*="brand-title"]'
+              ];
+          }
           
           for (const selector of selectors) {
               const element = document.querySelector(selector);
               if (element) {
-                  const text = element.textContent?.trim();
-                  if (text && text.length > 1 && text.length < 50) {
-                      detectedBrand = text;
-                      console.log(`[PointFour] Brand from selector ${selector}:`, detectedBrand);
-                      break;
+                  let text = element.textContent?.trim();
+                  if (text && text.length > 1 && text.length < 100) {
+                      // For marketplace sites, try to extract brand from longer text
+                      if (isMarketplace && (selector === 'h1' || selector === 'h1:first-of-type' || selector.includes('h1') || selector === 'h2:first-of-type')) {
+                          console.log(`[PointFour] Processing marketplace text from ${selector}:`, text);
+                          
+                          // Method 1: Look for all-caps words or phrases that could be brand names
+                          const words = text.split(/\s+/);
+                          
+                          // First try to find multi-word all-caps brands like "GOLDEN GOOSE"
+                          for (let i = 0; i < words.length - 1; i++) {
+                              const word1 = words[i].replace(/[^A-Za-z]/g, '');
+                              const word2 = words[i + 1].replace(/[^A-Za-z]/g, '');
+                              
+                              if (word1.length >= 2 && word2.length >= 2 && 
+                                  word1 === word1.toUpperCase() && word1 !== word1.toLowerCase() &&
+                                  word2 === word2.toUpperCase() && word2 !== word2.toLowerCase()) {
+                                  text = word1 + ' ' + word2;
+                                  console.log(`[PointFour] Found multi-word all-caps brand:`, text);
+                                  break;
+                              }
+                          }
+                          
+                          // If no multi-word brand found, look for single words
+                          if (text === words.join(' ')) { // No multi-word brand found
+                              for (const word of words) {
+                                  const cleanWord = word.replace(/[^A-Za-z]/g, ''); // Remove punctuation
+                                  if (cleanWord.length >= 2 && cleanWord.length <= 20) {
+                                      // Check if word is all caps (likely brand name)
+                                      if (cleanWord === cleanWord.toUpperCase() && cleanWord !== cleanWord.toLowerCase()) {
+                                          text = cleanWord;
+                                          console.log(`[PointFour] Found single all-caps brand name:`, text);
+                                          break;
+                                      }
+                                      // Check if word is title case and looks like a brand
+                                      if (cleanWord[0] === cleanWord[0].toUpperCase() && cleanWord.length >= 3) {
+                                          // Additional validation for title case brands
+                                          const lowerWord = cleanWord.toLowerCase();
+                                          if (!['the', 'and', 'for', 'with', 'from', 'une', 'des', 'les', 'ballerines', 'chaussures', 'sac', 'bag'].includes(lowerWord)) {
+                                              text = cleanWord;
+                                              console.log(`[PointFour] Found title-case brand name:`, text);
+                                              break;
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          
+                          // Method 2: If text is short and looks like a standalone brand
+                          if (words.length === 1 && text.length >= 2 && text.length <= 20) {
+                              console.log(`[PointFour] Found standalone brand:`, text);
+                              // Keep the text as is
+                          }
+                      }
+                      
+                      // Filter out obviously non-brand text
+                      const nonBrandPatterns = [
+                          /^(home|shop|cart|checkout|account|login|register|search|menu|nav)/i,
+                          /^(new|sale|outlet|clearance|trending|popular|best)/i,
+                          /^(size|color|fit|material|price|add|buy|wishlist)/i,
+                          /^(femme|homme|woman|man|women|men|kids|enfant|child)/i, // Gender/category terms
+                          /^(clothing|apparel|fashion|style|collection|category)/i, // Generic fashion terms
+                          /^(accessories|shoes|bags|jewelry|watches)/i // Category terms
+                      ];
+                      
+                      const isValidBrand = !nonBrandPatterns.some(pattern => pattern.test(text)) && 
+                                          text.length >= 2 && text.length <= 50;
+                      
+                      if (isValidBrand) {
+                          detectedBrand = text;
+                          console.log(`[PointFour] Brand from selector ${selector}:`, detectedBrand);
+                          break;
+                      }
                   }
               }
           }
@@ -1620,8 +2131,24 @@ let dataUpdateCount = 0; // Count how many times we've received data
     });
     
     if (itemName && brandName) {
+        // Apply category filtering first if available
+        const pageData = window.pointFourPageData;
+        let productCategory = pageData?.productCategory;
+        
+        // Fallback: if no category is available, try to detect from item name
+        if (!productCategory || productCategory.category === 'unknown') {
+            productCategory = detectCategoryFromItemName(itemName);
+            console.log('[PointFour] Using fallback category detection:', productCategory);
+        }
+        
+        let categoryFilteredReviews = reviews;
+        if (productCategory && productCategory.category !== 'unknown') {
+            categoryFilteredReviews = filterReviewsByCategory(reviews, productCategory, itemName);
+            console.log('[PointFour] Applied category filtering:', productCategory.category);
+        }
+        
         // Separate item-specific from general brand reviews
-        const itemSpecificReviews = reviews.filter(r => 
+        const itemSpecificReviews = categoryFilteredReviews.filter(r => 
             r.tags.some(tag => 
                 tag.toLowerCase().includes('fit') || 
                 tag.toLowerCase().includes('size') ||
@@ -1632,7 +2159,7 @@ let dataUpdateCount = 0; // Count how many times we've received data
             !r.brandLevel
         );
         
-        const generalBrandReviews = reviews.filter(r => 
+        const generalBrandReviews = categoryFilteredReviews.filter(r => 
             r.brandLevel || !r.tags.some(tag => 
                 tag.toLowerCase().includes('fit') || 
                 tag.toLowerCase().includes('size') ||
@@ -2108,7 +2635,7 @@ let dataUpdateCount = 0; // Count how many times we've received data
         // We want to show progressive loading until we have comprehensive data
         const hasReviews = data.externalSearchResults?.reviews && data.externalSearchResults.reviews.length > 0;
         const hasStructuredAnalysis = data.externalSearchResults?.brandFitSummary?.sections && 
-                                    Object.keys(data.externalSearchResults.brandFitSummary.sections).length > 0;
+                                    Object.keys(data.externalSearchResults?.brandFitSummary?.sections).length > 0;
         const hasRecommendation = data.recommendation && 
                                  data.recommendation !== 'Analyzing fit information...' &&
                                  data.recommendation.length > 50;
@@ -2119,8 +2646,18 @@ let dataUpdateCount = 0; // Count how many times we've received data
         if (hasStructuredAnalysis) dataQuality += 40;
         if (hasRecommendation) dataQuality += 30;
         
+        // Check if this is a final/definitive response (even if negative)
+        const isFinalResponse = data.recommendation && (
+            data.recommendation.includes('marketplace brand') ||
+            data.recommendation.includes('not applicable') ||
+            data.recommendation.includes('not available') ||
+            data.recommendation.includes('no data') ||
+            data.recommendation.includes('unable to analyze')
+        );
+        
         // Data is complete if we have reviews AND either structured analysis OR a good recommendation
-        const isCompleteData = hasReviews && (hasStructuredAnalysis || hasRecommendation);
+        // OR if we got a definitive final response (even negative ones)
+        const isCompleteData = (hasReviews && (hasStructuredAnalysis || hasRecommendation)) || isFinalResponse;
         
         // Track data quality progression
         dataUpdateCount++;
@@ -2138,7 +2675,7 @@ let dataUpdateCount = 0; // Count how many times we've received data
             elapsed: Date.now() - loadingStartTime,
             currentPhase: currentLoadingPhase,
             reviewsCount: data.externalSearchResults?.reviews?.length || 0,
-            sectionsCount: data.externalSearchResults.brandFitSummary?.sections ? Object.keys(data.externalSearchResults.brandFitSummary.sections).length : 0,
+            sectionsCount: data.externalSearchResults?.brandFitSummary?.sections ? Object.keys(data.externalSearchResults.brandFitSummary.sections).length : 0,
             recommendationLength: data.recommendation?.length || 0
         });
         
@@ -2204,8 +2741,8 @@ let dataUpdateCount = 0; // Count how many times we've received data
                         </div>
                     `;
                 }
-            } else {
-                // Over 30 seconds: Final processing
+            } else if (elapsed < 45000) {
+                // 30-45 seconds: Final processing
                 if (currentLoadingPhase !== 'finalizing') {
                     currentLoadingPhase = 'finalizing';
                     contentDiv.innerHTML = `
@@ -2220,8 +2757,12 @@ let dataUpdateCount = 0; // Count how many times we've received data
                         </div>
                     `;
                 }
+                return;
+            } else {
+                // Over 45 seconds: Force show available data or timeout message
+                console.log('🕐 [PointFour] Hard timeout reached (45s), showing available data');
+                // Don't return - let it fall through to show whatever data we have
             }
-            return;
         }
         
         // Smart summary detection - check multiple locations
@@ -2648,10 +3189,29 @@ let dataUpdateCount = 0; // Count how many times we've received data
         const urlExtraction = window.pointFourURLExtraction;
         const itemName = urlExtraction?.itemName;
         
-        // Extract item-specific reviews
+        // Extract item-specific reviews with category filtering
         let itemSpecificFitReviews = [];
+        
+        // Get category data at broader scope
+        const pageData = window.pointFourPageData;
+        let productCategory = pageData?.productCategory;
+        
         if (data.externalSearchResults?.reviews && itemName) {
-            itemSpecificFitReviews = data.externalSearchResults.reviews.filter(r => {
+            // Apply category filtering first
+            
+            // Fallback: if no category is available, try to detect from item name
+            if (!productCategory || productCategory.category === 'unknown') {
+                productCategory = detectCategoryFromItemName(itemName);
+                console.log('[PointFour] Using fallback category detection for item-specific reviews:', productCategory);
+            }
+            
+            let reviewsToFilter = data.externalSearchResults.reviews;
+            if (productCategory && productCategory.category !== 'unknown') {
+                reviewsToFilter = filterReviewsByCategory(reviewsToFilter, productCategory, itemName);
+                console.log('[PointFour] Applied category filtering for item-specific reviews:', productCategory.category);
+            }
+            
+            itemSpecificFitReviews = reviewsToFilter.filter(r => {
                 const reviewText = (r.title + ' ' + r.snippet + ' ' + (r.fullContent || '')).toLowerCase();
                 const itemWords = itemName.toLowerCase().split(' ').filter(word => word.length > 2);
                 const mentionsItem = itemWords.some(word => reviewText.includes(word));
@@ -2662,12 +3222,19 @@ let dataUpdateCount = 0; // Count how many times we've received data
             });
         }
         
+        // Also apply fallback category detection for logging consistency
+        if ((!productCategory || productCategory.category === 'unknown') && itemName) {
+            productCategory = detectCategoryFromItemName(itemName);
+        }
+        
         console.log('🔍 [PointFour] Review analysis:', {
             itemName,
             totalReviews: data.externalSearchResults?.reviews?.length || 0,
             itemSpecificCount: itemSpecificFitReviews.length,
             hasStructuredData: !!structuredData?.fit,
-            hasRecommendation: !!recommendation
+            hasRecommendation: !!recommendation,
+            productCategory: productCategory?.category || 'unknown',
+            categoryConfidence: productCategory?.confidence || 'unknown'
         });
         
         // Debug: Check first few reviews for item mention detection
@@ -2895,18 +3462,33 @@ let dataUpdateCount = 0; // Count how many times we've received data
         
         // REMOVED: Redundant MATERIALS SECTION since we already have QUALITY & MATERIALS combined section above
         
-        // Add confidence indicator for overall analysis
+        // Add confidence indicator for overall analysis with category information
+        // Note: pageData and productCategory already declared above
+        
+        // Fallback: if no category is available, try to detect from item name
+        // Note: urlExtraction and itemName already declared above
+        if ((!productCategory || productCategory.category === 'unknown') && itemName) {
+            productCategory = detectCategoryFromItemName(itemName);
+            console.log('[PointFour] Using fallback category detection for widget display:', productCategory);
+        }
+        
         if (structuredData?.confidence && totalReviews > 0) {
+            const categoryInfo = productCategory && productCategory.category !== 'unknown' 
+                ? ` • ${productCategory.category} reviews` 
+                : '';
             content += `
                 <div class="pointfour-confidence">
-                    <small>Based on ${totalReviews} review${totalReviews === 1 ? '' : 's'}${structuredData.confidence === 'low' ? ` • ${structuredData.confidence.toUpperCase()} confidence` : ''}</small>
+                    <small>Based on ${totalReviews} review${totalReviews === 1 ? '' : 's'}${structuredData.confidence === 'low' ? ` • ${structuredData.confidence.toUpperCase()} confidence` : ''}${categoryInfo}</small>
                 </div>
             `;
         } else if (totalReviews > 0) {
             // Show basic confidence info when we have reviews but no structured confidence
+            const categoryInfo = productCategory && productCategory.category !== 'unknown' 
+                ? ` • ${productCategory.category} specific` 
+                : '';
             content += `
                 <div class="pointfour-confidence">
-                    <small>Based on ${totalReviews} review${totalReviews === 1 ? '' : 's'}</small>
+                    <small>Based on ${totalReviews} review${totalReviews === 1 ? '' : 's'}${categoryInfo}</small>
                 </div>
             `;
         }
@@ -2934,7 +3516,7 @@ let dataUpdateCount = 0; // Count how many times we've received data
             
             // Fallback: extract from brandFitSummary summary text if no structured materials
             if (!materials && data.externalSearchResults?.brandFitSummary?.summary) {
-                const summary = data.externalSearchResults.brandFitSummary.summary;
+                const summary = data.externalSearchResults?.brandFitSummary?.summary;
                 const materialMatches = summary.match(/(\d+%\s+\w+)/g);
                 if (materialMatches) {
                     materials = {
@@ -2945,12 +3527,28 @@ let dataUpdateCount = 0; // Count how many times we've received data
                 }
             }
             
-            // Additional fallback: look for materials in the review snippets, but only for specific item
+            // Additional fallback: look for materials in the review snippets, but only for specific item with category filtering
             if (!materials && data.externalSearchResults?.reviews && urlExtraction?.itemName) {
                 const itemName = urlExtraction.itemName.toLowerCase();
                 
+                // Apply category filtering first
+                const pageData = window.pointFourPageData;
+                let productCategory = pageData?.productCategory;
+                
+                // Fallback: if no category is available, try to detect from item name
+                if (!productCategory || productCategory.category === 'unknown') {
+                    productCategory = detectCategoryFromItemName(itemName);
+                    console.log('[PointFour] Using fallback category detection for materials extraction:', productCategory);
+                }
+                
+                let reviewsToFilter = data.externalSearchResults.reviews;
+                if (productCategory && productCategory.category !== 'unknown') {
+                    reviewsToFilter = filterReviewsByCategory(reviewsToFilter, productCategory, itemName);
+                    console.log('[PointFour] Applied category filtering for materials extraction:', productCategory.category);
+                }
+                
                 // Filter reviews that mention this specific item
-                const itemSpecificReviews = data.externalSearchResults.reviews.filter(review => {
+                const itemSpecificReviews = reviewsToFilter.filter(review => {
                     const reviewText = (review.snippet + ' ' + review.fullContent + ' ' + review.title).toLowerCase();
                     return reviewText.includes(itemName) || 
                            itemName.split(' ').some(word => word.length > 3 && reviewText.includes(word));
@@ -2997,12 +3595,12 @@ let dataUpdateCount = 0; // Count how many times we've received data
                 altSections: data.externalSearchResults?.sections?.materials,
                 finalMaterials: materials,
                 fullAPIResponse: data.externalSearchResults ? {
-                    hasBrandFitSummary: !!data.externalSearchResults.brandFitSummary,
-                    hasSections: !!data.externalSearchResults.brandFitSummary?.sections,
-                    sectionKeys: data.externalSearchResults.brandFitSummary?.sections ? Object.keys(data.externalSearchResults.brandFitSummary.sections) : [],
-                    hasReviews: !!data.externalSearchResults.reviews,
-                    reviewCount: data.externalSearchResults.reviews?.length || 0,
-                    summaryPreview: data.externalSearchResults.brandFitSummary?.summary?.substring(0, 100) + '...'
+                    hasBrandFitSummary: !!data.externalSearchResults?.brandFitSummary,
+                    hasSections: !!data.externalSearchResults?.brandFitSummary?.sections,
+                    sectionKeys: data.externalSearchResults?.brandFitSummary?.sections ? Object.keys(data.externalSearchResults.brandFitSummary.sections) : [],
+                    hasReviews: !!data.externalSearchResults?.reviews,
+                    reviewCount: data.externalSearchResults?.reviews?.length || 0,
+                    summaryPreview: data.externalSearchResults?.brandFitSummary?.summary?.substring(0, 100) + '...'
                 } : null
             });
             
@@ -3016,8 +3614,8 @@ let dataUpdateCount = 0; // Count how many times we've received data
             if (data && data.externalSearchResults) {
                 // Create optimized widget data to avoid URL length issues
                 const widgetData = {
-                    brandFitSummary: data.externalSearchResults.brandFitSummary,
-                    reviews: (data.externalSearchResults.reviews || []).map(review => ({
+                    brandFitSummary: data.externalSearchResults?.brandFitSummary,
+                    reviews: (data.externalSearchResults?.reviews || []).map(review => ({
                         // Only send essential fields to reduce URL size
                         title: review.title?.substring(0, 100) || '',
                         snippet: review.snippet?.substring(0, 150) || '', // Truncate snippet
@@ -3522,7 +4120,7 @@ function extractProductImageFromPage() {
             });
             isProcessing = false;
         }
-    }, 30000); // 30 second timeout
+    }, 15000); // 15 second timeout
     
     try {
         // Get URL extraction data if available
@@ -3538,7 +4136,9 @@ function extractProductImageFromPage() {
             title: document.title,
             urlExtraction: urlExtraction,
             extractedData: extractedData,
-            pageData: pageData
+            pageData: pageData,
+            productCategory: pageData?.productCategory || null,
+            itemName: pageData?.itemName || null
         };
         
         console.log('[PointFour] Sending message to background script:', messageData);
@@ -3583,6 +4183,72 @@ function extractProductImageFromPage() {
         }, 5000); // Give it 5 seconds to receive data
     }
 }
+
+  // ========================================
+  // TESTING & DEBUG FUNCTIONS
+  // ========================================
+  
+  // Debug function for testing category detection - accessible from console
+  window.pointFourTestCategory = function(testItemName = null, testUrl = null) {
+      const itemName = testItemName || extractItemNameFromPage();
+      const pageContent = document.body.textContent || '';
+      const url = testUrl || window.location.href;
+      
+      console.log('🧪 [PointFour] Testing category detection:');
+      console.log('📦 Item name:', itemName);
+      console.log('🔗 URL:', url);
+      
+      const detectedCategory = detectProductCategory(itemName, pageContent, url);
+      
+      console.log('✅ [PointFour] Category detection result:', {
+          category: detectedCategory.category,
+          confidence: detectedCategory.confidence,
+          score: detectedCategory.score,
+          reasoning: detectedCategory.reasoning
+      });
+      
+      // Test filtering with sample reviews if available
+      const pageData = window.pointFourPageData;
+      if (pageData && pageData.extractedData) {
+          console.log('💾 [PointFour] Page data available:', {
+              brand: pageData.brand,
+              pageType: pageData.pageType.isProductPage ? 'product' : 'listing',
+              hasCategory: !!pageData.productCategory
+          });
+      }
+      
+      return detectedCategory;
+  };
+  
+  // Debug function for testing review filtering
+  window.pointFourTestReviewFiltering = function(sampleReviews = null) {
+      const pageData = window.pointFourPageData;
+      if (!pageData || !pageData.productCategory) {
+          console.log('❌ [PointFour] No category data available for testing');
+          return;
+      }
+      
+      const testReviews = sampleReviews || [
+          { title: 'Great sneakers', snippet: 'These shoes are comfortable and stylish', fullContent: 'The athletic shoes fit perfectly' },
+          { title: 'Perfect dress', snippet: 'This dress is beautiful and fits well', fullContent: 'The fabric is soft and the length is perfect' },
+          { title: 'Love this bag', snippet: 'Great handbag with lots of space', fullContent: 'The leather quality is amazing and it holds everything' },
+          { title: 'Nice shirt', snippet: 'This top is comfortable and flattering', fullContent: 'The sleeves are the right length and the fit is great' }
+      ];
+      
+      console.log('🧪 [PointFour] Testing review filtering:');
+      console.log('📊 Category:', pageData.productCategory.category);
+      console.log('📝 Sample reviews:', testReviews.length);
+      
+      const filteredReviews = filterReviewsByCategory(testReviews, pageData.productCategory, pageData.itemName);
+      
+      console.log('✅ [PointFour] Filtering results:', {
+          originalCount: testReviews.length,
+          filteredCount: filteredReviews.length,
+          filteredReviews: filteredReviews.map(r => r.title)
+      });
+      
+      return filteredReviews;
+  };
 
   // ========================================
   // MAIN INITIALIZATION
@@ -3650,12 +4316,22 @@ function extractProductImageFromPage() {
                   };
               }
               
+              // Extract product name for category detection
+              const itemName = extractItemNameFromPage();
+              const pageContent = document.body.textContent || '';
+              
+              // Detect product category
+              const productCategory = detectProductCategory(itemName, pageContent, window.location.href);
+              console.log('[PointFour] Detected product category:', productCategory);
+              
               // Store extracted data globally for API calls
               window.pointFourPageData = {
                   brand: currentBrand,
                   pageType: pageType,
                   extractedData: extractedData,
-                  url: window.location.href
+                  url: window.location.href,
+                  itemName: itemName,
+                  productCategory: productCategory
               };
               
               createWidget();
