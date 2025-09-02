@@ -4,7 +4,7 @@
 console.log('🚀 BACKGROUND SCRIPT STARTING...');
 
 // Use localhost for development, production URL for deployed extension
-const API_BASE_URL = 'https://www.pointfour.in';
+const API_BASE_URL = 'http://localhost:3000';
 console.log('🔧 BACKGROUND SCRIPT LOADED AT:', new Date().toISOString(), 'API_BASE_URL:', API_BASE_URL);
 
 // Test API connection immediately
@@ -482,14 +482,21 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
       };
     }
     
-    // Prepare API request data
+    // Prepare API request data - BRAND-FIRST approach
     const apiRequestData = {
       brand: brandName,
-      itemName: urlExtraction?.itemName || '',
+      // REMOVED: itemName - this changes search behavior, we want brand reviews first
       category,
       enhancedAnalysis: true,
       enableExternalSearch: true
     };
+    
+    // Store item name separately for frontend enhancement
+    const itemEnhancementData = urlExtraction?.itemName ? {
+      itemName: urlExtraction.itemName,
+      confidence: urlExtraction.confidence,
+      source: urlExtraction.source
+    } : null;
     
     // Add URL extraction data if available
     if (urlExtraction) {
@@ -517,15 +524,20 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
     // Use the working search-reviews endpoint for brands that should show fit advice
     console.log('🔍 Making API call to search-reviews endpoint for brand:', brandName, 'category:', category);
     
-    // Build query parameters for GET request
+    // Build query parameters for GET request - BRAND FIRST APPROACH
     const params = new URLSearchParams({
       brand: brandName,
       searchType: 'all',
       enableExternalSearch: 'true'
     });
     
-    if (apiRequestData.itemName) {
-      params.append('itemName', apiRequestData.itemName);
+    // IMPORTANT: Don't add itemName to main search - this changes search behavior  
+    // We want brand reviews first, item data is for frontend enhancement only
+    if (itemEnhancementData) {
+      console.log('🎯 [PointFour] Item name available but NOT adding to API search:', itemEnhancementData.itemName);
+      console.log('🎯 [PointFour] Using brand-first search approach - item data for enhancement only');
+    } else {
+      console.log('🎯 [PointFour] No item name found - pure brand search');
     }
     
     if (apiRequestData.category) {
@@ -534,6 +546,14 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
     
     const apiUrl = `${API_BASE_URL}/api/extension/search-reviews?${params.toString()}`;
     console.log('🔍 API URL:', apiUrl);
+    console.log('🎯 [PointFour] Full API request details (brand-first approach):', {
+      brand: brandName,
+      itemNameForEnhancement: itemEnhancementData?.itemName || 'none',
+      category: apiRequestData.category,
+      hasUrlExtraction: !!urlExtraction,
+      searchApproach: 'brand-first'
+    });
+    console.log('🎯 [PointFour] API Query Parameters:', params.toString());
     
     // Add timeout to prevent hanging - increased to allow for comprehensive search
     const controller = new AbortController();
@@ -563,8 +583,27 @@ async function fetchBrandData(brandName, category = 'general', urlExtraction = n
       totalResults: data.totalResults || 0,
       hasBrandFitSummary: !!data.brandFitSummary,
       summaryPreview: data.brandFitSummary?.summary?.substring(0, 100) + '...' || 'N/A',
-      sectionsCount: data.brandFitSummary?.sections ? Object.keys(data.brandFitSummary.sections).length : 0
+      sectionsCount: data.brandFitSummary?.sections ? Object.keys(data.brandFitSummary.sections).length : 0,
+      hasItemSpecificData: !!(data.itemFitSummary || data.productAnalysis || data.itemAnalysis),
+      reviewsCount: data.reviews?.length || 0
     });
+    
+    // Enhanced logging for brand-first approach
+    if (itemEnhancementData) {
+      console.log('🎯 [PointFour] Brand-first API call results:', {
+        enhancementItem: itemEnhancementData.itemName,
+        foundBrandData: !!data.brandFitSummary,
+        totalBrandReviews: data.reviews?.length || 0,
+        canEnhanceWithItem: !!(data.brandFitSummary && itemEnhancementData),
+        searchApproach: 'brand-first-with-item-enhancement'
+      });
+    } else {
+      console.log('🎯 [PointFour] Pure brand API call results:', {
+        foundBrandData: !!data.brandFitSummary,
+        totalBrandReviews: data.reviews?.length || 0,
+        searchApproach: 'pure-brand'
+      });
+    }
     
     // Don't generate old-style summary - let popup handle rich summaries
     // Enhanced analysis of the response

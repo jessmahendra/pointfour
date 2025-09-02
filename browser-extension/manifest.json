@@ -30,7 +30,7 @@
   "options_page": "settings.html",
   "web_accessible_resources": [
     {
-      "resources": ["widget.html", "widget.js", "widget-styles.css"],
+      "resources": ["popup.html"],
       "matches": ["<all_urls>"]
     }
   ]
