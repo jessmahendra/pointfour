@@ -189,12 +189,13 @@ function renderMainContent(data, contentDiv) {
                         0;
     
     // Check if this is complete data that should be shown
-    const hasReviews = data.externalSearchResults?.reviews && data.externalSearchResults.reviews.length > 0;
+    const hasReviews = (data.externalSearchResults?.reviews && data.externalSearchResults.reviews.length > 0) ||
+                       (data.reviews && data.reviews.length > 0);
     const hasStructuredAnalysis = data.externalSearchResults?.brandFitSummary?.sections && 
                                 Object.keys(data.externalSearchResults?.brandFitSummary?.sections).length > 0;
     const hasRecommendation = data.recommendation && 
                              data.recommendation !== 'Analyzing fit information...' &&
-                             data.recommendation.length > 50;
+                             data.recommendation.length > 20; // Reduced from 50 to 20
     
     // Calculate data quality score (0-100)
     let dataQuality = 0;

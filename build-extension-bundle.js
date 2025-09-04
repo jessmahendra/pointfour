@@ -1,52 +1,79 @@
-// ========================================
-// POINTFOUR BROWSER EXTENSION - MODULAR CONTENT SCRIPT
-// Version: 4.0 (Refactored Modular Architecture)
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+console.log('🔨 Building bundled extension without ES6 modules...');
+
+// Read all module files
+const modulesDir = path.join(__dirname, 'browser-extension', 'modules');
+const modules = [
+    'config.js',
+    'api-security.js', 
+    'state.js',
+    'site-detection.js',
+    'brand-detection.js',
+    'product-extraction.js',
+    'review-analysis.js',
+    'widget-management.js'
+];
+
+let bundledContent = `// ========================================
+// POINTFOUR BROWSER EXTENSION - BUNDLED VERSION
+// Version: 4.0 (Modular Architecture - Bundled for Browser Compatibility)
 // ========================================
 
-import { initializeAPISecurity } from './modules/api-security.js';
-import { CONFIG } from './modules/config.js';
-import { getState, setState, updateState } from './modules/state.js';
-import { detectFashionSite, detectPageType, shouldRunOnThisPage } from './modules/site-detection.js';
-import { 
-    extractBrandFromContent, 
-    extractBrandFromDomain, 
-    isMarketplaceSite, 
-    cleanBrandName 
-} from './modules/brand-detection.js';
-import {
-    extractAllProductData,
-    extractProductFromURL,
-    extractProductImageFromPage,
-    extractItemNameFromPage
-} from './modules/product-extraction.js';
-import {
-    extractQualityInsights,
-    classifyReviewRelevance,
-    extractRelevantQuotes
-} from './modules/review-analysis.js';
-import {
-    createWidget,
-    showWidget,
-    hideWidget,
-    updateWidgetContent
-} from './modules/widget-management.js';
+`;
+
+// Process each module file
+for (const moduleFile of modules) {
+    const modulePath = path.join(modulesDir, moduleFile);
+    let moduleContent = fs.readFileSync(modulePath, 'utf8');
+    
+    console.log(`📦 Processing module: ${moduleFile}`);
+    
+    // Remove all import/export statements and convert to IIFE pattern
+    moduleContent = moduleContent
+        // Remove import statements
+        .replace(/import\s+.*?from\s+['"].*?['"];?\s*\n?/g, '')
+        // Remove export statements but keep the declarations
+        .replace(/export\s+/g, '')
+        // Remove export default blocks completely
+        .replace(/export\s+default\s+{[^}]*};\s*$/m, '')
+        // Remove any remaining 'default' statements that got orphaned
+        .replace(/^default\s+{[^}]*};\s*$/gm, '')
+        // Remove standalone 'default' statements
+        .replace(/^default\s+[^;{]*;\s*$/gm, '')
+        // Clean up multiple empty lines
+        .replace(/\n\s*\n\s*\n/g, '\n\n');
+    
+    // Add module content with header
+    bundledContent += `
+// ========================================
+// MODULE: ${moduleFile.toUpperCase().replace('.JS', '')}
+// ========================================
+
+${moduleContent}
+
+`;
+}
+
+// Add the main execution logic
+bundledContent += `
+// ========================================
+// MAIN EXECUTION FLOW
+// ========================================
 
 (function() {
     'use strict';
 
-    // ========================================
-    // INITIALIZATION
-    // ========================================
-    
     // Initialize API security measures
     initializeAPISecurity();
 
-    // ========================================
-    // MAIN EXECUTION FLOW
-    // ========================================
-
     async function initialize() {
-        console.log('[PointFour] Modular content script initializing...');
+        console.log('[PointFour] Bundled content script initializing...');
         
         // Check if we should run on this page
         if (!shouldRunOnThisPage()) {
@@ -161,12 +188,12 @@ import {
             widgetContainer.classList.add('pointfour-loading');
             const contentDiv = widgetContainer.querySelector('.pointfour-content');
             if (contentDiv) {
-                contentDiv.innerHTML = `
+                contentDiv.innerHTML = \`
                     <div class="pointfour-loading-spinner">
                         <div class="pointfour-spinner"></div>
-                        <p>Searching for ${brand} reviews...</p>
+                        <p>Searching for \${brand} reviews...</p>
                     </div>
-                `;
+                \`;
             }
         }
 
@@ -196,7 +223,7 @@ import {
             params.set('pageTitle', document.title);
 
             // Make API call
-            const apiUrl = `https://pointfour.in/api/extension/search-reviews?${params.toString()}`;
+            const apiUrl = \`http://localhost:3000/api/extension/search-reviews?\${params.toString()}\`;
             console.log('[PointFour] API Request:', apiUrl);
 
             const response = await fetch(apiUrl, {
@@ -207,7 +234,7 @@ import {
             });
 
             if (!response.ok) {
-                throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                throw new Error(\`API request failed: \${response.status} \${response.statusText}\`);
             }
 
             const data = await response.json();
@@ -310,6 +337,14 @@ import {
         }
     });
 
-    console.log('[PointFour] Modular content script loaded successfully');
+    console.log('[PointFour] Bundled content script loaded successfully');
 
 })();
+`;
+
+// Write the bundled content script
+const outputPath = path.join(__dirname, 'browser-extension', 'content-script-bundled.js');
+fs.writeFileSync(outputPath, bundledContent, 'utf8');
+
+console.log('✅ Bundled content script created at:', outputPath);
+console.log('📊 Bundle size:', Math.round(bundledContent.length / 1024), 'KB');

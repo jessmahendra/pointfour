@@ -1278,7 +1278,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
     
     // Add CORS headers for browser extension
     response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
     
     return response;
@@ -1309,7 +1309,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
     
     // Add CORS headers for browser extension
     errorResponse.headers.set('Access-Control-Allow-Origin', '*');
-    errorResponse.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    errorResponse.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     errorResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type');
     
     return errorResponse;

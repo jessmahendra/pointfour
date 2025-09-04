@@ -15,7 +15,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content-script.js"],
+      "js": ["content-script-bundled.js"],
       "css": ["content-styles.css"],
       "run_at": "document_idle"
     }

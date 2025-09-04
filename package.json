@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "build:extension": "node build-extension.js",
+    "build:bundle": "node build-extension-bundle.js",
     "friend": "node build-extension.js"
   },
   "dependencies": {
