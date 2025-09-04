@@ -2693,10 +2693,11 @@ function updateWidgetContent(data) {
         hasData: !!data,
         error: data?.error,
         brandName: data?.brandName,
-        hasReviews: !!data?.externalSearchResults?.reviews,
-        reviewsCount: data?.externalSearchResults?.reviews?.length || 0,
-        hasStructuredData: !!data?.externalSearchResults?.brandFitSummary?.sections,
-        sectionsCount: data?.externalSearchResults?.brandFitSummary?.sections ? Object.keys(data.externalSearchResults.brandFitSummary.sections).length : 0,
+        hasReviews: !!(data?.reviews || data?.externalSearchResults?.reviews),
+        reviewsCount: (data?.reviews?.length || data?.externalSearchResults?.reviews?.length || 0),
+        hasStructuredData: !!(data?.brandFitSummary?.sections || data?.externalSearchResults?.brandFitSummary?.sections),
+        sectionsCount: (data?.brandFitSummary?.sections ? Object.keys(data.brandFitSummary.sections).length : 
+                       (data?.externalSearchResults?.brandFitSummary?.sections ? Object.keys(data.externalSearchResults.brandFitSummary.sections).length : 0)),
         recommendation: data?.recommendation?.substring(0, 100) + '...' || 'N/A',
         currentLoadingPhase: getState('currentLoadingPhase'),
         hasShownFinalData: getState('hasShownFinalData'),
@@ -2752,13 +2753,13 @@ function renderMainContent(data, contentDiv) {
                         0;
     
     // Check if this is complete data that should be shown
-    const hasReviews = (data.externalSearchResults?.reviews && data.externalSearchResults.reviews.length > 0) ||
-                       (data.reviews && data.reviews.length > 0);
-    const hasStructuredAnalysis = data.externalSearchResults?.brandFitSummary?.sections && 
-                                Object.keys(data.externalSearchResults?.brandFitSummary?.sections).length > 0;
+    const hasReviews = (data.reviews && data.reviews.length > 0) ||
+                       (data.externalSearchResults?.reviews && data.externalSearchResults.reviews.length > 0);
+    const hasStructuredAnalysis = (data.brandFitSummary?.sections && Object.keys(data.brandFitSummary.sections).length > 0) ||
+                                (data.externalSearchResults?.brandFitSummary?.sections && Object.keys(data.externalSearchResults.brandFitSummary.sections).length > 0);
     const hasRecommendation = data.recommendation && 
                              data.recommendation !== 'Analyzing fit information...' &&
-                             data.recommendation.length > 20; // Reduced from 50 to 20
+                             data.recommendation.length > 20;
     
     // Calculate data quality score (0-100)
     let dataQuality = 0;
@@ -2853,7 +2854,7 @@ function renderProgressiveLoading(brandName, contentDiv) {
 
 function renderFinalContent(data, brandName, totalReviews, contentDiv) {
     const isMarketplace = data.isMarketplace || false;
-    const sections = data.externalSearchResults?.brandFitSummary?.sections || {};
+    const sections = data.brandFitSummary?.sections || data.externalSearchResults?.brandFitSummary?.sections || {};
     const qualityInsight = extractQualityInsights(data);
     
     let contentHTML = `
