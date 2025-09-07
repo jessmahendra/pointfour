@@ -705,7 +705,7 @@ export async function POST(request: NextRequest) {
     let modelUsed = '';
     let isGPT5Test = false;
     
-    if (ENABLE_GPT5_TESTING && Math.random() * 100 < GPT5_TEST_PERCENTAGE) {
+    if (false) { // Temporarily disable GPT-5 testing to use regular analysis
       // Use GPT-5 test function for a percentage of requests
       console.log(`🧪 GPT-5 TESTING: Using GPT-5 test function for ${enhancedBrand} (${GPT5_TEST_PERCENTAGE}% chance)`);
       modelUsed = 'gpt-5-mini';
@@ -798,7 +798,7 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      sections.qualityMaterials = {
+      sections.quality = {
         title: 'Quality & Materials',
         recommendation: qualityMaterialsRecommendation,
         confidence: qualityMaterialsConfidence,
@@ -1263,15 +1263,18 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
 
     const response = NextResponse.json({
       brandName: brand, // Include the brand name in the response
-      brandFitSummary: {
-        summary,
-        confidence: analysis.overallConfidence || 'low',
-        sections,
-        hasData: Object.keys(sections).length > 0,
-        totalResults: prioritizedReviews.length,
-        sources: []
+      externalSearchResults: {
+        brandFitSummary: {
+          summary,
+          confidence: analysis.overallConfidence || 'low',
+          sections,
+          hasData: Object.keys(sections).length > 0,
+          totalResults: prioritizedReviews.length,
+          sources: []
+        },
+        reviews: prioritizedReviews.slice(0, 20),
+        totalResults: prioritizedReviews.length
       },
-      reviews: prioritizedReviews.slice(0, 20),
       groupedReviews,
       totalResults: prioritizedReviews.length
     });
@@ -1960,8 +1963,8 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting.`;
           content: prompt
         }
       ],
-      max_completion_tokens: 1500, // Reduced for testing - GPT-5 uses max_completion_tokens
-      temperature: 0.3
+      max_completion_tokens: 1500 // Reduced for testing - GPT-5 uses max_completion_tokens
+      // Note: GPT-5 only supports default temperature (1), no custom temperature
     });
 
     console.log(`🚀 GPT-5: Response received, content length: ${completion.choices?.[0]?.message?.content?.length || 0}`);
