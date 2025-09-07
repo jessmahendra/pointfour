@@ -2753,10 +2753,10 @@ function renderMainContent(data, contentDiv) {
                         0;
     
     // Check if this is complete data that should be shown
-    const hasReviews = (data.reviews && data.reviews.length > 0) ||
-                       (data.externalSearchResults?.reviews && data.externalSearchResults.reviews.length > 0);
-    const hasStructuredAnalysis = (data.brandFitSummary?.sections && Object.keys(data.brandFitSummary.sections).length > 0) ||
-                                (data.externalSearchResults?.brandFitSummary?.sections && Object.keys(data.externalSearchResults.brandFitSummary.sections).length > 0);
+    const hasReviews = (data.externalSearchResults?.reviews && data.externalSearchResults.reviews.length > 0) ||
+                       (data.reviews && data.reviews.length > 0);
+    const hasStructuredAnalysis = (data.externalSearchResults?.brandFitSummary?.sections && Object.keys(data.externalSearchResults.brandFitSummary.sections).length > 0) ||
+                                (data.brandFitSummary?.sections && Object.keys(data.brandFitSummary.sections).length > 0);
     const hasRecommendation = data.recommendation && 
                              data.recommendation !== 'Analyzing fit information...' &&
                              data.recommendation.length > 20;
@@ -2786,13 +2786,18 @@ function renderMainContent(data, contentDiv) {
     const qualityImproved = dataQuality > lastDataQuality;
     setState('lastDataQuality', dataQuality);
     
-    // If this isn't complete data yet, show progressive loading
-    if (!isCompleteData && !data.error) {
+    // Check if we should force completion due to timeout or processing state
+    const elapsed = Date.now() - getState('loadingStartTime');
+    const isProcessing = getState('isProcessing');
+    const forceComplete = elapsed > 20000 || (!isProcessing && elapsed > 5000);
+    
+    // If this isn't complete data yet and we're not forcing completion, show progressive loading
+    if (!isCompleteData && !data.error && !forceComplete) {
         renderProgressiveLoading(brandName, contentDiv);
         return;
     }
     
-    // Mark as complete and render final content
+    // Mark as complete and render final content (even if incomplete)
     setState('hasShownFinalData', true);
     renderFinalContent(data, brandName, totalReviews, contentDiv);
 }
@@ -2854,7 +2859,7 @@ function renderProgressiveLoading(brandName, contentDiv) {
 
 function renderFinalContent(data, brandName, totalReviews, contentDiv) {
     const isMarketplace = data.isMarketplace || false;
-    const sections = data.brandFitSummary?.sections || data.externalSearchResults?.brandFitSummary?.sections || {};
+    const sections = data.externalSearchResults?.brandFitSummary?.sections || data.brandFitSummary?.sections || {};
     const qualityInsight = extractQualityInsights(data);
     
     let contentHTML = `
@@ -2889,13 +2894,13 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
     if (Object.keys(sections).length > 0) {
         contentHTML += '<div class="pointfour-sections">';
         
-        // Prioritize sections: fit > quality > fabric > washCare
-        const sectionPriority = ['fit', 'quality', 'fabric', 'washCare'];
+        // Prioritize sections: fit > quality > washCare (matching original working structure)
+        const sectionPriority = ['fit', 'quality', 'washCare'];
         const sortedSections = sectionPriority.filter(key => sections[key]);
         
         for (const sectionKey of sortedSections.slice(0, 3)) {  // Show max 3 sections
             const section = sections[sectionKey];
-            if (section && section.recommendation) {
+            if (section && section.recommendation && isUsefulRecommendation(section.recommendation)) {
                 const sectionTitle = getSectionTitle(sectionKey);
                 const sectionIcon = getSectionIcon(sectionKey);
                 
@@ -2916,6 +2921,45 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         contentHTML += '</div>';
     }
     
+    // Reviews page button - show if we have reviews OR analysis data
+    if (totalReviews > 0 || sections && Object.keys(sections).length > 0) {
+        const urlExtraction = window.pointFourURLExtraction || null;
+        
+        // Build URL parameters for the full reviews page
+        const params = new URLSearchParams({
+            brand: brandName,
+            from: 'extension'
+        });
+        
+        // Add extracted data if available
+        if (urlExtraction) {
+            if (urlExtraction.itemName) params.set('item', urlExtraction.itemName);
+            if (urlExtraction.category) params.set('category', urlExtraction.category);
+            if (urlExtraction.productImage) params.set('image', urlExtraction.productImage);
+        }
+        
+        // Add page context
+        params.set('url', window.location.href);
+        params.set('pageTitle', document.title);
+        
+        const analyzeUrl = `https://www.pointfour.in/extension-reviews?${params.toString()}`;
+        
+        contentHTML += `
+            <div class="pointfour-search-info">
+                <a href="${analyzeUrl}" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="pointfour-reviews-button">
+                    <span>${totalReviews > 0 ? `Found ${totalReviews} review${totalReviews === 1 ? '' : 's'}` : 'View Full Analysis'}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M7 17L17 7"></path>
+                        <path d="M7 7h10v10"></path>
+                    </svg>
+                </a>
+            </div>
+        `;
+    }
+
     // Style button
     const urlExtraction = window.pointFourURLExtraction;
     if (urlExtraction && urlExtraction.itemName) {
@@ -2950,6 +2994,26 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
 // ========================================
 // HELPER FUNCTIONS
 // ========================================
+
+function isUsefulRecommendation(recommendation) {
+    if (!recommendation || recommendation.length < 15) return false;
+    
+    // Filter out generic/unhelpful responses
+    const genericPhrases = [
+        'no specific washing or care instructions',
+        'not applicable',
+        'not explicitly mentioned',
+        'information is not provided',
+        'information not explicitly mentioned',
+        'no specific advice',
+        'general care should be followed'
+    ];
+    
+    const lowerRec = recommendation.toLowerCase();
+    const isGeneric = genericPhrases.some(phrase => lowerRec.includes(phrase));
+    
+    return !isGeneric;
+}
 
 function cleanRecommendationText(text) {
     // Remove redundant phrases and clean up the recommendation
