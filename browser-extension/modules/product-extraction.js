@@ -351,35 +351,79 @@ export function extractMaterialsFromPage() {
         '[data-tab="details"]',
         '[data-tab="care"]',
         '.accordion-content',
-        '.expandable-content'
+        '.expandable-content',
+        // Reformation specific selectors
+        '.pdp-product-details',
+        '.pdp-details',
+        '.product-details-accordion',
+        '.details-content',
+        '.product-info-details',
+        // Generic details sections
+        '.details',
+        '[class*="detail"]',
+        '[class*="fabric"]',
+        '[class*="material"]',
+        '[class*="composition"]',
+        // List items that might contain details
+        '.product-details ul li',
+        '.product-info ul li',
+        '.details ul li'
     ];
     
     const materialPatterns = [
-        /(\d+%\s+(?:organic\s+)?(?:merino\s+)?wool)/gi,
-        /(\d+%\s+(?:organic\s+)?cotton)/gi, 
-        /(\d+%\s+silk)/gi,
-        /(\d+%\s+linen)/gi,
-        /(\d+%\s+cashmere)/gi,
-        /(\d+%\s+polyester)/gi,
-        /(\d+%\s+viscose)/gi,
-        /(\d+%\s+lyocell)/gi,
-        /(\d+%\s+tencel)/gi,
-        /(\d+%\s+modal)/gi,
-        /(\d+%\s+spandex)/gi,
-        /(\d+%\s+elastane)/gi,
-        /(100%\s+\w+)/gi,
-        /(?:composition|material|fabric):\s*([^\.]+)/gi
+        // Flexible patterns for percentage + material (handles complex names)
+        /(\d+%\s+[^,\.\n]+?(?:cotton|wool|silk|linen|cashmere|polyester|viscose|lyocell|tencel|modal|spandex|elastane|nylon|rayon|bamboo|hemp)(?:[^,\.\n]*?))/gi,
+        
+        // Specific patterns for common materials with modifiers
+        /(\d+%\s+(?:regeneratively\s+grown\s+|organic\s+|recycled\s+|merino\s+|pima\s+)*cotton[^,\.\n]*)/gi,
+        /(\d+%\s+(?:merino\s+|lambswool\s+|virgin\s+)*wool[^,\.\n]*)/gi,
+        /(\d+%\s+(?:mulberry\s+)*silk[^,\.\n]*)/gi,
+        /(\d+%\s+(?:french\s+|european\s+)*linen[^,\.\n]*)/gi,
+        /(\d+%\s+tencel[™\u2122]*\s*lyocell[^,\.\n]*)/gi,
+        /(\d+%\s+lyocell[^,\.\n]*)/gi,
+        /(\d+%\s+tencel[™\u2122]*[^,\.\n]*)/gi,
+        /(\d+%\s+(?:recycled\s+)*polyester[^,\.\n]*)/gi,
+        /(\d+%\s+viscose[^,\.\n]*)/gi,
+        /(\d+%\s+modal[^,\.\n]*)/gi,
+        /(\d+%\s+(?:recycled\s+)*nylon[^,\.\n]*)/gi,
+        /(\d+%\s+spandex[^,\.\n]*)/gi,
+        /(\d+%\s+elastane[^,\.\n]*)/gi,
+        
+        // Handle "100% Material" patterns
+        /(100%\s+[^,\.\n]+)/gi,
+        
+        // General composition patterns
+        /(?:composition|material|fabric|made\s+(?:of|with|from))[:]*\s*([^\.]+)/gi,
+        
+        // Handle "X and Y" patterns like "57% Cotton and 43% Lyocell"
+        /(\d+%\s+[^,\.\n]+?\s+and\s+\d+%\s+[^,\.\n]+)/gi
     ];
     
     const carePatterns = [
         /machine wash/gi,
         /hand wash/gi,
+        /wash cold/gi,
+        /wash warm/gi,
+        /cold wash/gi,
+        /warm wash/gi,
         /dry clean/gi,
         /do not bleach/gi,
         /tumble dry/gi,
+        /line dry/gi,
+        /air dry/gi,
+        /hang dry/gi,
         /iron on low/gi,
         /lay flat to dry/gi,
-        /wash separately/gi
+        /wash separately/gi,
+        /gentle cycle/gi,
+        /delicate cycle/gi,
+        /do not iron/gi,
+        /low heat/gi,
+        /medium heat/gi,
+        /high heat/gi,
+        // Handle combined instructions like "Wash cold + line dry"
+        /wash\s+cold\s*\+\s*line\s+dry/gi,
+        /wash\s+\w+\s*\+\s*\w+\s+dry/gi
     ];
     
     const sizeGuidePatterns = [
@@ -419,13 +463,67 @@ export function extractMaterialsFromPage() {
         }
     }
     
-    // Remove duplicates
-    materials.composition = [...new Set(materials.composition)];
-    materials.careInstructions = [...new Set(materials.careInstructions)];
+    // Clean up and filter materials
+    materials.composition = cleanMaterialsList(materials.composition);
+    materials.careInstructions = cleanCareInstructions(materials.careInstructions);
     
     console.log('[PointFour] Extracted materials:', materials);
     
     return materials;
+}
+
+function cleanMaterialsList(compositions) {
+    // Remove duplicates
+    let cleaned = [...new Set(compositions)];
+    
+    // Filter out overly long or irrelevant matches
+    cleaned = cleaned.filter(comp => {
+        const trimmed = comp.trim();
+        
+        // Keep if it starts with percentage
+        if (/^\d+%/.test(trimmed)) {
+            // Remove if too long (over 100 chars) or contains irrelevant words
+            return trimmed.length < 100 && 
+                   !trimmed.toLowerCase().includes('vintage jeans') &&
+                   !trimmed.toLowerCase().includes('fabric & care') &&
+                   !trimmed.toLowerCase().includes('stretch just like');
+        }
+        
+        // Keep general material descriptions if they're concise
+        return trimmed.length < 50 && 
+               (trimmed.toLowerCase().includes('fabric') || 
+                trimmed.toLowerCase().includes('material') || 
+                trimmed.toLowerCase().includes('composition'));
+    });
+    
+    // Prioritize specific percentage matches over general ones
+    const percentageMatches = cleaned.filter(comp => /^\d+%/.test(comp.trim()));
+    const generalMatches = cleaned.filter(comp => !/^\d+%/.test(comp.trim()));
+    
+    // If we have percentage matches, prefer them
+    if (percentageMatches.length > 0) {
+        // Sort percentage matches by specificity (shorter = more specific usually)
+        return percentageMatches.sort((a, b) => a.length - b.length).slice(0, 5);
+    }
+    
+    return generalMatches.slice(0, 3);
+}
+
+function cleanCareInstructions(careInstructions) {
+    // Remove duplicates
+    let cleaned = [...new Set(careInstructions)];
+    
+    // Sort by preference (combined instructions first, then specific ones)
+    cleaned.sort((a, b) => {
+        const aHasPlus = a.includes('+');
+        const bHasPlus = b.includes('+');
+        
+        if (aHasPlus && !bHasPlus) return -1;
+        if (!aHasPlus && bHasPlus) return 1;
+        return a.length - b.length;
+    });
+    
+    return cleaned.slice(0, 4); // Max 4 care instructions
 }
 
 // ========================================
