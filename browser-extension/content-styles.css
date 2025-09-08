@@ -334,7 +334,7 @@
 /* Main insight styling */
 .pointfour-main-insight {
     margin: 0 0 12px 0 !important;
-    font-weight: 500;
+    font-weight: normal;
     color: #2D2D2D;
     font-size: 13px;
     line-height: 1.4;
@@ -363,7 +363,7 @@
 }
 
 .pointfour-section-content {
-    margin-left: 24px; /* Align with header text, accounting for icon */
+    margin-left: 0; /* Remove indentation - align with header */
 }
 
 /* Materials and Care specific styling */
