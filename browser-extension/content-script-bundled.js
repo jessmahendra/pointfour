@@ -2871,8 +2871,12 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
             </div>
     `;
     
-    // Main recommendation
-    if (data.recommendation) {
+    // Main recommendation - only show if we have sections with evidence
+    const hasMeaningfulData = Object.values(sections).some(section => 
+        section && section.evidence && section.evidence.length > 0
+    );
+    
+    if (data.recommendation && hasMeaningfulData) {
         const cleanedRecommendation = cleanRecommendationText(data.recommendation);
         contentHTML += `
             <div class="pointfour-fit-info">
@@ -2890,35 +2894,30 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         `;
     }
     
-    // Fit sections
+    // Fit sections with real quotes
     if (Object.keys(sections).length > 0) {
         contentHTML += '<div class="pointfour-sections">';
         
-        // Prioritize sections: fit > quality > washCare (matching original working structure)
+        // Prioritize sections: fit > quality > washCare
         const sectionPriority = ['fit', 'quality', 'washCare'];
         const sortedSections = sectionPriority.filter(key => sections[key]);
         
-        for (const sectionKey of sortedSections.slice(0, 3)) {  // Show max 3 sections
+        for (const sectionKey of sortedSections.slice(0, 3)) {
             const section = sections[sectionKey];
             if (section && section.recommendation && isUsefulRecommendation(section.recommendation)) {
-                const sectionTitle = getSectionTitle(sectionKey);
-                const sectionIcon = getSectionIcon(sectionKey);
-                
-                contentHTML += `
-                    <div class="pointfour-section">
-                        <div class="pointfour-section-header">
-                            ${sectionIcon}
-                            <span>${sectionTitle}</span>
-                        </div>
-                        <div class="pointfour-section-content">
-                            <p>${section.recommendation}</p>
-                        </div>
-                    </div>
-                `;
+                contentHTML += renderSectionWithQuotes(sectionKey, section);
             }
         }
         
         contentHTML += '</div>';
+    }
+    
+    // Materials and Care - only show on product pages
+    if (isProductPage()) {
+        const materials = extractMaterialsFromPage();
+        if (materials && (materials.composition.length > 0 || materials.careInstructions.length > 0)) {
+            contentHTML += renderMaterialsAndCare(materials);
+        }
     }
     
     // Reviews page button - show if we have reviews OR analysis data
@@ -2989,6 +2988,181 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
             handleStyleButtonClick(brand, data);
         });
     }
+}
+
+// ========================================
+// SECTION RENDERING WITH QUOTES
+// ========================================
+
+function renderSectionWithQuotes(sectionKey, section) {
+    const sectionTitle = getSectionTitle(sectionKey);
+    const sectionIcon = getSectionIcon(sectionKey);
+    
+    // Extract the main insight from recommendation (before the quotes)
+    let mainInsight = section.recommendation;
+    if (mainInsight.length > 100) {
+        // Truncate very long recommendations
+        mainInsight = mainInsight.substring(0, 100) + '...';
+    }
+    
+    let html = `
+        <div class="pointfour-section">
+            <div class="pointfour-section-header">
+                ${sectionIcon}
+                <span>${sectionTitle}</span>
+            </div>
+            <div class="pointfour-section-content">
+                <p class="pointfour-main-insight">${mainInsight}</p>
+    `;
+    
+    // Add real user quotes if evidence exists
+    if (section.evidence && section.evidence.length > 0) {
+        const quotes = section.evidence.slice(0, 3); // Show max 3 quotes
+        
+        html += '<ul class="pointfour-bullet-list">';
+        for (const quote of quotes) {
+            if (quote && quote.trim().length > 10) { // Only show substantial quotes
+                const cleanedQuote = cleanQuoteText(quote);
+                html += `<li class="pointfour-quote">"${cleanedQuote}"</li>`;
+            }
+        }
+        html += '</ul>';
+    }
+    
+    // Show confidence warning only if confidence is low
+    if (section.confidence === 'low') {
+        html += '<div class="pointfour-source">Limited data available - based on fewer reviews</div>';
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    return html;
+}
+
+function cleanQuoteText(quote) {
+    // Clean up quote text for display
+    return quote
+        .replace(/^\s*["']+|["']+\s*$/g, '') // Remove surrounding quotes
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim()
+        .substring(0, 120); // Limit length
+}
+
+function isProductPage() {
+    // Detect if we're on a specific product page vs a listing/category page
+    const url = window.location.pathname.toLowerCase();
+    const hostname = window.location.hostname.replace('www.', '').toLowerCase();
+    
+    // Common product page patterns
+    const productPatterns = [
+        /\/products?\//,  // /product/ or /products/
+        /\/item\//,       // /item/
+        /\/p\//,          // /p/
+        /-p\d+\.html/,    // Zara style: item-name-p123.html
+        /\/[^\/]+\.html/, // General .html product pages
+    ];
+    
+    // Check URL patterns
+    for (const pattern of productPatterns) {
+        if (pattern.test(url)) return true;
+    }
+    
+    // Site-specific detection
+    const siteDetection = {
+        'reformation.com': () => url.includes('/products/'),
+        'roheframes.com': () => url.includes('/products/'),
+        'everlane.com': () => url.includes('/products/'),
+        'zara.com': () => /-p\d+\.html/.test(url),
+    };
+    
+    if (siteDetection[hostname]) {
+        return siteDetection[hostname]();
+    }
+    
+    // Fallback: check for product-specific elements on page
+    const productElements = [
+        '.product-details',
+        '.product-info', 
+        '.product-form',
+        '[class*="add-to-cart"]',
+        '[class*="size-selector"]',
+        '.product-images'
+    ];
+    
+    return productElements.some(selector => document.querySelector(selector));
+}
+
+function renderMaterialsAndCare(materials) {
+    let html = '';
+    
+    // Materials section
+    if (materials.composition && materials.composition.length > 0) {
+        // Remove duplicates and clean up
+        const uniqueComposition = [...new Set(materials.composition)]
+            .map(comp => comp.trim())
+            .filter(comp => comp.length > 0);
+            
+        if (uniqueComposition.length > 0) {
+            html += `
+                <div class="pointfour-section">
+                    <div class="pointfour-section-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M12 2L2 7v10l10 5 10-5V7l-10-5z" stroke-width="2"/>
+                        </svg>
+                        <span>Materials</span>
+                    </div>
+                    <div class="pointfour-section-content">
+                        <ul class="pointfour-bullet-list pointfour-materials-list">
+            `;
+            
+            for (const comp of uniqueComposition.slice(0, 5)) { // Max 5 items
+                html += `<li>${comp}</li>`;
+            }
+            
+            html += `
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Care instructions section
+    if (materials.careInstructions && materials.careInstructions.length > 0) {
+        const uniqueCareInstructions = [...new Set(materials.careInstructions)]
+            .map(care => care.trim())
+            .filter(care => care.length > 0);
+            
+        if (uniqueCareInstructions.length > 0) {
+            html += `
+                <div class="pointfour-section">
+                    <div class="pointfour-section-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="3" stroke-width="2"/>
+                            <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke-width="2"/>
+                        </svg>
+                        <span>Care</span>
+                    </div>
+                    <div class="pointfour-section-content">
+                        <ul class="pointfour-bullet-list pointfour-care-list">
+            `;
+            
+            for (const care of uniqueCareInstructions.slice(0, 4)) { // Max 4 items
+                html += `<li>${care}</li>`;
+            }
+            
+            html += `
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    return html;
 }
 
 // ========================================
