@@ -2686,12 +2686,19 @@ function createWidget() {
                 </svg>
                 <span>PointFour</span>
             </div>
-            <button class="pointfour-close" aria-label="Close">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-            </button>
+            <div class="pointfour-header-buttons">
+                <button class="pointfour-minimize" aria-label="Minimize">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <button class="pointfour-close" aria-label="Close">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
         </div>
         <div class="pointfour-content">
             <div class="pointfour-loading-spinner">
@@ -2707,14 +2714,25 @@ function createWidget() {
     
     // Add event listeners
     const closeBtn = widgetContainer.querySelector('.pointfour-close');
+    const minimizeBtn = widgetContainer.querySelector('.pointfour-minimize');
+    
     if (closeBtn) {
         closeBtn.addEventListener('click', hideWidget);
     }
     
-    // Click outside to close
+    if (minimizeBtn) {
+        minimizeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleMinimize();
+        });
+    }
+    
+    // Click outside to close (but not if widget is minimized)
     document.addEventListener('click', function(e) {
         const currentContainer = getState('widgetContainer');
-        if (currentContainer && !currentContainer.contains(e.target)) {
+        const isMinimized = getState('widgetMinimized');
+        if (currentContainer && !currentContainer.contains(e.target) && !isMinimized) {
             hideWidget();
         }
     });
@@ -2753,6 +2771,63 @@ function hideWidget() {
             setState('widgetInjected', false);
         }
     }, 300);
+}
+
+function toggleMinimize() {
+    console.log('[PointFour] Toggle minimize clicked');
+    const widgetContainer = getState('widgetContainer');
+    if (!widgetContainer) {
+        console.log('[PointFour] No widget container found');
+        return;
+    }
+    
+    const isMinimized = widgetContainer.classList.contains('pointfour-minimized');
+    const minimizeBtn = widgetContainer.querySelector('.pointfour-minimize');
+    const content = widgetContainer.querySelector('.pointfour-content');
+    
+    console.log('[PointFour] Current minimized state:', isMinimized);
+    
+    if (isMinimized) {
+        // Expand widget
+        console.log('[PointFour] Expanding widget');
+        widgetContainer.classList.remove('pointfour-minimized');
+        if (content) {
+            content.style.display = 'block';
+            console.log('[PointFour] Content display set to block');
+        }
+        
+        // Change minimize button icon to minimize (horizontal line)
+        if (minimizeBtn) {
+            minimizeBtn.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <line x1="5" y1="12" x2="19" y2="12" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            `;
+            minimizeBtn.setAttribute('aria-label', 'Minimize');
+        }
+        
+        setState('widgetMinimized', false);
+    } else {
+        // Minimize widget
+        console.log('[PointFour] Minimizing widget');
+        widgetContainer.classList.add('pointfour-minimized');
+        if (content) {
+            content.style.display = 'none';
+            console.log('[PointFour] Content display set to none');
+        }
+        
+        // Change minimize button icon to expand (plus or up arrow)
+        if (minimizeBtn) {
+            minimizeBtn.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polyline points="18,15 12,9 6,15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
+            minimizeBtn.setAttribute('aria-label', 'Expand');
+        }
+        
+        setState('widgetMinimized', true);
+    }
 }
 
 // ========================================
@@ -2945,12 +3020,22 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
     const itemName = urlExtraction?.itemName || null;
     const isItemSpecific = itemName && itemName.length > 0;
     
+    // Generate appropriate review context copy
+    let reviewContext = '';
+    const genericTerms = ['shop', 'store', 'collection', 'brand', 'clothing', 'fashion'];
+    const isGenericTerm = itemName && genericTerms.includes(itemName.toLowerCase());
+    
+    if (isItemSpecific && itemName && !isGenericTerm) {
+        reviewContext = `Based on ${totalReviews} reviews for ${itemName}`;
+    } else {
+        reviewContext = `Based on ${totalReviews} ${brandName} reviews`;
+    }
+    
     let contentHTML = `
         <div class="pointfour-results">
             <h3>${brandName}</h3>
             <div class="pointfour-meta">
-                <span class="pointfour-review-count">Based on ${totalReviews} reviews</span>
-                ${isItemSpecific ? `<span class="pointfour-item-tag">for ${itemName}</span>` : '<span class="pointfour-brand-tag">general brand reviews</span>'}
+                <span class="pointfour-review-count">${reviewContext}</span>
                 ${isMarketplace ? '<span class="pointfour-marketplace-tag">Multi-brand site</span>' : ''}
             </div>
     `;
@@ -3043,34 +3128,9 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         `;
     }
 
-    // Style button - reuse urlExtraction already declared above
-    if (urlExtraction && urlExtraction.itemName) {
-        contentHTML += `
-            <div class="pointfour-actions">
-                <button class="pointfour-style-btn" data-brand="${brandName}" data-item="${urlExtraction.itemName}">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Find Similar Styles
-                </button>
-            </div>
-        `;
-    }
-    
     contentHTML += '</div>';
     contentDiv.innerHTML = contentHTML;
     
-    // Add style button event listener
-    const styleBtn = contentDiv.querySelector('.pointfour-style-btn');
-    if (styleBtn) {
-        styleBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const brand = styleBtn.dataset.brand;
-            const item = styleBtn.dataset.item;
-            handleStyleButtonClick(brand, data);
-        });
-    }
 }
 
 // ========================================
@@ -3369,29 +3429,6 @@ function getSectionIcon(sectionKey) {
         washCare: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3" stroke-width="2"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke-width="2"/></svg>'
     };
     return icons[sectionKey] || '';
-}
-
-function handleStyleButtonClick(brandName, data) {
-    const urlExtraction = window.pointFourURLExtraction;
-    if (!urlExtraction) return;
-    
-    const params = new URLSearchParams({
-        brand: brandName,
-        item: urlExtraction.itemName || '',
-        category: urlExtraction.category || '',
-        source: 'extension'
-    });
-    
-    // Add product image if available
-    if (urlExtraction.productImage) {
-        params.set('image', urlExtraction.productImage);
-    }
-    
-    // Open the style page in a new tab
-    const styleUrl = `https://www.pointfour.in/style?${params.toString()}`;
-    console.log('🎨 Opening style URL:', styleUrl);
-    
-    window.open(styleUrl, '_blank', 'noopener,noreferrer');
 }
 
 // ========================================

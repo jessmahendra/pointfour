@@ -45,10 +45,17 @@
 
 /* Minimized state */
 .pointfour-widget.pointfour-minimized {
-  opacity: 0;
-  transform: translateY(20px) scale(0.95);
-  pointer-events: none;
-  visibility: hidden;
+  /* Keep the header visible but hide the content */
+}
+
+.pointfour-widget.pointfour-minimized .pointfour-content {
+  display: none !important;
+}
+
+/* Ensure the header is still interactive when minimized */
+.pointfour-widget.pointfour-minimized .pointfour-header {
+  border-bottom: none;
+  border-radius: 12px;
 }
 
 /* Loading state */
