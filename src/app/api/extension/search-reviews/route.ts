@@ -323,14 +323,161 @@ export async function OPTIONS() {
   });
 }
 
+// Category filtering functions for Phase 2
+function filterReviewsByRelevance(reviews: Review[], filterParams: any): Review[] {
+  const { category, productType, productLine, brand } = filterParams;
+  
+  if (!reviews || !Array.isArray(reviews)) return [];
+  
+  console.log('[API] Filtering reviews by relevance:', {
+    totalReviews: reviews.length,
+    category,
+    productType,
+    productLine
+  });
+  
+  // Define category-specific keywords for filtering
+  const categoryKeywords: any = {
+    shoes: {
+      include: [
+        'shoe', 'shoes', 'boot', 'boots', 'sneaker', 'sneakers', 'sandal', 'sandals',
+        'heel', 'heels', 'flat', 'flats', 'pump', 'pumps', 'loafer', 'loafers',
+        'footwear', 'sole', 'lace', 'strap', 'arch support', 'heel height',
+        'toe box', 'insole', 'outsole', 'comfortable to walk', 'sizing', 'width'
+      ],
+      exclude: [
+        'shirt', 'top', 'blouse', 'sweater', 'dress', 'skirt', 'pants', 'jean',
+        'bag', 'purse', 'wallet', 'belt', 'jacket', 'coat'
+      ]
+    },
+    bags: {
+      include: [
+        'bag', 'bags', 'handbag', 'purse', 'tote', 'clutch', 'backpack', 'wallet',
+        'satchel', 'crossbody', 'shoulder bag', 'messenger', 'strap', 'handle',
+        'compartment', 'pocket', 'zipper', 'closure', 'capacity', 'carry'
+      ],
+      exclude: [
+        'shoe', 'boot', 'sneaker', 'heel', 'shirt', 'top', 'dress', 'pants',
+        'jewelry', 'watch', 'sunglasses'
+      ]
+    },
+    clothing: {
+      include: [
+        'dress', 'shirt', 'top', 'blouse', 'sweater', 'pants', 'jeans', 'skirt',
+        'jacket', 'coat', 'cardigan', 'hoodie', 'sleeve', 'collar', 'neckline',
+        'fit', 'length', 'waist', 'chest', 'shoulder', 'fabric', 'material'
+      ],
+      exclude: [
+        'shoe', 'boot', 'sneaker', 'heel', 'bag', 'purse', 'wallet',
+        'jewelry', 'watch', 'sunglasses'
+      ]
+    },
+    accessories: {
+      include: [
+        'jewelry', 'watch', 'necklace', 'bracelet', 'earring', 'ring', 'scarf',
+        'belt', 'hat', 'sunglasses', 'gloves', 'accessory', 'chain', 'pendant'
+      ],
+      exclude: [
+        'shoe', 'boot', 'dress', 'shirt', 'pants', 'bag', 'purse'
+      ]
+    }
+  };
+  
+  const keywords = categoryKeywords[category];
+  if (!keywords) {
+    console.log('[API] No keywords defined for category:', category);
+    return reviews; // Return all if no keywords defined
+  }
+  
+  // Score each review for relevance
+  const scoredReviews = reviews.map((review: any) => {
+    const reviewText = `${review.title || ''} ${review.snippet || ''} ${review.fullContent || ''}`.toLowerCase();
+    
+    let relevanceScore = 0;
+    
+    // Check for include keywords (positive scoring)
+    for (const keyword of keywords.include) {
+      const matches = (reviewText.match(new RegExp(keyword, 'gi')) || []).length;
+      relevanceScore += matches * 2; // Each match adds 2 points
+    }
+    
+    // Check for exclude keywords (negative scoring)
+    for (const keyword of keywords.exclude) {
+      const matches = (reviewText.match(new RegExp(keyword, 'gi')) || []).length;
+      relevanceScore -= matches * 3; // Each exclude match removes 3 points
+    }
+    
+    // Bonus points for exact product type matches
+    if (productType && reviewText.includes(productType.toLowerCase())) {
+      relevanceScore += 5;
+    }
+    
+    // Bonus points for product line matches
+    if (productLine && reviewText.includes(productLine.toLowerCase())) {
+      relevanceScore += 10;
+    }
+    
+    // Bonus for brand name mentions (ensures review is about the brand)
+    if (brand && reviewText.includes(brand.toLowerCase())) {
+      relevanceScore += 1;
+    }
+    
+    return {
+      ...review,
+      relevanceScore
+    };
+  });
+  
+  // Filter out reviews with negative scores and sort by relevance
+  const relevantReviews = scoredReviews
+    .filter((review: any) => review.relevanceScore > 0)
+    .sort((a: any, b: any) => b.relevanceScore - a.relevanceScore);
+  
+  console.log('[API] Relevance filtering results:', {
+    originalCount: reviews.length,
+    relevantCount: relevantReviews.length,
+    avgScore: relevantReviews.length > 0 ? 
+      (relevantReviews.reduce((sum: number, r: any) => sum + r.relevanceScore, 0) / relevantReviews.length).toFixed(2) : 0
+  });
+  
+  return relevantReviews;
+}
+
+function determineRelevanceLevel(filteredReviews: any[], originalReviews: any[], filterParams: any): string {
+  const { productLine, productType, category } = filterParams;
+  
+  // Determine the level of specificity achieved
+  const productLineMatches = productLine ? 
+    filteredReviews.filter((r: any) => r.relevanceScore >= 10).length : 0;
+  const productTypeMatches = productType ? 
+    filteredReviews.filter((r: any) => r.relevanceScore >= 5).length : 0;
+  
+  if (productLineMatches >= 3) {
+    return 'exact_product';
+  } else if (productTypeMatches >= 3) {
+    return 'product_type';
+  } else if (filteredReviews.length >= 3) {
+    return 'category';
+  } else {
+    return 'insufficient_data';
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const brand = searchParams.get('brand');
     const searchType = searchParams.get('searchType') || 'all';
     const enableExternalSearch = searchParams.get('enableExternalSearch') === 'true';
-    const itemName = searchParams.get('itemName') || '';
+    const itemName = searchParams.get('itemName') || searchParams.get('item') || '';
     const category = searchParams.get('category') || 'general';
+    const productType = searchParams.get('productType') || '';
+    const productLine = searchParams.get('productLine') || '';
+    const categoryConfidence = searchParams.get('categoryConfidence') || 'low';
+    const categorySource = searchParams.get('categorySource') || 'unknown';
+    
+    // Determine if we should use category-specific filtering
+    const useRelevantFiltering = searchType === 'relevant' && category && category !== 'unknown' && category !== 'general';
     
     if (!brand) {
       return NextResponse.json({ error: 'Brand name is required' }, { status: 400 });
@@ -341,6 +488,9 @@ export async function GET(request: NextRequest) {
     console.log(`   SearchType: ${searchType}`);
     console.log(`   Item: ${itemName}`);
     console.log(`   Category: ${category}`);
+    console.log(`   ProductType: ${productType}`);
+    console.log(`   ProductLine: ${productLine}`);
+    console.log(`   UseRelevantFiltering: ${useRelevantFiltering}`);
     console.log(`   EnableExternalSearch: ${enableExternalSearch}\n`);
     
     // For GET requests, we'll use a simplified approach with external search
@@ -1233,24 +1383,96 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
     
     console.log(`📊 FIT PRIORITIZATION: Sorted ${finalUniqueReviews.length} reviews by fit relevance`);
     
-    // Log top fit-relevant reviews
-    prioritizedReviews.slice(0, 5).forEach((review, index) => {
+    // Apply category-based filtering if requested (Phase 2 Implementation)
+    let filteredReviews = prioritizedReviews;
+    let relevanceLevel = 'general';
+    
+    if (useRelevantFiltering) {
+      console.log(`🔍 CATEGORY FILTERING: Applying ${category} filter to ${prioritizedReviews.length} reviews`);
+      
+      const filterParams = {
+        category,
+        productType,
+        productLine,
+        brand
+      };
+      
+      const categoryFilteredReviews = filterReviewsByRelevance(prioritizedReviews, filterParams);
+      relevanceLevel = determineRelevanceLevel(categoryFilteredReviews, prioritizedReviews, filterParams);
+      
+      // Enforce minimum threshold of 3 reviews
+      if (categoryFilteredReviews.length >= 3) {
+        filteredReviews = categoryFilteredReviews;
+        console.log(`✅ CATEGORY FILTER SUCCESS: Using ${categoryFilteredReviews.length} ${category} reviews (${relevanceLevel})`);
+      } else {
+        console.log(`❌ INSUFFICIENT DATA: Only ${categoryFilteredReviews.length} ${category} reviews found, minimum 3 required`);
+        
+        // Return empty result with clear messaging
+        const response = NextResponse.json({
+          brandName: brand,
+          category,
+          productType,
+          productLine,
+          relevanceLevel: 'insufficient_data',
+          totalResults: 0,
+          status: 'no_relevant_data',
+          message: `No sufficient ${category} reviews found for ${brand}`,
+          externalSearchResults: {
+            brandFitSummary: {
+              summary: `Unable to find enough ${category}-specific reviews for ${brand}. Try viewing all brand reviews or check individual product pages.`,
+              confidence: 'low',
+              sections: {},
+              hasData: false,
+              totalResults: 0,
+              sources: [],
+              hasMoreSources: false
+            },
+            reviews: [],
+            totalResults: 0
+          },
+          groupedReviews: {
+            primary: [],
+            community: [],
+            blogs: [],
+            videos: [],
+            social: [],
+            publications: [],
+            other: []
+          },
+          totalResults: 0
+        });
+        
+        response.headers.set('Access-Control-Allow-Origin', '*');
+        response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+        
+        return response;
+      }
+    } else {
+      console.log(`📋 NO CATEGORY FILTERING: Using all ${prioritizedReviews.length} reviews`);
+    }
+    
+    // Update prioritizedReviews to use filtered results
+    const finalPrioritizedReviews = filteredReviews;
+    
+    // Log top fit-relevant reviews (using filtered set)
+    finalPrioritizedReviews.slice(0, 5).forEach((review, index) => {
       const score = calculateFitRelevanceScore(review);
       console.log(`🏆 #${index + 1} FIT RELEVANT: "${review.title.substring(0, 60)}..." (score: ${score})`);
     });
     
     // Create detailed summary based on analysis using filtered/prioritized results
-    const summary = generateDetailedSummary(analysis, prioritizedReviews, brand, productCategory);
+    const summary = generateDetailedSummary(analysis, finalPrioritizedReviews, brand, productCategory);
     
-    // Group reviews by source type with proper Review structure using prioritized reviews
+    // Group reviews by source type with proper Review structure using filtered reviews
     const groupedReviews = {
-      primary: prioritizedReviews.filter(r => r.url.includes('reddit') || r.url.includes('substack')),
-      community: prioritizedReviews.filter(r => r.url.includes('forum') || r.url.includes('community')),
-      blogs: prioritizedReviews.filter(r => r.url.includes('blog') || r.url.includes('medium')),
-      videos: prioritizedReviews.filter(r => r.url.includes('youtube') || r.url.includes('video')),
-      social: prioritizedReviews.filter(r => r.url.includes('instagram') || r.url.includes('twitter')),
-      publications: prioritizedReviews.filter(r => r.url.includes('magazine') || r.url.includes('vogue')),
-      other: prioritizedReviews.filter(r => 
+      primary: finalPrioritizedReviews.filter(r => r.url.includes('reddit') || r.url.includes('substack')),
+      community: finalPrioritizedReviews.filter(r => r.url.includes('forum') || r.url.includes('community')),
+      blogs: finalPrioritizedReviews.filter(r => r.url.includes('blog') || r.url.includes('medium')),
+      videos: finalPrioritizedReviews.filter(r => r.url.includes('youtube') || r.url.includes('video')),
+      social: finalPrioritizedReviews.filter(r => r.url.includes('instagram') || r.url.includes('twitter')),
+      publications: finalPrioritizedReviews.filter(r => r.url.includes('magazine') || r.url.includes('vogue')),
+      other: finalPrioritizedReviews.filter(r => 
         !['reddit', 'substack', 'forum', 'community', 'blog', 'medium', 'youtube', 'video', 'instagram', 'twitter', 'magazine', 'vogue']
           .some(s => r.url.includes(s))
       )
@@ -1263,7 +1485,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
 
     // Extract top sources for transparency
     const sourceCount = new Map<string, number>();
-    prioritizedReviews.forEach(review => {
+    finalPrioritizedReviews.forEach(review => {
       try {
         const urlObj = new URL(review.url);
         const hostname = urlObj.hostname.replace(/^www\./, '');
@@ -1318,21 +1540,34 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
 
     const response = NextResponse.json({
       brandName: brand, // Include the brand name in the response
+      category: category !== 'general' ? category : null,
+      productType: productType || null,
+      productLine: productLine || null,
+      relevanceLevel,
+      categorySpecific: useRelevantFiltering,
       externalSearchResults: {
         brandFitSummary: {
           summary,
           confidence: analysis.overallConfidence || 'low',
           sections,
           hasData: Object.keys(sections).length > 0,
-          totalResults: prioritizedReviews.length,
+          totalResults: finalPrioritizedReviews.length,
           sources: topSources,
-          hasMoreSources: hasMoreSources
+          hasMoreSources: hasMoreSources,
+          categorySpecific: useRelevantFiltering
         },
-        reviews: prioritizedReviews.slice(0, 20),
-        totalResults: prioritizedReviews.length
+        reviews: finalPrioritizedReviews.slice(0, 20),
+        totalResults: finalPrioritizedReviews.length
       },
       groupedReviews,
-      totalResults: prioritizedReviews.length
+      totalResults: finalPrioritizedReviews.length,
+      // Add filtering metadata for debugging
+      filteringMetadata: useRelevantFiltering ? {
+        originalReviewCount: prioritizedReviews.length,
+        filteredReviewCount: finalPrioritizedReviews.length,
+        filterParams: { category, productType, productLine },
+        relevanceLevel
+      } : null
     });
     
     // Add CORS headers for browser extension
