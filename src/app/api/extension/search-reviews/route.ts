@@ -323,8 +323,25 @@ export async function OPTIONS() {
   });
 }
 
+// Category filtering interfaces
+interface FilterParams {
+  category: string;
+  productType: string;
+  productLine: string;
+  brand: string;
+}
+
+interface CategoryKeywords {
+  include: string[];
+  exclude: string[];
+}
+
+interface ReviewWithScore extends Review {
+  relevanceScore: number;
+}
+
 // Category filtering functions for Phase 2
-function filterReviewsByRelevance(reviews: Review[], filterParams: any): Review[] {
+function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams): ReviewWithScore[] {
   const { category, productType, productLine, brand } = filterParams;
   
   if (!reviews || !Array.isArray(reviews)) return [];
@@ -337,7 +354,7 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: any): Review[
   });
   
   // Define category-specific keywords for filtering
-  const categoryKeywords: any = {
+  const categoryKeywords: Record<string, CategoryKeywords> = {
     shoes: {
       include: [
         'shoe', 'shoes', 'boot', 'boots', 'sneaker', 'sneakers', 'sandal', 'sandals',
@@ -386,11 +403,12 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: any): Review[
   const keywords = categoryKeywords[category];
   if (!keywords) {
     console.log('[API] No keywords defined for category:', category);
-    return reviews; // Return all if no keywords defined
+    // Return reviews with default score of 0 to match return type
+    return reviews.map(review => ({ ...review, relevanceScore: 0 }));
   }
   
   // Score each review for relevance
-  const scoredReviews = reviews.map((review: any) => {
+  const scoredReviews = reviews.map((review: Review): ReviewWithScore => {
     const reviewText = `${review.title || ''} ${review.snippet || ''} ${review.fullContent || ''}`.toLowerCase();
     
     let relevanceScore = 0;
@@ -430,27 +448,27 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: any): Review[
   
   // Filter out reviews with negative scores and sort by relevance
   const relevantReviews = scoredReviews
-    .filter((review: any) => review.relevanceScore > 0)
-    .sort((a: any, b: any) => b.relevanceScore - a.relevanceScore);
+    .filter((review: ReviewWithScore) => review.relevanceScore > 0)
+    .sort((a: ReviewWithScore, b: ReviewWithScore) => b.relevanceScore - a.relevanceScore);
   
   console.log('[API] Relevance filtering results:', {
     originalCount: reviews.length,
     relevantCount: relevantReviews.length,
     avgScore: relevantReviews.length > 0 ? 
-      (relevantReviews.reduce((sum: number, r: any) => sum + r.relevanceScore, 0) / relevantReviews.length).toFixed(2) : 0
+      (relevantReviews.reduce((sum: number, r: ReviewWithScore) => sum + r.relevanceScore, 0) / relevantReviews.length).toFixed(2) : 0
   });
   
   return relevantReviews;
 }
 
-function determineRelevanceLevel(filteredReviews: any[], originalReviews: any[], filterParams: any): string {
-  const { productLine, productType, category } = filterParams;
+function determineRelevanceLevel(filteredReviews: ReviewWithScore[], originalReviews: Review[], filterParams: FilterParams): string {
+  const { productLine, productType } = filterParams;
   
   // Determine the level of specificity achieved
   const productLineMatches = productLine ? 
-    filteredReviews.filter((r: any) => r.relevanceScore >= 10).length : 0;
+    filteredReviews.filter((r: ReviewWithScore) => r.relevanceScore >= 10).length : 0;
   const productTypeMatches = productType ? 
-    filteredReviews.filter((r: any) => r.relevanceScore >= 5).length : 0;
+    filteredReviews.filter((r: ReviewWithScore) => r.relevanceScore >= 5).length : 0;
   
   if (productLineMatches >= 3) {
     return 'exact_product';
@@ -473,8 +491,8 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category') || 'general';
     const productType = searchParams.get('productType') || '';
     const productLine = searchParams.get('productLine') || '';
-    const categoryConfidence = searchParams.get('categoryConfidence') || 'low';
-    const categorySource = searchParams.get('categorySource') || 'unknown';
+    // const categoryConfidence = searchParams.get('categoryConfidence') || 'low';
+    // const categorySource = searchParams.get('categorySource') || 'unknown';
     
     // Determine if we should use category-specific filtering
     const useRelevantFiltering = searchType === 'relevant' && category && category !== 'unknown' && category !== 'general';
@@ -1387,6 +1405,12 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
     let filteredReviews = prioritizedReviews;
     let relevanceLevel = 'general';
     
+    // Extract category filtering parameters from extracted data
+    const category = extractedData?.category || 'general';
+    const productType = extractedData?.productType || '';
+    const productLine = extractedData?.productLine || '';
+    const useRelevantFiltering = category && category !== 'unknown' && category !== 'general';
+    
     if (useRelevantFiltering) {
       console.log(`🔍 CATEGORY FILTERING: Applying ${category} filter to ${prioritizedReviews.length} reviews`);
       
@@ -1438,8 +1462,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
             social: [],
             publications: [],
             other: []
-          },
-          totalResults: 0
+          }
         });
         
         response.headers.set('Access-Control-Allow-Origin', '*');
@@ -1522,7 +1545,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         }
         
         sourceCount.set(sourceName, (sourceCount.get(sourceName) || 0) + 1);
-      } catch (e) {
+      } catch {
         // Skip invalid URLs
       }
     });

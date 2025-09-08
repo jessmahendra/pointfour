@@ -215,7 +215,7 @@ const classifyReviewRelevance = (
     review.fullContent || ""
   }`.toLowerCase();
   const itemLower = itemName.toLowerCase();
-  const brandLower = brandName.toLowerCase();
+  // const brandLower = brandName.toLowerCase(); // Currently unused
 
   // Check if review mentions the specific item
   const hasItemMention = itemLower
