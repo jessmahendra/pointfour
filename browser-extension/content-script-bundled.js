@@ -2960,11 +2960,17 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
     const sections = data.externalSearchResults?.brandFitSummary?.sections || data.brandFitSummary?.sections || {};
     const qualityInsight = extractQualityInsights(data);
     
+    // Determine if this is item-specific or brand-general
+    const urlExtraction = window.pointFourURLExtraction || null;
+    const itemName = urlExtraction?.itemName || null;
+    const isItemSpecific = itemName && itemName.length > 0;
+    
     let contentHTML = `
         <div class="pointfour-results">
             <h3>${brandName}</h3>
             <div class="pointfour-meta">
                 <span class="pointfour-review-count">Based on ${totalReviews} reviews</span>
+                ${isItemSpecific ? `<span class="pointfour-item-tag">for ${itemName}</span>` : '<span class="pointfour-brand-tag">general brand reviews</span>'}
                 ${isMarketplace ? '<span class="pointfour-marketplace-tag">Multi-brand site</span>' : ''}
             </div>
     `;

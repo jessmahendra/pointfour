@@ -375,6 +375,54 @@
     font-weight: 500; /* Slightly bolder for material compositions */
 }
 
+/* Review context tags */
+.pointfour-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.pointfour-review-count {
+    font-size: 12px;
+    color: #78716c;
+}
+
+.pointfour-item-tag,
+.pointfour-brand-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.pointfour-item-tag {
+    background: #e6f3ff;
+    color: #0066cc;
+    border: 1px solid #b3d9ff;
+}
+
+.pointfour-brand-tag {
+    background: #f0f0e8;
+    color: #5d5d4e;
+    border: 1px solid #e0e0d4;
+}
+
+.pointfour-marketplace-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fed7aa;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
 /* Section headers */
 .pointfour-fit-info h4,
 .pointfour-quality-info h4,
