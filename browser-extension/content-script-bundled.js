@@ -1959,10 +1959,259 @@ function extractTableData(table) {
 }
 
 // ========================================
-// PRODUCT CATEGORY DETECTION
+// ENHANCED CATEGORY DETECTION
 // ========================================
 
-// Category detection function moved to review-analysis.js to avoid duplication
+function detectProductCategory() {
+    console.log('[PointFour] Detecting product category using multiple methods...');
+    
+    let bestCategory = { category: 'unknown', confidence: 'low', source: 'none', score: 0 };
+    
+    // Method 1: URL-based detection (most reliable)
+    const urlCategory = detectCategoryFromURL();
+    if (urlCategory.confidence !== 'low') {
+        bestCategory = urlCategory;
+        console.log('[PointFour] URL category detection:', urlCategory);
+    }
+    
+    // Method 2: Breadcrumb-based detection
+    const breadcrumbCategory = detectCategoryFromBreadcrumbs();
+    if (breadcrumbCategory.confidence !== 'low' && breadcrumbCategory.score > bestCategory.score) {
+        bestCategory = breadcrumbCategory;
+        console.log('[PointFour] Breadcrumb category detection:', breadcrumbCategory);
+    }
+    
+    // Method 3: Page heading detection
+    const headingCategory = detectCategoryFromHeadings();
+    if (headingCategory.confidence !== 'low' && headingCategory.score > bestCategory.score) {
+        bestCategory = headingCategory;
+        console.log('[PointFour] Heading category detection:', headingCategory);
+    }
+    
+    // Method 4: Product title/name detection (fallback)
+    const itemName = extractItemNameFromPage();
+    if (itemName && bestCategory.confidence === 'low') {
+        const itemCategory = detectCategoryFromItemName(itemName);
+        if (itemCategory.confidence !== 'low') {
+            bestCategory = { ...itemCategory, source: 'item_name' };
+            console.log('[PointFour] Item name category detection:', itemCategory);
+        }
+    }
+    
+    console.log('[PointFour] Final category detection result:', bestCategory);
+    return bestCategory;
+}
+
+function detectCategoryFromURL() {
+    const url = window.location.href.toLowerCase();
+    const pathname = window.location.pathname.toLowerCase();
+    
+    // URL patterns for different categories
+    const categoryPatterns = {
+        shoes: {
+            patterns: ['/shoes/', '/footwear/', '/sneakers/', '/boots/', '/heels/', '/flats/', '/sandals/', '/pumps/', '/loafers/'],
+            score: 20
+        },
+        bags: {
+            patterns: ['/bags/', '/handbags/', '/purses/', '/backpacks/', '/clutches/', '/totes/', '/wallets/'],
+            score: 20
+        },
+        clothing: {
+            patterns: ['/clothing/', '/apparel/', '/dresses/', '/tops/', '/bottoms/', '/jackets/', '/coats/', '/shirts/', '/pants/', '/jeans/', '/skirts/'],
+            score: 15
+        },
+        accessories: {
+            patterns: ['/accessories/', '/jewelry/', '/watches/', '/scarves/', '/belts/', '/hats/', '/sunglasses/'],
+            score: 20
+        }
+    };
+    
+    for (const [category, config] of Object.entries(categoryPatterns)) {
+        for (const pattern of config.patterns) {
+            if (pathname.includes(pattern)) {
+                return {
+                    category: category,
+                    confidence: 'high',
+                    source: 'url',
+                    score: config.score,
+                    matchedPattern: pattern
+                };
+            }
+        }
+    }
+    
+    return { category: 'unknown', confidence: 'low', source: 'url', score: 0 };
+}
+
+function detectCategoryFromBreadcrumbs() {
+    const breadcrumbSelectors = [
+        'nav[aria-label*="breadcrumb"] a, nav[aria-label*="Breadcrumb"] a',
+        '.breadcrumb a, .breadcrumbs a',
+        '[data-testid*="breadcrumb"] a',
+        'ol.breadcrumb a, ul.breadcrumb a',
+        '.navigation-breadcrumbs a',
+        '[class*="breadcrumb"] a'
+    ];
+    
+    const categoryKeywords = {
+        shoes: ['shoes', 'footwear', 'sneakers', 'boots', 'heels', 'flats', 'sandals', 'pumps', 'loafers'],
+        bags: ['bags', 'handbags', 'purses', 'backpacks', 'clutches', 'totes', 'wallets', 'luggage'],
+        clothing: ['clothing', 'apparel', 'dresses', 'tops', 'bottoms', 'jackets', 'coats', 'shirts', 'pants', 'jeans', 'skirts'],
+        accessories: ['accessories', 'jewelry', 'watches', 'scarves', 'belts', 'hats', 'sunglasses', 'gloves']
+    };
+    
+    for (const selector of breadcrumbSelectors) {
+        const links = document.querySelectorAll(selector);
+        for (const link of links) {
+            const text = link.textContent.trim().toLowerCase();
+            
+            for (const [category, keywords] of Object.entries(categoryKeywords)) {
+                for (const keyword of keywords) {
+                    if (text.includes(keyword)) {
+                        return {
+                            category: category,
+                            confidence: 'high',
+                            source: 'breadcrumb',
+                            score: 18,
+                            matchedKeyword: keyword
+                        };
+                    }
+                }
+            }
+        }
+    }
+    
+    return { category: 'unknown', confidence: 'low', source: 'breadcrumb', score: 0 };
+}
+
+function detectCategoryFromHeadings() {
+    const headingSelectors = ['h1', 'h2', 'h3', '.page-title', '.category-title', '.product-category'];
+    
+    const categoryKeywords = {
+        shoes: ['shoes', 'footwear', 'sneakers', 'boots', 'heels', 'flats', 'sandals', 'pumps', 'loafers'],
+        bags: ['bags', 'handbags', 'purses', 'backpacks', 'clutches', 'totes', 'wallets'],
+        clothing: ['clothing', 'apparel', 'dresses', 'tops', 'bottoms', 'jackets', 'coats', 'shirts', 'pants', 'jeans', 'skirts'],
+        accessories: ['accessories', 'jewelry', 'watches', 'scarves', 'belts', 'hats', 'sunglasses']
+    };
+    
+    for (const selector of headingSelectors) {
+        const elements = document.querySelectorAll(selector);
+        for (const element of elements) {
+            const text = element.textContent.trim().toLowerCase();
+            
+            for (const [category, keywords] of Object.entries(categoryKeywords)) {
+                for (const keyword of keywords) {
+                    if (text.includes(keyword)) {
+                        return {
+                            category: category,
+                            confidence: 'medium',
+                            source: 'heading',
+                            score: 15,
+                            matchedKeyword: keyword
+                        };
+                    }
+                }
+            }
+        }
+    }
+    
+    return { category: 'unknown', confidence: 'low', source: 'heading', score: 0 };
+}
+
+function detectCategoryFromItemName(itemName) {
+    // Basic implementation to avoid circular imports
+    // The full implementation is in review-analysis.js
+    const lowerItemName = itemName.toLowerCase();
+    
+    const categoryKeywords = {
+        shoes: ['shoes', 'sneakers', 'boots', 'heels', 'flats', 'sandals', 'pumps', 'loafers'],
+        bags: ['bag', 'handbag', 'purse', 'backpack', 'clutch', 'tote', 'wallet'],
+        clothing: ['dress', 'shirt', 'top', 'pants', 'jeans', 'jacket', 'coat', 'skirt'],
+        accessories: ['jewelry', 'watch', 'scarf', 'belt', 'hat', 'sunglasses']
+    };
+    
+    for (const [category, keywords] of Object.entries(categoryKeywords)) {
+        for (const keyword of keywords) {
+            if (lowerItemName.includes(keyword)) {
+                return {
+                    category: category,
+                    confidence: 'medium',
+                    source: 'item_name',
+                    score: 10
+                };
+            }
+        }
+    }
+    
+    return { category: 'unknown', confidence: 'low', source: 'item_name', score: 0 };
+}
+
+function extractProductType(itemName, category) {
+    if (!itemName) return null;
+    
+    const lowerItemName = itemName.toLowerCase();
+    
+    const productTypes = {
+        shoes: {
+            pumps: ['pumps', 'pump'],
+            heels: ['heels', 'heel', 'stiletto', 'stilettos'],
+            sneakers: ['sneakers', 'sneaker', 'trainers', 'trainer'],
+            boots: ['boots', 'boot', 'ankle boots', 'knee boots'],
+            flats: ['flats', 'flat', 'ballet flats', 'ballerinas'],
+            sandals: ['sandals', 'sandal'],
+            loafers: ['loafers', 'loafer', 'slip-on', 'slip-ons']
+        },
+        bags: {
+            handbag: ['handbag', 'handbags'],
+            tote: ['tote', 'totes'],
+            clutch: ['clutch', 'clutches'],
+            backpack: ['backpack', 'backpacks'],
+            crossbody: ['crossbody', 'cross-body'],
+            shoulder: ['shoulder bag', 'shoulder bags']
+        },
+        clothing: {
+            dress: ['dress', 'dresses', 'midi dress', 'maxi dress', 'mini dress'],
+            top: ['top', 'tops', 'shirt', 'blouse'],
+            pants: ['pants', 'trousers', 'jeans'],
+            jacket: ['jacket', 'blazer', 'coat'],
+            skirt: ['skirt', 'skirts']
+        },
+        accessories: {
+            watch: ['watch', 'watches'],
+            jewelry: ['necklace', 'bracelet', 'earrings', 'ring'],
+            scarf: ['scarf', 'scarves'],
+            belt: ['belt', 'belts']
+        }
+    };
+    
+    if (category && productTypes[category]) {
+        for (const [type, keywords] of Object.entries(productTypes[category])) {
+            for (const keyword of keywords) {
+                if (lowerItemName.includes(keyword)) {
+                    return type;
+                }
+            }
+        }
+    }
+    
+    return null;
+}
+
+function extractProductLine(itemName) {
+    if (!itemName) return null;
+    
+    // Extract potential product line names (usually first 1-2 words)
+    const words = itemName.trim().split(/\s+/);
+    if (words.length >= 2) {
+        // Look for capitalized words that might be product line names
+        const potentialLine = words.slice(0, 2).join(' ');
+        if (/^[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?$/.test(potentialLine)) {
+            return potentialLine;
+        }
+    }
+    
+    return null;
+}
 
 // ========================================
 // COMPREHENSIVE PRODUCT EXTRACTION
@@ -1983,8 +2232,8 @@ function extractAllProductData() {
         materials: extractMaterialsFromPage(),
         sizeGuide: extractSizeGuideFromPage(),
         
-        // Derived information
-        category: null,
+        // Enhanced category detection
+        categoryDetection: detectProductCategory(),
         
         // Meta information
         extractedAt: new Date().toISOString(),
@@ -1992,9 +2241,13 @@ function extractAllProductData() {
         hostname: window.location.hostname
     };
     
-    // Determine category from item name
-    if (productData.itemName) {
-        productData.category = detectCategoryFromItemName(productData.itemName);
+    // Set main category from detection
+    productData.category = productData.categoryDetection.category;
+    
+    // Extract product type and line if we have an item name and category
+    if (productData.itemName && productData.category !== 'unknown') {
+        productData.productType = extractProductType(productData.itemName, productData.category);
+        productData.productLine = extractProductLine(productData.itemName);
     }
     
     // Merge URL data if available
@@ -3015,10 +3268,15 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
     const itemName = urlExtraction?.itemName || null;
     const isItemSpecific = itemName && itemName.length > 0;
     
-    // Generate appropriate review context copy with sources
+    // Generate category-specific review context copy with sources
     let reviewContext = '';
     const genericTerms = ['shop', 'store', 'collection', 'brand', 'clothing', 'fashion'];
     const isGenericTerm = itemName && genericTerms.includes(itemName.toLowerCase());
+    
+    // Get category information from data
+    const category = data.category || urlExtraction?.category;
+    const productType = data.productType || urlExtraction?.productType;
+    const relevanceLevel = data.relevanceLevel;
     
     // Get top sources for transparency
     const sources = data.externalSearchResults?.brandFitSummary?.sources || [];
@@ -3042,8 +3300,20 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         }
     }
     
-    if (isItemSpecific && itemName && !isGenericTerm) {
+    // Generate context based on category specificity and relevance
+    if (relevanceLevel === 'exact_product' && itemName && !isGenericTerm) {
         reviewContext = `Based on ${totalReviews} reviews${sourcesText} for ${itemName}`;
+    } else if (relevanceLevel === 'product_type' && productType) {
+        const categoryText = getCategoryDisplayText(category, productType);
+        reviewContext = `Based on ${totalReviews} ${brandName} ${categoryText} reviews${sourcesText}`;
+    } else if (relevanceLevel === 'category' && category && category !== 'unknown') {
+        const categoryText = getCategoryDisplayText(category);
+        reviewContext = `Based on ${totalReviews} ${brandName} ${categoryText} reviews${sourcesText}`;
+    } else if (isItemSpecific && itemName && !isGenericTerm) {
+        reviewContext = `Based on ${totalReviews} reviews${sourcesText} for ${itemName}`;
+    } else if (category && category !== 'unknown') {
+        const categoryText = getCategoryDisplayText(category);
+        reviewContext = `Based on ${totalReviews} ${brandName} ${categoryText} reviews${sourcesText}`;
     } else {
         reviewContext = `Based on ${totalReviews} ${brandName} reviews${sourcesText}`;
     }
@@ -3338,9 +3608,6 @@ function renderMaterialsAndCare(materials) {
             html += `
                 <div class="pointfour-section">
                     <div class="pointfour-section-header">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M12 2L2 7v10l10 5 10-5V7l-10-5z" stroke-width="2"/>
-                        </svg>
                         <span>Materials</span>
                     </div>
                     <div class="pointfour-section-content">
@@ -3369,10 +3636,6 @@ function renderMaterialsAndCare(materials) {
             html += `
                 <div class="pointfour-section">
                     <div class="pointfour-section-header">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="3" stroke-width="2"/>
-                            <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke-width="2"/>
-                        </svg>
                         <span>Care</span>
                     </div>
                     <div class="pointfour-section-content">
@@ -3445,6 +3708,24 @@ function getSectionIcon(sectionKey) {
         washCare: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3" stroke-width="2"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke-width="2"/></svg>'
     };
     return icons[sectionKey] || '';
+}
+
+function getCategoryDisplayText(category, productType = null) {
+    // Map category and product type to user-friendly display text
+    const categoryMapping = {
+        shoes: productType ? `${productType}` : 'shoe',
+        bags: productType ? `${productType}` : 'bag', 
+        clothing: productType ? `${productType}` : 'clothing',
+        accessories: productType ? `${productType}` : 'accessory'
+    };
+    
+    const displayText = categoryMapping[category];
+    if (displayText) {
+        // Ensure it's in singular form for better grammar
+        return displayText.endsWith('s') && displayText !== 'dress' ? displayText : displayText;
+    }
+    
+    return category || 'product';
 }
 
 // ========================================

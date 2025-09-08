@@ -183,12 +183,28 @@ import {
                 if (extractedData.itemName) {
                     params.set('item', extractedData.itemName);
                 }
-                if (extractedData.category) {
+                if (extractedData.category && extractedData.category !== 'unknown') {
                     params.set('category', extractedData.category);
+                }
+                if (extractedData.productType) {
+                    params.set('productType', extractedData.productType);
+                }
+                if (extractedData.productLine) {
+                    params.set('productLine', extractedData.productLine);
+                }
+                if (extractedData.categoryDetection) {
+                    params.set('categoryConfidence', extractedData.categoryDetection.confidence);
+                    params.set('categorySource', extractedData.categoryDetection.source);
                 }
                 if (extractedData.productImage) {
                     params.set('productImage', extractedData.productImage);
                 }
+            }
+            
+            // Set search type to 'relevant' for category-specific filtering
+            if (extractedData && extractedData.category && extractedData.category !== 'unknown') {
+                params.set('searchType', 'relevant');
+                console.log('[PointFour] Using relevant search for category:', extractedData.category);
             }
 
             // Add page context

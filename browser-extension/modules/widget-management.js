@@ -374,10 +374,15 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
     const itemName = urlExtraction?.itemName || null;
     const isItemSpecific = itemName && itemName.length > 0;
     
-    // Generate appropriate review context copy with sources
+    // Generate category-specific review context copy with sources
     let reviewContext = '';
     const genericTerms = ['shop', 'store', 'collection', 'brand', 'clothing', 'fashion'];
     const isGenericTerm = itemName && genericTerms.includes(itemName.toLowerCase());
+    
+    // Get category information from data
+    const category = data.category || urlExtraction?.category;
+    const productType = data.productType || urlExtraction?.productType;
+    const relevanceLevel = data.relevanceLevel;
     
     // Get top sources for transparency
     const sources = data.externalSearchResults?.brandFitSummary?.sources || [];
@@ -401,8 +406,20 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         }
     }
     
-    if (isItemSpecific && itemName && !isGenericTerm) {
+    // Generate context based on category specificity and relevance
+    if (relevanceLevel === 'exact_product' && itemName && !isGenericTerm) {
         reviewContext = `Based on ${totalReviews} reviews${sourcesText} for ${itemName}`;
+    } else if (relevanceLevel === 'product_type' && productType) {
+        const categoryText = getCategoryDisplayText(category, productType);
+        reviewContext = `Based on ${totalReviews} ${brandName} ${categoryText} reviews${sourcesText}`;
+    } else if (relevanceLevel === 'category' && category && category !== 'unknown') {
+        const categoryText = getCategoryDisplayText(category);
+        reviewContext = `Based on ${totalReviews} ${brandName} ${categoryText} reviews${sourcesText}`;
+    } else if (isItemSpecific && itemName && !isGenericTerm) {
+        reviewContext = `Based on ${totalReviews} reviews${sourcesText} for ${itemName}`;
+    } else if (category && category !== 'unknown') {
+        const categoryText = getCategoryDisplayText(category);
+        reviewContext = `Based on ${totalReviews} ${brandName} ${categoryText} reviews${sourcesText}`;
     } else {
         reviewContext = `Based on ${totalReviews} ${brandName} reviews${sourcesText}`;
     }
@@ -698,9 +715,6 @@ function renderMaterialsAndCare(materials) {
             html += `
                 <div class="pointfour-section">
                     <div class="pointfour-section-header">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M12 2L2 7v10l10 5 10-5V7l-10-5z" stroke-width="2"/>
-                        </svg>
                         <span>Materials</span>
                     </div>
                     <div class="pointfour-section-content">
@@ -729,10 +743,6 @@ function renderMaterialsAndCare(materials) {
             html += `
                 <div class="pointfour-section">
                     <div class="pointfour-section-header">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="3" stroke-width="2"/>
-                            <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke-width="2"/>
-                        </svg>
                         <span>Care</span>
                     </div>
                     <div class="pointfour-section-content">
@@ -805,6 +815,24 @@ function getSectionIcon(sectionKey) {
         washCare: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3" stroke-width="2"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke-width="2"/></svg>'
     };
     return icons[sectionKey] || '';
+}
+
+function getCategoryDisplayText(category, productType = null) {
+    // Map category and product type to user-friendly display text
+    const categoryMapping = {
+        shoes: productType ? `${productType}` : 'shoe',
+        bags: productType ? `${productType}` : 'bag', 
+        clothing: productType ? `${productType}` : 'clothing',
+        accessories: productType ? `${productType}` : 'accessory'
+    };
+    
+    const displayText = categoryMapping[category];
+    if (displayText) {
+        // Ensure it's in singular form for better grammar
+        return displayText.endsWith('s') && displayText !== 'dress' ? displayText : displayText;
+    }
+    
+    return category || 'product';
 }
 
 
