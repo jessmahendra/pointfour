@@ -453,18 +453,20 @@ function renderSectionWithQuotes(sectionKey, section) {
                 <p class="pointfour-main-insight">${mainInsight}</p>
     `;
     
-    // Add real user quotes if evidence exists
+    // Add real user quotes if evidence exists - filter for section relevance
     if (section.evidence && section.evidence.length > 0) {
-        const quotes = section.evidence.slice(0, 3); // Show max 3 quotes
+        const relevantQuotes = filterQuotesForSection(section.evidence, sectionKey);
         
-        html += '<ul class="pointfour-bullet-list">';
-        for (const quote of quotes) {
-            if (quote && quote.trim().length > 10) { // Only show substantial quotes
-                const cleanedQuote = cleanQuoteText(quote);
-                html += `<li class="pointfour-quote">"${cleanedQuote}"</li>`;
+        if (relevantQuotes.length > 0) {
+            html += '<ul class="pointfour-bullet-list">';
+            for (const quote of relevantQuotes.slice(0, 3)) { // Show max 3 relevant quotes
+                if (quote && quote.trim().length > 10) {
+                    const cleanedQuote = cleanQuoteText(quote);
+                    html += `<li class="pointfour-quote">"${cleanedQuote}"</li>`;
+                }
             }
+            html += '</ul>';
         }
-        html += '</ul>';
     }
     
     // Show confidence warning only if confidence is low
@@ -478,6 +480,74 @@ function renderSectionWithQuotes(sectionKey, section) {
     `;
     
     return html;
+}
+
+function filterQuotesForSection(quotes, sectionKey) {
+    // Define keywords for each section type
+    const sectionKeywords = {
+        fit: [
+            // Sizing terms
+            'runs small', 'runs large', 'run small', 'run large', 'runs big', 'run big',
+            'true to size', 'tts', 'size up', 'size down', 'sized up', 'sized down',
+            'fits small', 'fits large', 'fits big', 'fits tight', 'fits loose',
+            'tight', 'loose', 'snug', 'roomy', 'baggy', 'fitted', 'oversized',
+            'smaller than expected', 'bigger than expected', 'larger than expected',
+            'size', 'sizing', 'fit', 'fits', 'fitting',
+            // Specific size references
+            'went up a size', 'went down a size', 'order a size up', 'order a size down',
+            'usual size', 'normal size', 'typical size', 'my size'
+        ],
+        
+        quality: [
+            // Quality terms
+            'quality', 'well made', 'poorly made', 'cheap', 'expensive', 'worth it',
+            'durable', 'lasted', 'lasts', 'falling apart', 'falls apart', 
+            'construction', 'stitching', 'seams', 'pilling', 'pills',
+            'fades', 'faded', 'color', 'fabric quality', 'material quality',
+            'feels cheap', 'feels expensive', 'feels good', 'feels bad',
+            'impressive', 'disappointed', 'disappointed with', 'love the quality',
+            'hate the quality', 'amazing quality', 'terrible quality',
+            'overpriced', 'worth the money', 'value for money'
+        ],
+        
+        washCare: [
+            // Care and washing terms
+            'wash', 'washed', 'washing', 'shrink', 'shrinks', 'shrank', 'shrinkage',
+            'dry clean', 'machine wash', 'hand wash', 'cold wash', 'hot wash',
+            'dryer', 'tumble dry', 'air dry', 'hang dry', 'lay flat',
+            'iron', 'ironing', 'wrinkle', 'wrinkles', 'care instructions',
+            'bleach', 'detergent', 'fabric softener', 'delicate cycle',
+            'after washing', 'holds up', 'maintains shape', 'lost shape'
+        ]
+    };
+    
+    const keywords = sectionKeywords[sectionKey] || [];
+    if (keywords.length === 0) return quotes; // Return all if no keywords defined
+    
+    // Score each quote based on relevance to the section
+    const scoredQuotes = quotes.map(quote => {
+        const lowerQuote = quote.toLowerCase();
+        let score = 0;
+        
+        // Count keyword matches
+        for (const keyword of keywords) {
+            if (lowerQuote.includes(keyword.toLowerCase())) {
+                score += 1;
+                // Give extra weight to exact phrase matches
+                if (lowerQuote.includes(keyword.toLowerCase())) {
+                    score += 0.5;
+                }
+            }
+        }
+        
+        return { quote, score };
+    });
+    
+    // Filter out quotes with no relevance and sort by relevance score
+    return scoredQuotes
+        .filter(item => item.score > 0) // Only keep quotes with at least one keyword match
+        .sort((a, b) => b.score - a.score) // Sort by relevance (highest first)
+        .map(item => item.quote); // Return just the quotes
 }
 
 function cleanQuoteText(quote) {
