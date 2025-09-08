@@ -6,6 +6,7 @@ export const ALLOWED_API_ENDPOINTS = [
   'http://localhost:3000',
   'http://localhost:3002', 
   'https://pointfour.in',
+  'https://www.pointfour.in',
   'https://api.pointfour.in'
 ];
 

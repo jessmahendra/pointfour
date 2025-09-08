@@ -16,6 +16,7 @@ const ALLOWED_API_ENDPOINTS = [
   'http://localhost:3000',
   'http://localhost:3002', 
   'https://pointfour.in',
+  'https://www.pointfour.in',
   'https://api.pointfour.in'
 ];
 
@@ -2728,14 +2729,8 @@ function createWidget() {
         });
     }
     
-    // Click outside to close (but not if widget is minimized)
-    document.addEventListener('click', function(e) {
-        const currentContainer = getState('widgetContainer');
-        const isMinimized = getState('widgetMinimized');
-        if (currentContainer && !currentContainer.contains(e.target) && !isMinimized) {
-            hideWidget();
-        }
-    });
+    // Note: Click-outside-to-close behavior has been removed 
+    // Users can close the widget using the X button or minimize it
     
     console.log('[PointFour] Widget created successfully');
 }
@@ -3620,7 +3615,7 @@ function getSectionIcon(sectionKey) {
             params.set('pageTitle', document.title);
 
             // Make API call
-            const apiUrl = `http://localhost:3000/api/extension/search-reviews?${params.toString()}`;
+            const apiUrl = `https://www.pointfour.in/api/extension/search-reviews?${params.toString()}`;
             console.log('[PointFour] API Request:', apiUrl);
 
             const response = await fetch(apiUrl, {

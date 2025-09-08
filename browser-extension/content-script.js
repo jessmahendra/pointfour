@@ -196,7 +196,7 @@ import {
             params.set('pageTitle', document.title);
 
             // Make API call
-            const apiUrl = `https://pointfour.in/api/extension/search-reviews?${params.toString()}`;
+            const apiUrl = `https://www.pointfour.in/api/extension/search-reviews?${params.toString()}`;
             console.log('[PointFour] API Request:', apiUrl);
 
             const response = await fetch(apiUrl, {

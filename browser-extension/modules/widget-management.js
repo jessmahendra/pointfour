@@ -88,14 +88,8 @@ export function createWidget() {
         });
     }
     
-    // Click outside to close (but not if widget is minimized)
-    document.addEventListener('click', function(e) {
-        const currentContainer = getState('widgetContainer');
-        const isMinimized = getState('widgetMinimized');
-        if (currentContainer && !currentContainer.contains(e.target) && !isMinimized) {
-            hideWidget();
-        }
-    });
+    // Note: Click-outside-to-close behavior has been removed 
+    // Users can close the widget using the X button or minimize it
     
     console.log('[PointFour] Widget created successfully');
 }
