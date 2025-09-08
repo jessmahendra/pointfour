@@ -1961,7 +1961,27 @@ function extractTableData(table) {
 // PRODUCT CATEGORY DETECTION
 // ========================================
 
-// Category detection function moved to review-analysis.js to avoid duplication
+function detectCategoryFromItemName(itemName = '') {
+    const categoryMappings = {
+        'jeans': ['jean', 'denim'],
+        'dress': ['dress', 'midi', 'maxi', 'mini'],
+        'top': ['top', 'blouse', 'shirt', 'tee', 't-shirt', 'tank', 'cami', 'bodysuit'],
+        'outerwear': ['jacket', 'coat', 'blazer', 'cardigan', 'sweater', 'hoodie', 'vest'],
+        'bottom': ['pant', 'trouser', 'short', 'skirt', 'legging'],
+        'shoes': ['shoe', 'boot', 'sandal', 'sneaker', 'heel', 'flat', 'loafer'],
+        'accessories': ['bag', 'purse', 'wallet', 'belt', 'scarf', 'hat', 'jewelry', 'necklace', 'earring', 'bracelet', 'ring']
+    };
+    
+    const lowerItemName = itemName.toLowerCase();
+    
+    for (const [category, keywords] of Object.entries(categoryMappings)) {
+        if (keywords.some(keyword => lowerItemName.includes(keyword))) {
+            return category;
+        }
+    }
+    
+    return 'clothing'; // Default category
+}
 
 // ========================================
 // COMPREHENSIVE PRODUCT EXTRACTION
