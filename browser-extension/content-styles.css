@@ -292,8 +292,12 @@
     border-left: 2px solid #C19A5B;
 }
 
-/* User quote styling */
-.pointfour-bullet-list li.pointfour-quote {
+/* User quote styling using div containers instead of lists */
+.pointfour-quotes-container {
+    margin: 8px 0;
+}
+
+.pointfour-quote {
     font-style: italic;
     color: #5d4e37; /* Stone text color */
     background: rgba(232, 224, 213, 0.3); /* Very subtle stone background */
@@ -306,7 +310,7 @@
     position: relative;
 }
 
-.pointfour-bullet-list li.pointfour-quote:before {
+.pointfour-quote:before {
     content: """; /* Opening quote mark */
     position: absolute;
     left: 6px;
@@ -318,7 +322,7 @@
     font-style: normal;
 }
 
-.pointfour-bullet-list li.pointfour-quote:after {
+.pointfour-quote:after {
     content: """; /* Closing quote mark */
     color: #C19A5B;
     font-weight: bold;

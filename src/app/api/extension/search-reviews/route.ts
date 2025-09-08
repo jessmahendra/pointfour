@@ -1261,6 +1261,61 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
     console.log('🔍 API RESPONSE DEBUG: Sections keys:', Object.keys(sections));
     console.log('🔍 API RESPONSE DEBUG: hasData will be:', Object.keys(sections).length > 0);
 
+    // Extract top sources for transparency
+    const sourceCount = new Map<string, number>();
+    prioritizedReviews.forEach(review => {
+      try {
+        const urlObj = new URL(review.url);
+        const hostname = urlObj.hostname.replace(/^www\./, '');
+        
+        // Map common domains to readable names
+        const sourceMap: { [key: string]: string } = {
+          'reddit.com': 'Reddit',
+          'substack.com': 'Substack', 
+          'medium.com': 'Medium',
+          'youtube.com': 'YouTube',
+          'instagram.com': 'Instagram',
+          'twitter.com': 'Twitter',
+          'styleforum.net': 'StyleForum',
+          'vogue.com': 'Vogue',
+          'elle.com': 'Elle',
+          'refinery29.com': 'Refinery29'
+        };
+        
+        let sourceName = sourceMap[hostname];
+        if (!sourceName) {
+          // Check for subdomain matches (like user.substack.com)
+          for (const [domain, name] of Object.entries(sourceMap)) {
+            if (hostname.endsWith(domain)) {
+              sourceName = name;
+              break;
+            }
+          }
+        }
+        
+        // Fallback to generic name
+        if (!sourceName) {
+          sourceName = hostname.split('.')[0];
+          sourceName = sourceName.charAt(0).toUpperCase() + sourceName.slice(1);
+        }
+        
+        sourceCount.set(sourceName, (sourceCount.get(sourceName) || 0) + 1);
+      } catch (e) {
+        // Skip invalid URLs
+      }
+    });
+    
+    // Get top 3 sources
+    const topSources = Array.from(sourceCount.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name, count]) => ({ name, count }));
+    
+    // Check if there are more sources beyond top 3
+    const hasMoreSources = sourceCount.size > 3;
+    
+    console.log('🔍 TOP SOURCES:', topSources);
+
     const response = NextResponse.json({
       brandName: brand, // Include the brand name in the response
       externalSearchResults: {
@@ -1270,7 +1325,8 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
           sections,
           hasData: Object.keys(sections).length > 0,
           totalResults: prioritizedReviews.length,
-          sources: []
+          sources: topSources,
+          hasMoreSources: hasMoreSources
         },
         reviews: prioritizedReviews.slice(0, 20),
         totalResults: prioritizedReviews.length

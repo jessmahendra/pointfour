@@ -380,15 +380,37 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
     const itemName = urlExtraction?.itemName || null;
     const isItemSpecific = itemName && itemName.length > 0;
     
-    // Generate appropriate review context copy
+    // Generate appropriate review context copy with sources
     let reviewContext = '';
     const genericTerms = ['shop', 'store', 'collection', 'brand', 'clothing', 'fashion'];
     const isGenericTerm = itemName && genericTerms.includes(itemName.toLowerCase());
     
+    // Get top sources for transparency
+    const sources = data.externalSearchResults?.brandFitSummary?.sources || [];
+    const hasMoreSources = data.externalSearchResults?.brandFitSummary?.hasMoreSources || false;
+    let sourcesText = '';
+    
+    if (sources.length > 0) {
+        const sourceNames = sources.slice(0, 3).map(s => s.name);
+        
+        if (sourceNames.length === 1) {
+            sourcesText = ` from ${sourceNames[0]}`;
+        } else if (sourceNames.length === 2) {
+            sourcesText = ` from ${sourceNames[0]} and ${sourceNames[1]}`;
+        } else if (sourceNames.length === 3) {
+            sourcesText = ` from ${sourceNames[0]}, ${sourceNames[1]}, and ${sourceNames[2]}`;
+        }
+        
+        // Add "and more" if there are additional sources
+        if (hasMoreSources) {
+            sourcesText += ' and more';
+        }
+    }
+    
     if (isItemSpecific && itemName && !isGenericTerm) {
-        reviewContext = `Based on ${totalReviews} reviews for ${itemName}`;
+        reviewContext = `Based on ${totalReviews} reviews${sourcesText} for ${itemName}`;
     } else {
-        reviewContext = `Based on ${totalReviews} ${brandName} reviews`;
+        reviewContext = `Based on ${totalReviews} ${brandName} reviews${sourcesText}`;
     }
     
     let contentHTML = `
@@ -512,7 +534,6 @@ function renderSectionWithQuotes(sectionKey, section) {
     let html = `
         <div class="pointfour-section">
             <div class="pointfour-section-header">
-                ${sectionIcon}
                 <span>${sectionTitle}</span>
             </div>
             <div class="pointfour-section-content">
@@ -524,14 +545,14 @@ function renderSectionWithQuotes(sectionKey, section) {
         const relevantQuotes = filterQuotesForSection(section.evidence, sectionKey);
         
         if (relevantQuotes.length > 0) {
-            html += '<ul class="pointfour-bullet-list">';
+            html += '<div class="pointfour-quotes-container">';
             for (const quote of relevantQuotes.slice(0, 3)) { // Show max 3 relevant quotes
                 if (quote && quote.trim().length > 10) {
                     const cleanedQuote = cleanQuoteText(quote);
-                    html += `<li class="pointfour-quote">"${cleanedQuote}"</li>`;
+                    html += `<div class="pointfour-quote">"${cleanedQuote}"</div>`;
                 }
             }
-            html += '</ul>';
+            html += '</div>';
         }
     }
     
