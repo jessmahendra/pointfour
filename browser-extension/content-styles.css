@@ -643,35 +643,34 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  background: #000000;
-  color: #FFFFFF !important;
+  padding: 12px 20px;
+  background: #FFFFFF;
+  color: #000000 !important;
   text-decoration: none !important;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: all 0.2s ease;
   cursor: pointer;
-  border: 1px solid #000000;
+  border: 1px solid #D6D6D6;
+  width: 100%;
+  justify-content: center;
 }
 
 .pointfour-reviews-button:hover {
-  background: #1a1a1a;
-  border-color: #1a1a1a;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: #f8f8f8;
+  border-color: #cccccc;
 }
 
 .pointfour-reviews-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  background: #FFFFFF;
 }
 
 .pointfour-reviews-button svg {
   width: 12px;
   height: 12px;
-  stroke: #FFFFFF;
+  stroke: #000000;
   transition: transform 0.2s ease;
 }
 
@@ -944,45 +943,264 @@
 /* Tailored Recommendations */
 .pointfour-tailored-recommendations {
   margin-top: 16px;
-  padding: 16px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 8px;
-  border: 1px solid #dee2e6;
   text-align: center;
 }
 
 .pointfour-tailored-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  display: inline-block;
   padding: 12px 20px;
-  background: linear-gradient(135deg, #8b7355 0%, #a68b5b 100%);
-  color: white;
+  background: #000000;
+  color: #FFFFFF !important;
   border: none;
   border-radius: 6px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(139, 115, 85, 0.2);
+  width: 100%;
+  text-align: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
 }
 
 .pointfour-tailored-btn:hover {
-  background: linear-gradient(135deg, #7a6349 0%, #957a4f 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(139, 115, 85, 0.3);
+  background: #333333;
 }
 
 .pointfour-tailored-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(139, 115, 85, 0.2);
+  background: #000000;
 }
 
-.pointfour-tailored-description {
-  margin: 8px 0 0 0;
+/* Tailored Recommendations Results */
+.pointfour-tailored-results {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.pointfour-tailored-results h4 {
+  margin: 0 0 16px 0;
+  color: #9F513A;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.pointfour-size-match {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.pointfour-recommended-size {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.pointfour-confidence-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
   font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.pointfour-confidence-badge.confidence-high {
+  background: #d4edda;
+  color: #155724;
+}
+
+.pointfour-confidence-badge.confidence-medium {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.pointfour-confidence-badge.confidence-low {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.pointfour-size-measurements {
   color: #6c757d;
-  font-style: italic;
+  font-size: 12px;
+}
+
+.pointfour-fit-advice,
+.pointfour-alternative-sizes {
+  margin-bottom: 16px;
+}
+
+.pointfour-fit-advice strong,
+.pointfour-alternative-sizes strong {
+  color: #9F513A;
+  font-size: 14px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.pointfour-fit-advice ul,
+.pointfour-alternative-sizes ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.pointfour-fit-advice li,
+.pointfour-alternative-sizes li {
+  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.pointfour-alternative-sizes li {
+  padding: 8px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  margin-bottom: 8px;
+}
+
+.pointfour-alternative-sizes li small {
+  display: block;
+  color: #6c757d;
+  margin-top: 4px;
+}
+
+.pointfour-tailored-actions {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.pointfour-btn-secondary {
+  display: inline-block;
+  padding: 8px 16px;
+  background: #FFFFFF;
+  color: #000000;
+  border: 1px solid #D6D6D6;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pointfour-btn-secondary:hover {
+  background: #f8f8f8;
+  border-color: #cccccc;
+}
+
+/* Inline Size Input Form */
+.pointfour-size-input-form {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.pointfour-size-input-form h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #495057;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pointfour-size-input-form h4:before {
+  content: "✨";
+  font-size: 18px;
+}
+
+.pointfour-form-description {
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+.pointfour-size-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pointfour-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pointfour-form-group label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 13px;
+}
+
+.pointfour-form-group select,
+.pointfour-form-group input {
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: border-color 0.2s ease;
+  background: white;
+}
+
+.pointfour-form-group select:focus,
+.pointfour-form-group input:focus {
+  outline: none;
+  border-color: #8b7355;
+  box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.1);
+}
+
+.pointfour-measurements-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.pointfour-form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.pointfour-btn-primary,
+.pointfour-btn-secondary {
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.pointfour-btn-primary {
+  background: linear-gradient(135deg, #8b7355 0%, #a68b5b 100%);
+  color: white;
+}
+
+.pointfour-btn-primary:hover {
+  background: linear-gradient(135deg, #7a6349 0%, #957a4f 100%);
+  transform: translateY(-1px);
+}
+
+.pointfour-btn-secondary {
+  background: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.pointfour-btn-secondary:hover {
+  background: #e9ecef;
+  color: #495057;
 }
 
 /* Tailored Recommendations Results */
