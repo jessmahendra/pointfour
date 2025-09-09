@@ -192,6 +192,15 @@ import {
                 if (extractedData.productLine) {
                     params.set('productLine', extractedData.productLine);
                 }
+                if (extractedData.sku) {
+                    params.set('sku', extractedData.sku);
+                }
+                if (extractedData.color) {
+                    params.set('color', extractedData.color);
+                }
+                if (extractedData.productFingerprint) {
+                    params.set('productFingerprint', extractedData.productFingerprint);
+                }
                 if (extractedData.categoryDetection) {
                     params.set('categoryConfidence', extractedData.categoryDetection.confidence);
                     params.set('categorySource', extractedData.categoryDetection.source);

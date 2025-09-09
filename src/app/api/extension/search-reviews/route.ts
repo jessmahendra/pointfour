@@ -236,63 +236,83 @@ function detectSpecificItemSearch(brand: string, itemName: string = ''): boolean
   return hasSpecificDescriptors || hasSubstantialItemName;
 }
 
+// Universal fashion brand disambiguation - works dynamically for ALL brands
+function getDisambiguatedBrand(brand: string, category: string = 'clothing'): string {
+  // Dynamic disambiguation: add fashion context based on category for ANY brand
+  const categoryTerms = {
+    'shoes': 'shoes footwear fashion',
+    'bags': 'bags handbags fashion', 
+    'accessories': 'jewelry accessories fashion',
+    'clothing': 'clothing fashion',
+    'general': 'fashion'
+  };
+  
+  const fashionContext = categoryTerms[category] || 'fashion';
+  return `"${brand}" ${fashionContext} brand`;
+}
+
 function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general', itemName: string = '', isSpecificItem: boolean = false): string[] {
   // Base queries for each category
   const baseQueries = (() => {
     switch (category) {
       case 'bags':
+        const bagsBrand = getDisambiguatedBrand(brand);
         return [
-          `${brand} bag review quality "well made" OR "poorly made" OR "durable"`,
-          `${brand} handbag quality leather material construction review`,
-          `${brand} bag "holds up" OR "falling apart" OR "worth it" review`
+          `${bagsBrand} bag handbag review quality "well made" OR "poorly made" OR "durable"`,
+          `${bagsBrand} handbag quality leather material construction review`,
+          `${bagsBrand} bag "holds up" OR "falling apart" OR "worth it" review`
         ];
       
       case 'shoes':
+        const shoesBrand = getDisambiguatedBrand(brand, 'shoes');
         return [
-          `${brand} shoes fit review "runs small" OR "runs large" OR "true to size"`,
-          `${brand} shoe quality comfort "uncomfortable" OR "comfortable" review`,
-          `${brand} footwear durability "lasted" OR "wore out" review`
+          `${shoesBrand} shoes footwear fit review "runs small" OR "runs large" OR "true to size"`,
+          `${shoesBrand} shoe quality comfort "uncomfortable" OR "comfortable" review`,
+          `${shoesBrand} footwear durability "lasted" OR "wore out" review`
         ];
       
       case 'accessories':
+        const accessoriesBrand = getDisambiguatedBrand(brand, 'accessories');
         return [
-          `${brand} accessory quality review "well made" OR "cheap" OR "durable"`,
-          `${brand} jewelry watch quality "tarnish" OR "scratches" OR "holds up"`,
-          `${brand} accessory "worth it" OR "overpriced" review`
+          `${accessoriesBrand} accessory quality review "well made" OR "cheap" OR "durable"`,
+          `${accessoriesBrand} jewelry watch quality "tarnish" OR "scratches" OR "holds up"`,
+          `${accessoriesBrand} accessory "worth it" OR "overpriced" review`
         ];
       
       case 'clothing':
       default:
+        const clothingBrand = getDisambiguatedBrand(brand, 'clothing');
         return [
-          `"${brand}" "runs small" OR "runs large" OR "true to size" OR "size up" OR "size down"`,
-          `"${brand}" "fit" review "tight" OR "loose" OR "perfect" OR "weird" sizing`,
-          `"${brand}" "quality" "fabric" "material" "cotton" OR "wool" OR "polyester"`,
-          `"${brand}" "shrinks" OR "shrink" OR "wash" OR "care" OR "dry clean"`,
-          `"${brand}" site:reddit.com fit size review`,
-          `"${brand}" review "disappointed" OR "impressed" OR "worth it" OR "overpriced"`
+          `${clothingBrand} "runs small" OR "runs large" OR "true to size" OR "size up" OR "size down"`,
+          `${clothingBrand} "fit" review "tight" OR "loose" OR "perfect" OR "weird" sizing`,
+          `${clothingBrand} "quality" "fabric" "material" "cotton" OR "wool" OR "polyester"`,
+          `${clothingBrand} "shrinks" OR "shrink" OR "wash" OR "care" OR "dry clean"`,
+          `${clothingBrand} site:reddit.com fit size review`,
+          `${clothingBrand} review "disappointed" OR "impressed" OR "worth it" OR "overpriced"`
         ];
     }
   })();
 
   // Add platform-specific queries to target high-quality fashion content
+  const platformBrand = getDisambiguatedBrand(brand, category);
   const platformQueries = [
-    `"${brand}" site:substack.com review fit quality`,
-    `"${brand}" site:reddit.com "runs small" OR "runs large" OR "true to size"`,
-    `"${brand}" site:youtube.com review "fit" OR "size" OR "quality"`,
-    `"${brand}" fashion blog review fit sizing`,
-    `"${brand}" "wardrobe" OR "closet" review fit size`,
+    `${platformBrand} site:substack.com review fit quality`,
+    `${platformBrand} site:reddit.com "runs small" OR "runs large" OR "true to size"`,
+    `${platformBrand} site:youtube.com review "fit" OR "size" OR "quality"`,
+    `${platformBrand} fashion blog review fit sizing`,
+    `${platformBrand} "wardrobe" OR "closet" review fit size`,
   ];
 
   // If this is a specific item search, add item-focused queries with exact matching
   if (isSpecificItem && itemName) {
     const specificItemQueries = [
-      `"${brand} ${itemName}" review`,
-      `"${brand} ${itemName}" fit "runs small" OR "runs large" OR "true to size"`,
-      `"${brand} ${itemName}" quality "well made" OR "poorly made"`,
-      `"${brand} ${itemName}" material fabric composition`,
-      `"${brand} ${itemName}" "100%" OR "cotton" OR "wool" OR "silk" OR "polyester" OR "blend"`,
-      `"${brand} ${itemName}" site:substack.com review`,
-      `"${brand} ${itemName}" site:reddit.com review`
+      `"${brand} ${itemName}" fashion review`,
+      `"${brand} ${itemName}" clothing fit "runs small" OR "runs large" OR "true to size"`,
+      `"${brand} ${itemName}" fashion quality "well made" OR "poorly made"`,
+      `"${brand} ${itemName}" clothing material fabric composition`,
+      `"${brand} ${itemName}" fashion "100%" OR "cotton" OR "wool" OR "silk" OR "polyester" OR "blend"`,
+      `"${brand} ${itemName}" fashion site:substack.com review`,
+      `"${brand} ${itemName}" clothing site:reddit.com review`
     ];
     
     // For clothing items, add more specific material queries
@@ -329,6 +349,11 @@ interface FilterParams {
   productType: string;
   productLine: string;
   brand: string;
+  // Enhanced product identifiers
+  itemName?: string;
+  sku?: string;
+  color?: string;
+  productFingerprint?: string;
 }
 
 interface CategoryKeywords {
@@ -342,15 +367,18 @@ interface ReviewWithScore extends Review {
 
 // Category filtering functions for Phase 2
 function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams): ReviewWithScore[] {
-  const { category, productType, productLine, brand } = filterParams;
+  const { category, productType, productLine, brand, itemName, sku, color, productFingerprint } = filterParams;
   
   if (!reviews || !Array.isArray(reviews)) return [];
   
-  console.log('[API] Filtering reviews by relevance:', {
+  console.log('[API] Filtering reviews by enhanced relevance:', {
     totalReviews: reviews.length,
     category,
     productType,
-    productLine
+    productLine,
+    itemName,
+    sku,
+    color
   });
   
   // Define category-specific keywords for filtering
@@ -407,11 +435,45 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams)
     return reviews.map(review => ({ ...review, relevanceScore: 0 }));
   }
   
-  // Score each review for relevance
+  // Score each review for relevance using enhanced signals
   const scoredReviews = reviews.map((review: Review): ReviewWithScore => {
     const reviewText = `${review.title || ''} ${review.snippet || ''} ${review.fullContent || ''}`.toLowerCase();
     
     let relevanceScore = 0;
+    
+    // Item name matching (highest priority for exact product match)
+    if (itemName) {
+      const normalizedItemName = normalizeProductName(itemName);
+      const normalizedReviewText = normalizeProductName(reviewText);
+      
+      // Exact item name match
+      if (normalizedReviewText.includes(normalizedItemName)) {
+        relevanceScore += 15;
+      }
+      
+      // Partial item name match (significant words)
+      const itemWords = normalizedItemName.split(' ').filter(word => word.length > 3);
+      const matchedWords = itemWords.filter(word => normalizedReviewText.includes(word));
+      if (matchedWords.length > 0) {
+        relevanceScore += (matchedWords.length / itemWords.length) * 8;
+      }
+    }
+    
+    // SKU matching (very high confidence for exact product)
+    if (sku) {
+      const skuRegex = new RegExp(`\\b${sku.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      if (skuRegex.test(reviewText)) {
+        relevanceScore += 20;
+      }
+    }
+    
+    // Color matching (moderate confidence)
+    if (color) {
+      const colorRegex = new RegExp(`\\b${color.toLowerCase()}\\b`, 'i');
+      if (colorRegex.test(reviewText)) {
+        relevanceScore += 3;
+      }
+    }
     
     // Check for include keywords (positive scoring)
     for (const keyword of keywords.include) {
@@ -462,7 +524,11 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams)
 }
 
 function determineRelevanceLevel(filteredReviews: ReviewWithScore[], originalReviews: Review[], filterParams: FilterParams): string {
-  const { productLine, productType } = filterParams;
+  const { productLine, productType, itemName, sku } = filterParams;
+  
+  // High confidence levels based on enhanced matching
+  const hasExactProductSignals = sku || (itemName && itemName.length > 10);
+  const exactProductMatches = filteredReviews.filter((r: ReviewWithScore) => r.relevanceScore >= 15).length;
   
   // Determine the level of specificity achieved
   const productLineMatches = productLine ? 
@@ -470,8 +536,10 @@ function determineRelevanceLevel(filteredReviews: ReviewWithScore[], originalRev
   const productTypeMatches = productType ? 
     filteredReviews.filter((r: ReviewWithScore) => r.relevanceScore >= 5).length : 0;
   
-  if (productLineMatches >= 3) {
+  if (exactProductMatches >= 3) {
     return 'exact_product';
+  } else if (productLineMatches >= 3) {
+    return 'item_specific';
   } else if (productTypeMatches >= 3) {
     return 'product_type';
   } else if (filteredReviews.length >= 3) {
@@ -479,6 +547,15 @@ function determineRelevanceLevel(filteredReviews: ReviewWithScore[], originalRev
   } else {
     return 'insufficient_data';
   }
+}
+
+// Helper function for normalizing product names (same as frontend)
+function normalizeProductName(name: string): string {
+  if (!name) return '';
+  return name.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export async function GET(request: NextRequest) {
@@ -491,6 +568,10 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category') || 'general';
     const productType = searchParams.get('productType') || '';
     const productLine = searchParams.get('productLine') || '';
+    // Enhanced product identifiers
+    const sku = searchParams.get('sku') || '';
+    const color = searchParams.get('color') || '';
+    const productFingerprint = searchParams.get('productFingerprint') || '';
     // const categoryConfidence = searchParams.get('categoryConfidence') || 'low';
     // const categorySource = searchParams.get('categorySource') || 'unknown';
     
@@ -1137,7 +1218,41 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
     };
     
     // Filter results to only include those that actually mention the brand AND specific item (if provided)
-    const brandFilteredResults = allResults.filter(result => {
+    // First filter out non-fashion domains to prevent confusion (e.g., bike frames vs FRAME brand)
+    const nonFashionDomains = [
+      // Bike/cycling sites
+      'bikeradar.com', 'cycling.com', 'bicycling.com', 'mtbr.com', 'pinkbike.com', 'bike.com', 'cyclingnews.com',
+      // Home/furniture sites  
+      'homedepot.com', 'lowes.com', 'wayfair.com', 'ikea.com', 'overstock.com', 'homegoods.com',
+      // Auto sites
+      'automotive.com', 'cars.com', 'autotrader.com', 'caranddriver.com', 'motortrend.com',
+      // Tech sites
+      'techcrunch.com', 'engadget.com', 'theverge.com', 'wired.com', 'ars-technica.com',
+      // Sports sites
+      'espn.com', 'nfl.com', 'mlb.com', 'nba.com', 'sports.com', 'bleacherreport.com',
+      // Construction/industrial
+      'builderspace.com', 'constructionequipment.com', 'globalconstructor.com',
+      // Medical/health (avoid confusion with medical frames)
+      'webmd.com', 'mayoclinic.org', 'healthline.com',
+      // Generic amazon product pages (too noisy)
+      'amazon.com/gp/product', 'amazon.com/dp/'
+    ];
+    
+    const domainFilteredResults = allResults.filter(result => {
+      const link = (result.link || '').toLowerCase();
+      const isDomainExcluded = nonFashionDomains.some(domain => link.includes(domain));
+      
+      if (isDomainExcluded) {
+        console.log(`🚫 DOMAIN FILTER: Excluding non-fashion domain result: "${result.title}" from ${link}`);
+        return false;
+      }
+      
+      return true;
+    });
+    
+    console.log(`🔍 DOMAIN FILTERING: Reduced from ${allResults.length} to ${domainFilteredResults.length} results`);
+    
+    const brandFilteredResults = domainFilteredResults.filter(result => {
       const title = (result.title || '').toLowerCase();
       const snippet = (result.snippet || '').toLowerCase();
       const brandLower = brand.toLowerCase();
@@ -1310,15 +1425,15 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       return true;
     });
     
-    console.log(`🔍 BRAND FILTERING: Reduced from ${allResults.length} to ${brandFilteredResults.length} results`);
+    console.log(`🔍 BRAND FILTERING: Reduced from ${domainFilteredResults.length} to ${brandFilteredResults.length} results`);
 
     // FALLBACK: If filtering is too aggressive and removed all results, use a more lenient approach
     let finalResults = brandFilteredResults;
-    if (brandFilteredResults.length === 0 && allResults.length > 0) {
-      console.log('⚠️ FALLBACK: No results passed strict filtering, using lenient filtering...');
+    if (brandFilteredResults.length === 0 && domainFilteredResults.length > 0) {
+      console.log('⚠️ FALLBACK: No results passed strict filtering, using lenient filtering on domain-filtered results...');
       
-      // More lenient filtering: just check if brand appears anywhere in title, snippet, or URL
-      finalResults = allResults.filter(result => {
+      // More lenient filtering: just check if brand appears anywhere in title, snippet, or URL (but still exclude non-fashion domains)
+      finalResults = domainFilteredResults.filter(result => {
         const title = (result.title || '').toLowerCase();
         const snippet = (result.snippet || '').toLowerCase();
         const link = (result.link || '').toLowerCase();
@@ -1418,7 +1533,11 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         category,
         productType,
         productLine,
-        brand
+        brand,
+        itemName,
+        sku,
+        color,
+        productFingerprint
       };
       
       const categoryFilteredReviews = filterReviewsByRelevance(prioritizedReviews, filterParams);
