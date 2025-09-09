@@ -331,12 +331,22 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
   return [...baseQueries, ...platformQueries];
 }
 
-// Helper function to add CORS headers to responses
-function addCorsHeaders(response: Response): Response {
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-  return response;
+// Helper function to create responses with CORS headers
+function createCorsResponse(data: unknown, init?: ResponseInit): Response {
+  const response = Response.json(data, init);
+  
+  // Create new headers object with CORS headers
+  const headers = new Headers(response.headers);
+  headers.set('Access-Control-Allow-Origin', '*');
+  headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  headers.set('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Return new response with CORS headers
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: headers
+  });
 }
 
 // Handle CORS preflight requests
@@ -559,7 +569,7 @@ export async function GET(request: NextRequest) {
     const useRelevantFiltering = searchType === 'relevant' && category && category !== 'unknown' && category !== 'general';
     
     if (!brand) {
-      return addCorsHeaders(Response.json({ error: 'Brand name is required' }, { status: 400 }));
+      return createCorsResponse({ error: 'Brand name is required' }, { status: 400 });
     }
     
     console.log(`\n🎯 GET REQUEST RECEIVED:`);
@@ -622,18 +632,18 @@ export async function GET(request: NextRequest) {
       return response;
     }
     
-    return addCorsHeaders(Response.json({ 
+    return createCorsResponse({ 
       message: 'GET request received, but external search is required for analysis',
       brand: brand,
       searchType: searchType
-    }));
+    });
     
   } catch (error) {
     console.error('❌ GET REQUEST ERROR:', error);
-    return addCorsHeaders(Response.json({ 
+    return createCorsResponse({ 
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 }));
+    }, { status: 500 });
   }
 }
 
@@ -650,7 +660,7 @@ export async function POST(request: NextRequest) {
     brand = brandData;
     
     if (!brand) {
-      return addCorsHeaders(Response.json({ error: 'Brand name is required' }, { status: 400 }));
+      return createCorsResponse({ error: 'Brand name is required' }, { status: 400 });
     }
 
     // Log extracted data for debugging
@@ -738,7 +748,7 @@ export async function POST(request: NextRequest) {
 
     const brandLower = brand.toLowerCase().trim();
     if (nonFashionBrands.includes(brandLower)) {
-      return addCorsHeaders(Response.json({
+      return createCorsResponse({
         error: 'Brand not supported',
         message: `${brand} is not a fashion or apparel brand. Our analysis is designed for clothing, footwear, and fashion accessories brands only.`,
         brandFitSummary: {
@@ -749,13 +759,13 @@ export async function POST(request: NextRequest) {
           totalResults: 0,
           sources: []
         }
-      }, { status: 400 }));
+      }, { status: 400 });
     }
 
     const serperApiKey = process.env.SERPER_API_KEY;
     
     if (!serperApiKey) {
-      return addCorsHeaders(Response.json({
+      return createCorsResponse({
         brandFitSummary: {
           summary: `Search API not configured. Add SERPER_API_KEY to environment.`,
           confidence: 'low',
@@ -772,7 +782,7 @@ export async function POST(request: NextRequest) {
           other: []
         },
         totalResults: 0
-      }));
+      });
     }
 
     // Detect product category and check if this is a specific item search
@@ -889,7 +899,7 @@ export async function POST(request: NextRequest) {
       
       const fallbackSummary = `Unable to find reviews for ${brand} at this time. This may be due to temporary connectivity issues. Please try again in a few moments or use the full analysis page for more comprehensive results.`;
       
-      return addCorsHeaders(Response.json({
+      return createCorsResponse({
         brandFitSummary: {
           summary: fallbackSummary,
           confidence: 'low',
@@ -909,7 +919,7 @@ export async function POST(request: NextRequest) {
           other: []
         },
         totalResults: 0
-      }));
+      });
     }
     
     // Limit results sent to GPT analysis to prevent rate limiting (max 30 results)
@@ -1528,7 +1538,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         console.log(`❌ INSUFFICIENT DATA: Only ${categoryFilteredReviews.length} ${category} reviews found, minimum 3 required`);
         
         // Return empty result with clear messaging
-        const response = addCorsHeaders(Response.json({
+        const response = createCorsResponse({
           brandName: brand,
           category,
           productType,
@@ -1559,7 +1569,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
             publications: [],
             other: []
           }
-        }));
+        });
         
         return response;
       }
@@ -1653,7 +1663,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
     
     console.log('🔍 TOP SOURCES:', topSources);
 
-    const response = addCorsHeaders(Response.json({
+    const response = createCorsResponse({
       brandName: brand, // Include the brand name in the response
       category: category !== 'general' ? category : null,
       productType: productType || null,
@@ -1683,13 +1693,13 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         filterParams: { category, productType, productLine },
         relevanceLevel
       } : null
-    }));
+    });
     
     return response;
     
   } catch (error) {
     console.error('API Error:', error);
-    const errorResponse = addCorsHeaders(Response.json({
+    const errorResponse = createCorsResponse({
       brandName: brand || 'Unknown Brand', // Include brand name even in error response
       brandFitSummary: {
         summary: 'Error loading reviews',
@@ -1709,7 +1719,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         other: []
       },
       totalResults: 0
-    }));
+    });
     
     return errorResponse;
   }
