@@ -551,7 +551,7 @@ export async function GET(request: NextRequest) {
     const useRelevantFiltering = searchType === 'relevant' && category && category !== 'unknown' && category !== 'general';
     
     if (!brand) {
-      return NextResponse.json({ error: 'Brand name is required' }, { status: 400 });
+      return corsResponse({ error: 'Brand name is required' }, { status: 400 });
     }
     
     console.log(`\n🎯 GET REQUEST RECEIVED:`);
@@ -614,7 +614,7 @@ export async function GET(request: NextRequest) {
       return response;
     }
     
-    return NextResponse.json({ 
+    return corsResponse({ 
       message: 'GET request received, but external search is required for analysis',
       brand: brand,
       searchType: searchType
@@ -622,7 +622,7 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     console.error('❌ GET REQUEST ERROR:', error);
-    return NextResponse.json({ 
+    return corsResponse({ 
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });
@@ -642,7 +642,7 @@ export async function POST(request: NextRequest) {
     brand = brandData;
     
     if (!brand) {
-      return NextResponse.json({ error: 'Brand name is required' }, { status: 400 });
+      return corsResponse({ error: 'Brand name is required' }, { status: 400 });
     }
 
     // Log extracted data for debugging
@@ -730,7 +730,7 @@ export async function POST(request: NextRequest) {
 
     const brandLower = brand.toLowerCase().trim();
     if (nonFashionBrands.includes(brandLower)) {
-      return NextResponse.json({
+      return corsResponse({
         error: 'Brand not supported',
         message: `${brand} is not a fashion or apparel brand. Our analysis is designed for clothing, footwear, and fashion accessories brands only.`,
         brandFitSummary: {
@@ -747,7 +747,7 @@ export async function POST(request: NextRequest) {
     const serperApiKey = process.env.SERPER_API_KEY;
     
     if (!serperApiKey) {
-      return NextResponse.json({
+      return corsResponse({
         brandFitSummary: {
           summary: `Search API not configured. Add SERPER_API_KEY to environment.`,
           confidence: 'low',
@@ -881,7 +881,7 @@ export async function POST(request: NextRequest) {
       
       const fallbackSummary = `Unable to find reviews for ${brand} at this time. This may be due to temporary connectivity issues. Please try again in a few moments or use the full analysis page for more comprehensive results.`;
       
-      return NextResponse.json({
+      return corsResponse({
         brandFitSummary: {
           summary: fallbackSummary,
           confidence: 'low',
@@ -1520,7 +1520,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         console.log(`❌ INSUFFICIENT DATA: Only ${categoryFilteredReviews.length} ${category} reviews found, minimum 3 required`);
         
         // Return empty result with clear messaging
-        const response = NextResponse.json({
+        const response = corsResponse({
           brandName: brand,
           category,
           productType,
@@ -1649,7 +1649,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
     
     console.log('🔍 TOP SOURCES:', topSources);
 
-    const response = NextResponse.json({
+    const response = corsResponse({
       brandName: brand, // Include the brand name in the response
       category: category !== 'general' ? category : null,
       productType: productType || null,
@@ -1690,7 +1690,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
     
   } catch (error) {
     console.error('API Error:', error);
-    const errorResponse = NextResponse.json({
+    const errorResponse = corsResponse({
       brandName: brand || 'Unknown Brand', // Include brand name even in error response
       brandFitSummary: {
         summary: 'Error loading reviews',
