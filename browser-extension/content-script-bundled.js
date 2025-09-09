@@ -1559,22 +1559,32 @@ function extractProductImageFromPage() {
 function extractItemNameFromPage() {
     // Try to extract item name from various page elements
     const selectors = [
-        'h1',
+        'h1[class*="product"]',
+        'h1[class*="title"]',
+        'h1[data-testid*="title"]',
         '.product-title',
         '.product-name',
-        '[data-testid*="title"]',
+        '[data-testid*="product-title"]',
+        '[data-testid*="product-name"]',
         '[data-testid*="name"]',
         '.pdp-title',
-        '.item-title'
+        '.item-title',
+        '.product-info h1',
+        '.product-details h1',
+        'h1' // Fallback to any h1
     ];
     
     for (const selector of selectors) {
         const element = document.querySelector(selector);
         if (element) {
-            const text = element.textContent?.trim();
+            let text = element.textContent?.trim();
             if (text && text.length > 3 && text.length < 200) {
-                console.log('🎨 Found item name with selector:', selector, 'Text:', text);
-                return text;
+                // Clean up the text
+                text = cleanProductName(text);
+                if (text.length > 3) {
+                    console.log('🎨 Found item name with selector:', selector, 'Text:', text);
+                    return text;
+                }
             }
         }
     }
@@ -1583,8 +1593,10 @@ function extractItemNameFromPage() {
     const title = document.title;
     if (title && title.length > 3 && title.length < 200) {
         // Clean up title by removing common e-commerce suffixes
-        const cleanTitle = title.replace(/\s*[-|]\s*.+$/g, '').trim();
+        let cleanTitle = title.replace(/\s*[-|]\s*.+$/g, '').trim();
+        cleanTitle = cleanProductName(cleanTitle);
         if (cleanTitle.length > 3) {
+            console.log('🎨 Using cleaned page title as item name:', cleanTitle);
             return cleanTitle;
         }
     }
@@ -2197,6 +2209,162 @@ function extractProductType(itemName, category) {
     return null;
 }
 
+// ========================================
+// PRODUCT NAME CLEANING AND ENHANCEMENT
+// ========================================
+
+function cleanProductName(name) {
+    if (!name) return '';
+    
+    let cleaned = name.trim();
+    
+    // Remove common e-commerce noise
+    cleaned = cleaned.replace(/\s*[-|]\s*Shop.*$/i, '');
+    cleaned = cleaned.replace(/\s*[-|]\s*Buy.*$/i, '');
+    cleaned = cleaned.replace(/\s*[-|]\s*Free.*$/i, '');
+    cleaned = cleaned.replace(/\s*[-|]\s*\$.*$/i, '');
+    cleaned = cleaned.replace(/\s*[-|]\s*Sale.*$/i, '');
+    
+    // Remove brand repetition if it's at the start
+    const hostname = window.location.hostname.replace('www.', '').toLowerCase();
+    const brandFromDomain = extractBrandFromHostname(hostname);
+    if (brandFromDomain) {
+        const brandRegex = new RegExp(`^${brandFromDomain}\\s+`, 'i');
+        cleaned = cleaned.replace(brandRegex, '');
+    }
+    
+    // Remove extra whitespace
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    return cleaned;
+}
+
+function extractBrandFromHostname(hostname) {
+    const brandMap = {
+        'zara.com': 'Zara',
+        'everlane.com': 'Everlane',
+        'reformation.com': 'Reformation',
+        'roheframes.com': 'Rohe',
+        'cosstores.com': 'COS',
+        'cos.com': 'COS',
+        'arket.com': 'Arket',
+        'stories.com': '& Other Stories',
+        'aritzia.com': 'Aritzia',
+        'toteme-studio.com': 'Toteme',
+        'ganni.com': 'Ganni'
+    };
+    
+    return brandMap[hostname] || null;
+}
+
+function extractProductSKU() {
+    // Look for SKU patterns in various places
+    const skuSelectors = [
+        '[data-testid*="sku"]',
+        '[class*="sku"]',
+        '[id*="sku"]',
+        '.product-code',
+        '.item-code',
+        '.style-number',
+        '.model-number'
+    ];
+    
+    for (const selector of skuSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+            const text = element.textContent?.trim();
+            if (text && /[A-Z0-9]{3,}/.test(text)) {
+                return text;
+            }
+        }
+    }
+    
+    // Look for SKU patterns in the URL
+    const url = window.location.href;
+    const skuPatterns = [
+        /[\?&]sku=([A-Z0-9]+)/i,
+        /[\?&]style=([A-Z0-9]+)/i,
+        /[\?&]pid=([A-Z0-9]+)/i,
+        /\/p([A-Z0-9]{5,})\//i,
+        /-p(\d{5,})\.html/i
+    ];
+    
+    for (const pattern of skuPatterns) {
+        const match = url.match(pattern);
+        if (match) {
+            return match[1];
+        }
+    }
+    
+    return null;
+}
+
+function extractProductColor() {
+    // Look for color information in various places
+    const colorSelectors = [
+        '[data-testid*="color"]',
+        '[class*="color"]',
+        '.color-name',
+        '.color-selected',
+        '.selected-color',
+        '.color-option.active',
+        '.variant-color'
+    ];
+    
+    for (const selector of colorSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+            const text = element.textContent?.trim();
+            if (text && text.length > 1 && text.length < 30) {
+                return text;
+            }
+        }
+    }
+    
+    // Look for color in item name
+    const itemName = extractItemNameFromPage();
+    if (itemName) {
+        const colorKeywords = [
+            'black', 'white', 'grey', 'gray', 'blue', 'red', 'green', 'brown',
+            'navy', 'cream', 'beige', 'tan', 'khaki', 'olive', 'burgundy', 'wine',
+            'pink', 'purple', 'yellow', 'orange', 'silver', 'gold', 'bronze', 'copper'
+        ];
+        
+        const lowerItemName = itemName.toLowerCase();
+        for (const color of colorKeywords) {
+            if (lowerItemName.includes(color)) {
+                return color.charAt(0).toUpperCase() + color.slice(1);
+            }
+        }
+    }
+    
+    return null;
+}
+
+function extractProductSize() {
+    // Look for selected size information
+    const sizeSelectors = [
+        '.size-selected',
+        '.selected-size',
+        '.size-option.active',
+        '.size-option.selected',
+        '[data-testid*="size"].selected',
+        '.variant-size'
+    ];
+    
+    for (const selector of sizeSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+            const text = element.textContent?.trim();
+            if (text && /^(XXS|XS|S|M|L|XL|XXL|\d+|\d+\.\d+)$/i.test(text)) {
+                return text.toUpperCase();
+            }
+        }
+    }
+    
+    return null;
+}
+
 function extractProductLine(itemName) {
     if (!itemName) return null;
     
@@ -2210,12 +2378,151 @@ function extractProductLine(itemName) {
         }
     }
     
+    // Look for collection/line names in brackets or after "from"
+    const collectionPatterns = [
+        /from\s+the\s+([^\n\r,]+?)\s+(?:collection|line)/i,
+        /\(([^)]+?)\s+(?:collection|line)\)/i,
+        /part\s+of\s+(?:the\s+)?([^\n\r,]+?)\s+(?:collection|line)/i
+    ];
+    
+    for (const pattern of collectionPatterns) {
+        const match = itemName.match(pattern);
+        if (match && match[1]) {
+            return match[1].trim();
+        }
+    }
+    
     return null;
 }
 
 // ========================================
 // COMPREHENSIVE PRODUCT EXTRACTION
 // ========================================
+
+// ========================================
+// SEMANTIC SIMILARITY FUNCTIONS
+// ========================================
+
+function calculateProductSimilarity(product1, product2) {
+    let similarity = 0;
+    let factors = 0;
+    
+    // Exact name match (highest weight)
+    if (product1.itemName && product2.itemName) {
+        const name1 = normalizeProductName(product1.itemName);
+        const name2 = normalizeProductName(product2.itemName);
+        
+        if (name1 === name2) {
+            similarity += 100;
+            factors += 1;
+        } else {
+            // Partial name similarity
+            const nameSimilarity = calculateStringSimilarity(name1, name2);
+            similarity += nameSimilarity * 60; // Weight: 60
+            factors += 1;
+        }
+    }
+    
+    // SKU/Product Code match
+    if (product1.sku && product2.sku) {
+        if (product1.sku === product2.sku) {
+            similarity += 90;
+        }
+        factors += 1;
+    }
+    
+    // Color match
+    if (product1.color && product2.color) {
+        const colorSimilarity = normalizeColor(product1.color) === normalizeColor(product2.color) ? 15 : 0;
+        similarity += colorSimilarity;
+        factors += 1;
+    }
+    
+    // Category match
+    if (product1.category && product2.category) {
+        const categorySimilarity = product1.category === product2.category ? 20 : 0;
+        similarity += categorySimilarity;
+        factors += 1;
+    }
+    
+    // Product Type match
+    if (product1.productType && product2.productType) {
+        const typeSimilarity = product1.productType === product2.productType ? 25 : 0;
+        similarity += typeSimilarity;
+        factors += 1;
+    }
+    
+    // Product Line match
+    if (product1.productLine && product2.productLine) {
+        const lineSimilarity = product1.productLine === product2.productLine ? 30 : 0;
+        similarity += lineSimilarity;
+        factors += 1;
+    }
+    
+    return factors > 0 ? similarity / factors : 0;
+}
+
+function normalizeProductName(name) {
+    if (!name) return '';
+    return name.toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function normalizeColor(color) {
+    if (!color) return '';
+    const colorMap = {
+        'grey': 'gray',
+        'navy blue': 'navy',
+        'dark blue': 'navy',
+        'light blue': 'blue'
+    };
+    
+    const normalized = color.toLowerCase().trim();
+    return colorMap[normalized] || normalized;
+}
+
+function calculateStringSimilarity(str1, str2) {
+    if (!str1 || !str2) return 0;
+    if (str1 === str2) return 100;
+    
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    const editDistance = getEditDistance(longer, shorter);
+    const similarity = ((longer.length - editDistance) / longer.length) * 100;
+    
+    return Math.max(0, similarity);
+}
+
+function getEditDistance(str1, str2) {
+    const matrix = [];
+    
+    for (let i = 0; i <= str2.length; i++) {
+        matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+        matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+        for (let j = 1; j <= str1.length; j++) {
+            if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
+                );
+            }
+        }
+    }
+    
+    return matrix[str2.length][str1.length];
+}
 
 function extractAllProductData() {
     console.log('[PointFour] Starting comprehensive product data extraction...');
@@ -2227,6 +2534,11 @@ function extractAllProductData() {
         // Page content extraction
         itemName: extractItemNameFromPage(),
         productImage: extractProductImageFromPage(),
+        
+        // Enhanced product identifiers
+        sku: extractProductSKU(),
+        color: extractProductColor(),
+        size: extractProductSize(),
         
         // Detailed product information
         materials: extractMaterialsFromPage(),
@@ -2260,9 +2572,25 @@ function extractAllProductData() {
         }
     }
     
+    // Generate product fingerprint for better matching
+    productData.productFingerprint = generateProductFingerprint(productData);
+    
     console.log('[PointFour] Comprehensive product extraction completed:', productData);
     
     return productData;
+}
+
+function generateProductFingerprint(productData) {
+    const components = [];
+    
+    if (productData.brand) components.push(`brand:${productData.brand.toLowerCase()}`);
+    if (productData.itemName) components.push(`name:${normalizeProductName(productData.itemName)}`);
+    if (productData.sku) components.push(`sku:${productData.sku.toLowerCase()}`);
+    if (productData.category) components.push(`cat:${productData.category}`);
+    if (productData.productType) components.push(`type:${productData.productType}`);
+    if (productData.color) components.push(`color:${normalizeColor(productData.color)}`);
+    
+    return components.join('|');
 }
 
 
