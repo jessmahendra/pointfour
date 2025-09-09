@@ -331,6 +331,14 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
   return [...baseQueries, ...platformQueries];
 }
 
+// Helper function to add CORS headers to responses
+function addCorsHeaders(response: Response): Response {
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+  return response;
+}
+
 // Handle CORS preflight requests
 export async function OPTIONS() {
   return new Response(null, {
@@ -551,7 +559,7 @@ export async function GET(request: NextRequest) {
     const useRelevantFiltering = searchType === 'relevant' && category && category !== 'unknown' && category !== 'general';
     
     if (!brand) {
-      return Response.json({ error: 'Brand name is required' }, { status: 400 });
+      return addCorsHeaders(Response.json({ error: 'Brand name is required' }, { status: 400 }));
     }
     
     console.log(`\n🎯 GET REQUEST RECEIVED:`);
@@ -614,18 +622,18 @@ export async function GET(request: NextRequest) {
       return response;
     }
     
-    return Response.json({ 
+    return addCorsHeaders(Response.json({ 
       message: 'GET request received, but external search is required for analysis',
       brand: brand,
       searchType: searchType
-    });
+    }));
     
   } catch (error) {
     console.error('❌ GET REQUEST ERROR:', error);
-    return Response.json({ 
+    return addCorsHeaders(Response.json({ 
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 });
+    }, { status: 500 }));
   }
 }
 
@@ -642,7 +650,7 @@ export async function POST(request: NextRequest) {
     brand = brandData;
     
     if (!brand) {
-      return Response.json({ error: 'Brand name is required' }, { status: 400 });
+      return addCorsHeaders(Response.json({ error: 'Brand name is required' }, { status: 400 }));
     }
 
     // Log extracted data for debugging
@@ -730,7 +738,7 @@ export async function POST(request: NextRequest) {
 
     const brandLower = brand.toLowerCase().trim();
     if (nonFashionBrands.includes(brandLower)) {
-      return Response.json({
+      return addCorsHeaders(Response.json({
         error: 'Brand not supported',
         message: `${brand} is not a fashion or apparel brand. Our analysis is designed for clothing, footwear, and fashion accessories brands only.`,
         brandFitSummary: {
@@ -741,13 +749,13 @@ export async function POST(request: NextRequest) {
           totalResults: 0,
           sources: []
         }
-      }, { status: 400 });
+      }, { status: 400 }));
     }
 
     const serperApiKey = process.env.SERPER_API_KEY;
     
     if (!serperApiKey) {
-      return Response.json({
+      return addCorsHeaders(Response.json({
         brandFitSummary: {
           summary: `Search API not configured. Add SERPER_API_KEY to environment.`,
           confidence: 'low',
@@ -764,7 +772,7 @@ export async function POST(request: NextRequest) {
           other: []
         },
         totalResults: 0
-      });
+      }));
     }
 
     // Detect product category and check if this is a specific item search
@@ -881,7 +889,7 @@ export async function POST(request: NextRequest) {
       
       const fallbackSummary = `Unable to find reviews for ${brand} at this time. This may be due to temporary connectivity issues. Please try again in a few moments or use the full analysis page for more comprehensive results.`;
       
-      return Response.json({
+      return addCorsHeaders(Response.json({
         brandFitSummary: {
           summary: fallbackSummary,
           confidence: 'low',
@@ -901,7 +909,7 @@ export async function POST(request: NextRequest) {
           other: []
         },
         totalResults: 0
-      });
+      }));
     }
     
     // Limit results sent to GPT analysis to prevent rate limiting (max 30 results)
@@ -1520,7 +1528,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         console.log(`❌ INSUFFICIENT DATA: Only ${categoryFilteredReviews.length} ${category} reviews found, minimum 3 required`);
         
         // Return empty result with clear messaging
-        const response = Response.json({
+        const response = addCorsHeaders(Response.json({
           brandName: brand,
           category,
           productType,
@@ -1551,11 +1559,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
             publications: [],
             other: []
           }
-        });
-        
-        response.headers.set('Access-Control-Allow-Origin', '*');
-        response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+        }));
         
         return response;
       }
@@ -1649,7 +1653,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
     
     console.log('🔍 TOP SOURCES:', topSources);
 
-    const response = Response.json({
+    const response = addCorsHeaders(Response.json({
       brandName: brand, // Include the brand name in the response
       category: category !== 'general' ? category : null,
       productType: productType || null,
@@ -1679,18 +1683,13 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         filterParams: { category, productType, productLine },
         relevanceLevel
       } : null
-    });
-    
-    // Add CORS headers for browser extension
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+    }));
     
     return response;
     
   } catch (error) {
     console.error('API Error:', error);
-    const errorResponse = Response.json({
+    const errorResponse = addCorsHeaders(Response.json({
       brandName: brand || 'Unknown Brand', // Include brand name even in error response
       brandFitSummary: {
         summary: 'Error loading reviews',
@@ -1710,12 +1709,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         other: []
       },
       totalResults: 0
-    });
-    
-    // Add CORS headers for browser extension
-    errorResponse.headers.set('Access-Control-Allow-Origin', '*');
-    errorResponse.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    errorResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+    }));
     
     return errorResponse;
   }
