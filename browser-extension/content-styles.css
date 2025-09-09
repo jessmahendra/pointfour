@@ -827,3 +827,229 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* ========================================
+   ENHANCED SIZE CHART STYLES
+   ======================================== */
+
+.pointfour-enhanced-size-chart {
+  margin: 16px 0;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.pointfour-size-chart h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pointfour-size-table {
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+
+.pointfour-size-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pointfour-size-table th {
+  background: #6c757d;
+  color: white;
+  font-weight: 600;
+  padding: 8px 6px;
+  text-align: center;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pointfour-size-table td {
+  padding: 8px 6px;
+  text-align: center;
+  border-bottom: 1px solid #e9ecef;
+  font-size: 12px;
+}
+
+.pointfour-size-table td:first-child {
+  font-weight: 600;
+  background: #f8f9fa;
+  color: #495057;
+}
+
+.pointfour-size-table tr:last-child td {
+  border-bottom: none;
+}
+
+.pointfour-sizing-advice {
+  margin-top: 12px;
+}
+
+.pointfour-sizing-advice h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pointfour-sizing-advice ul {
+  margin: 0;
+  padding-left: 16px;
+  list-style: none;
+}
+
+.pointfour-sizing-advice li {
+  position: relative;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+.pointfour-sizing-advice li:before {
+  content: "•";
+  color: #8b7355;
+  font-weight: bold;
+  position: absolute;
+  left: -12px;
+}
+
+.pointfour-model-info {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e9ecef;
+}
+
+.pointfour-model-info small {
+  font-size: 11px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Tailored Recommendations */
+.pointfour-tailored-recommendations {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  text-align: center;
+}
+
+.pointfour-tailored-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #8b7355 0%, #a68b5b 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(139, 115, 85, 0.2);
+}
+
+.pointfour-tailored-btn:hover {
+  background: linear-gradient(135deg, #7a6349 0%, #957a4f 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(139, 115, 85, 0.3);
+}
+
+.pointfour-tailored-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(139, 115, 85, 0.2);
+}
+
+.pointfour-tailored-description {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Tailored Recommendations Results */
+.pointfour-tailored-results {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+  border-radius: 8px;
+  border: 1px solid #c3e6c3;
+}
+
+.pointfour-tailored-results h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d5a2d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pointfour-tailored-results h4:before {
+  content: "✨";
+  font-size: 18px;
+}
+
+.pointfour-size-match {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #28a745;
+  font-size: 14px;
+}
+
+.pointfour-size-match strong {
+  color: #28a745;
+}
+
+.pointfour-fit-advice {
+  margin-top: 12px;
+}
+
+.pointfour-fit-advice strong {
+  color: #495057;
+  font-size: 14px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.pointfour-fit-advice ul {
+  margin: 0;
+  padding-left: 16px;
+  list-style: none;
+}
+
+.pointfour-fit-advice li {
+  position: relative;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #495057;
+  line-height: 1.4;
+}
+
+.pointfour-fit-advice li:before {
+  content: "💡";
+  position: absolute;
+  left: -20px;
+  font-size: 12px;
+}

@@ -695,6 +695,24 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Enhanced size chart extraction for tailored recommendations
+    if (extractedData?.enhancedSizeChart) {
+      console.log('📏 ENHANCED SIZE CHART EXTRACTED:', {
+        brand: extractedData.enhancedSizeChart.brand,
+        productType: extractedData.enhancedSizeChart.productType,
+        measurements: Object.keys(extractedData.enhancedSizeChart.measurements).length,
+        sizeSystem: extractedData.enhancedSizeChart.sizeSystem,
+        confidence: extractedData.enhancedSizeChart.confidence,
+        sizingAdvice: extractedData.enhancedSizeChart.sizingAdvice?.length || 0,
+        modelInfo: extractedData.enhancedSizeChart.modelInfo
+      });
+      
+      // Log detailed measurements for debugging
+      if (extractedData.enhancedSizeChart.measurements && Object.keys(extractedData.enhancedSizeChart.measurements).length > 0) {
+        console.log('📊 DETAILED MEASUREMENTS:', extractedData.enhancedSizeChart.measurements);
+      }
+    }
+    
     if (pageData?.pageType) {
       console.log('🔍 PAGE TYPE DETECTION:', {
         isProductPage: pageData.pageType.isProductPage,
@@ -1686,6 +1704,8 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
       },
       groupedReviews,
       totalResults: finalPrioritizedReviews.length,
+      // Enhanced size chart data for tailored recommendations
+      enhancedSizeChart: extractedData?.enhancedSizeChart || null,
       // Add filtering metadata for debugging
       filteringMetadata: useRelevantFiltering ? {
         originalReviewCount: prioritizedReviews.length,

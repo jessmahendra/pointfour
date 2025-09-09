@@ -1270,6 +1270,8 @@ function isReasonableBrandName(brandName) {
 // POINTFOUR - PRODUCT EXTRACTION MODULE
 // ========================================
 
+// Enhanced size chart extraction function (moved inline to avoid import issues)
+
 // ========================================
 // PRODUCT URL EXTRACTION
 // ========================================
@@ -2544,6 +2546,9 @@ function extractAllProductData() {
         materials: extractMaterialsFromPage(),
         sizeGuide: extractSizeGuideFromPage(),
         
+        // Enhanced size chart extraction for tailored recommendations
+        enhancedSizeChart: extractEnhancedSizeChart(),
+        
         // Enhanced category detection
         categoryDetection: detectProductCategory(),
         
@@ -2593,7 +2598,350 @@ function generateProductFingerprint(productData) {
     return components.join('|');
 }
 
+/**
+ * Enhanced size chart extraction with improved accuracy
+ */
+function extractEnhancedSizeChart() {
+    console.log('[PointFour] Starting enhanced size chart extraction...');
+    
+    const sizeChart = {
+        brand: 'Unknown',
+        productType: 'general',
+        measurements: {},
+        sizeSystem: 'US',
+        confidence: 'low',
+        source: window.location.href,
+        sizingAdvice: [],
+        modelInfo: {}
+    };
 
+    // Enhanced selectors for better coverage
+    const sizeChartSelectors = [
+        '.size-guide', '.size-chart', '.sizing-info', '.fit-guide',
+        '[data-tab="sizing"]', '[data-tab="size-guide"]',
+        'table[class*="size"]', 'table[id*="size"]',
+        'a[href*="size-guide"]', 'button[class*="size-guide"]',
+        // Popup/modal selectors
+        '.modal', '.popup', '.overlay', '.lightbox',
+        '[class*="modal"]', '[class*="popup"]', '[class*="overlay"]',
+        '[class*="lightbox"]', '[class*="drawer"]',
+        // Size guide specific popup selectors
+        '.size-guide-modal', '.size-chart-popup', '.sizing-modal',
+        '[data-modal="size-guide"]', '[data-popup="size-guide"]',
+        // Details and size guide links
+        'a[href*="details"]', 'a[href*="size"]', 'button[class*="details"]',
+        'a[class*="details"]', 'button[class*="size"]',
+        // Generic table selector (fallback)
+        'table'
+    ];
+
+    // Enhanced size keywords for better detection
+    const sizeKeywords = [
+        'xs', 'small', 'medium', 'large', 'xl', 'xxl', 'xxxl',
+        'bust', 'waist', 'hip', 'chest', 'shoulder', 'length', 'inseam',
+        'size', 'measurement', 'fit', 'sizing', 'chart', 'guide'
+    ];
+
+    // First, try to extract size guide data from DOM inspection (including hidden content)
+    console.log('[PointFour] Looking for size guide content in DOM (including hidden elements)...');
+    
+    // Look for ALL tables in the DOM, including hidden ones
+    const allTables = document.querySelectorAll('table');
+    console.log(`[PointFour] Found ${allTables.length} tables in DOM`);
+    
+    for (const table of allTables) {
+        const tableText = (table.innerText || table.textContent || '').toLowerCase();
+        const sizeKeywords = ['size', 'bust', 'waist', 'hip', 'chest', 'shoulder', 'length', 'xs', 'sm', 'md', 'lg', 'xl', 'measurement'];
+        
+        if (sizeKeywords.some(keyword => tableText.includes(keyword))) {
+            console.log(`[PointFour] ✅ Found size chart table in DOM`);
+            console.log(`[PointFour] Table content preview:`, tableText.substring(0, 200));
+            
+            const tableData = extractTableData(table);
+            if (tableData.measurements && Object.keys(tableData.measurements).length > 0) {
+                Object.assign(sizeChart.measurements, tableData.measurements);
+                sizeChart.confidence = 'high';
+                console.log(`[PointFour] ✅ Added ${Object.keys(tableData.measurements).length} measurements from DOM table`);
+            }
+        }
+    }
+    
+    // Look for size guide containers (including hidden ones)
+    const sizeGuideContainers = document.querySelectorAll('.size-guide, .size-chart, .sizing-info, .fit-guide, [data-tab="sizing"], [data-tab="size-guide"], .modal-size-guide, .sizing-table, .measurement-table, [class*="size-guide"], [class*="size-chart"]');
+    console.log(`[PointFour] Found ${sizeGuideContainers.length} size guide containers in DOM`);
+    
+    for (const container of sizeGuideContainers) {
+        const containerText = (container.innerText || container.textContent || '').toLowerCase();
+        if (containerText.includes('size') || containerText.includes('measurement') || containerText.includes('waist') || containerText.includes('hip')) {
+            console.log(`[PointFour] ✅ Found size guide container in DOM`);
+            console.log(`[PointFour] Container content preview:`, containerText.substring(0, 200));
+            
+            const containerData = extractSizeDataFromElement(container);
+            if (containerData.measurements && Object.keys(containerData.measurements).length > 0) {
+                Object.assign(sizeChart.measurements, containerData.measurements);
+                sizeChart.confidence = 'high';
+                console.log(`[PointFour] ✅ Added ${Object.keys(containerData.measurements).length} measurements from DOM container`);
+            }
+            if (containerData.sizingAdvice && containerData.sizingAdvice.length > 0) {
+                sizeChart.sizingAdvice.push(...containerData.sizingAdvice);
+                console.log(`[PointFour] ✅ Added ${containerData.sizingAdvice.length} sizing advice items from DOM container`);
+            }
+        }
+    }
+    
+    // Only perform flash extraction if DOM inspection didn't find any size data
+    const hasSizeData = Object.keys(sizeChart.measurements).length > 0;
+    console.log(`[PointFour] DOM inspection found ${Object.keys(sizeChart.measurements).length} measurements`);
+    
+    if (!hasSizeData) {
+        console.log(`[PointFour] No size data found in DOM, trying flash extraction...`);
+        
+        // Look for size guide buttons and perform flash extraction
+        const sizeGuideButtons = document.querySelectorAll('button[class*="size-guide"], button[class*="details"], a[class*="details"], a[class*="size"], button[class*="size"], [data-tab="sizing"], [data-tab="size-guide"]');
+        
+        console.log(`[PointFour] Found ${sizeGuideButtons.length} potential size guide buttons`);
+        
+        for (const button of sizeGuideButtons) {
+            const buttonText = (button.innerText || button.textContent || '').toLowerCase();
+            console.log(`[PointFour] Checking button: "${buttonText}"`);
+            
+            if (buttonText.includes('size') || buttonText.includes('guide') || buttonText.includes('details')) {
+                console.log(`[PointFour] ✅ Found size guide button: "${buttonText}"`);
+                
+                try {
+                    // Perform invisible extraction: hide popup, extract, restore
+                    console.log(`[PointFour] Performing invisible extraction...`);
+                    
+                    // Click the button to open the size guide
+                    button.click();
+                    console.log(`[PointFour] Clicked size guide button`);
+                    
+                    // Wait a very short time for the popup to load
+                    setTimeout(() => {
+                        console.log(`[PointFour] Looking for size guide popup...`);
+                        
+                        // Look for the size guide popup
+                        const sizeGuidePopups = document.querySelectorAll('.modal, .popup, .overlay, .lightbox, [class*="modal"], [class*="popup"], [class*="overlay"], [class*="lightbox"], [class*="drawer"], [class*="dialog"], [role="dialog"], [aria-modal="true"]');
+                        
+                        for (const popup of sizeGuidePopups) {
+                            const isVisible = popup.offsetParent !== null && 
+                                            popup.style.display !== 'none' && 
+                                            popup.style.visibility !== 'hidden' &&
+                                            popup.offsetWidth > 0 && 
+                                            popup.offsetHeight > 0;
+                            
+                            if (isVisible) {
+                                const popupText = (popup.innerText || popup.textContent || '').toLowerCase();
+                                if (popupText.includes('size') || popupText.includes('measurement') || popupText.includes('waist') || popupText.includes('hip')) {
+                                    console.log(`[PointFour] ✅ Found size guide popup with measurements`);
+                                    console.log(`[PointFour] Popup content preview:`, popup.innerText.substring(0, 500));
+                                    
+                                    // Hide the popup immediately to prevent user disruption
+                                    const originalDisplay = popup.style.display;
+                                    const originalVisibility = popup.style.visibility;
+                                    const originalOpacity = popup.style.opacity;
+                                    
+                                    popup.style.display = 'none';
+                                    popup.style.visibility = 'hidden';
+                                    popup.style.opacity = '0';
+                                    
+                                    console.log(`[PointFour] Hidden popup to prevent user disruption`);
+                                    
+                                    // Extract data from the hidden popup
+                                    const popupData = extractSizeDataFromElement(popup);
+                                    if (popupData.measurements && Object.keys(popupData.measurements).length > 0) {
+                                        Object.assign(sizeChart.measurements, popupData.measurements);
+                                        sizeChart.confidence = 'high';
+                                        console.log(`[PointFour] ✅ Added ${Object.keys(popupData.measurements).length} measurements from popup`);
+                                    }
+                                    if (popupData.sizingAdvice && popupData.sizingAdvice.length > 0) {
+                                        sizeChart.sizingAdvice.push(...popupData.sizingAdvice);
+                                        console.log(`[PointFour] ✅ Added ${popupData.sizingAdvice.length} sizing advice items from popup`);
+                                    }
+                                    
+                                    // Close the popup completely to restore original state
+                                    const closeButton = popup.querySelector('button[aria-label="Close"], .close, [class*="close"], [class*="dismiss"], [aria-label="close"]');
+                                    if (closeButton) {
+                                        closeButton.click();
+                                        console.log(`[PointFour] Closed size guide popup via close button`);
+                                    } else {
+                                        // Try pressing Escape key
+                                        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                                        console.log(`[PointFour] Attempted to close popup with Escape key`);
+                                    }
+                                    
+                                    break;
+                                }
+                            }
+                        }
+                    }, 50); // Even shorter delay - 50ms for popup to load
+                    
+                } catch (error) {
+                    console.log('[PointFour] Error during invisible extraction:', error);
+                }
+            }
+        }
+    } else {
+        console.log(`[PointFour] Size data already found in DOM, skipping flash extraction`);
+    }
+
+    // Process each selector for existing content
+    for (const selector of sizeChartSelectors) {
+        const elements = document.querySelectorAll(selector);
+        
+        for (const element of elements) {
+            const text = (element.innerText || element.textContent || '').toLowerCase();
+            
+            // Check if this element contains size-related content
+            const containsSizeInfo = sizeKeywords.some(keyword => text.includes(keyword));
+            
+            if (containsSizeInfo) {
+                console.log(`[PointFour] Found size chart candidate: ${selector}`);
+                
+                const elementData = extractSizeDataFromElement(element);
+                if (elementData.measurements && Object.keys(elementData.measurements).length > 0) {
+                    Object.assign(sizeChart.measurements, elementData.measurements);
+                    sizeChart.confidence = 'high';
+                }
+                if (elementData.sizingAdvice && elementData.sizingAdvice.length > 0) {
+                    sizeChart.sizingAdvice.push(...elementData.sizingAdvice);
+                }
+            }
+        }
+    }
+
+    // Remove duplicates from sizing advice
+    sizeChart.sizingAdvice = [...new Set(sizeChart.sizingAdvice)];
+
+    console.log('[PointFour] Enhanced size chart extraction complete:', {
+        measurements: Object.keys(sizeChart.measurements).length,
+        confidence: sizeChart.confidence,
+        sizingAdvice: sizeChart.sizingAdvice.length
+    });
+
+    return sizeChart;
+}
+
+/**
+ * Extract size data from any element (table or text)
+ */
+function extractSizeDataFromElement(element) {
+    const data = {
+        measurements: {},
+        sizingAdvice: []
+    };
+
+    console.log(`[PointFour] Extracting size data from element: ${element.tagName}`);
+
+    // If it's a table, extract structured data
+    if (element.tagName === 'TABLE') {
+        console.log('[PointFour] Processing table element');
+        const tableData = extractTableData(element);
+        if (tableData.measurements && Object.keys(tableData.measurements).length > 0) {
+            Object.assign(data.measurements, tableData.measurements);
+            console.log(`[PointFour] Found ${Object.keys(tableData.measurements).length} measurements in table`);
+        }
+    }
+
+    // Look for tables within the element
+    const tables = element.querySelectorAll('table');
+    console.log(`[PointFour] Found ${tables.length} tables within element`);
+    
+    for (const table of tables) {
+        const tableData = extractTableData(table);
+        if (tableData.measurements && Object.keys(tableData.measurements).length > 0) {
+            Object.assign(data.measurements, tableData.measurements);
+            console.log(`[PointFour] Found ${Object.keys(tableData.measurements).length} measurements in nested table`);
+        }
+    }
+
+    // Extract measurements from text using more aggressive patterns
+    const text = (element.innerText || element.textContent || '');
+    console.log(`[PointFour] Processing text content (${text.length} chars):`, text.substring(0, 300));
+    
+    // Enhanced measurement patterns for size charts
+    const measurementPatterns = [
+        // Size chart table patterns: "Size 24" "25" "26" etc.
+        /size\s+(\w+)[:\s]*(\d+(?:\.\d+)?)/gi,
+        // Direct measurements: "28" waist, 38" hip
+        /(\d+(?:\.\d+)?)\s*["\s]*(?:waist|bust|chest)[,\s]*(\d+(?:\.\d+)?)\s*["\s]*(?:hip|hips)/gi,
+        // Size ranges: "26-28" or "XS-S"
+        /(\w+)[-\s]+(\w+)[:\s]+(\d+(?:\.\d+)?)\s*["\s]*(?:waist|bust|chest)/gi,
+        // Simple size patterns
+        /size\s+(\w+)[:\s]+(\d+(?:\.\d+)?) /gi,
+        // Measurement with units
+        /(\d+(?:\.\d+)?)\s*(?:cm|inch|inches|in|")/gi,
+        // Size chart specific: "24" "25" "26" etc.
+        /\b(\d{2,3})\b/gi,
+        // Size conversion patterns (for FRAME): "US 23 UK 4 IT 36 FR 32"
+        /(?:US|UK|IT|FR|EU)\s+(\d+(?:\.\d+)?)/gi,
+        // Size conversion with labels: "US: 23, UK: 4, IT: 36, FR: 32"
+        /(?:US|UK|IT|FR|EU)[:\s]+(\d+(?:\.\d+)?)/gi
+    ];
+
+    for (const pattern of measurementPatterns) {
+        const matches = [...text.matchAll(pattern)];
+        console.log(`[PointFour] Pattern ${pattern.source} found ${matches.length} matches`);
+        
+        for (const match of matches) {
+            if (match[1] && match[2]) {
+                const size = match[1].toLowerCase().trim();
+                const measurement = parseFloat(match[2]);
+                if (!isNaN(measurement)) {
+                    data.measurements[size] = data.measurements[size] || {};
+                    data.measurements[size].waist = measurement;
+                    console.log(`[PointFour] Added measurement: ${size} -> waist: ${measurement}`);
+                }
+            }
+            if (match[3] && !isNaN(parseFloat(match[3]))) {
+                const size = match[1] ? match[1].toLowerCase().trim() : 'unknown';
+                const measurement = parseFloat(match[3]);
+                data.measurements[size] = data.measurements[size] || {};
+                data.measurements[size].hip = measurement;
+                console.log(`[PointFour] Added measurement: ${size} -> hip: ${measurement}`);
+            }
+        }
+        
+        // Handle size conversion patterns (US/UK/IT/FR)
+        if (pattern.source.includes('US|UK|IT|FR|EU')) {
+            for (const match of matches) {
+                if (match[1]) {
+                    const size = match[1].toLowerCase().trim();
+                    const measurement = parseFloat(match[1]);
+                    if (!isNaN(measurement)) {
+                        // Store as size conversion data
+                        data.measurements[size] = data.measurements[size] || {};
+                        data.measurements[size].sizeConversion = measurement;
+                        console.log(`[PointFour] Added size conversion: ${size} -> ${measurement}`);
+                    }
+                }
+            }
+        }
+    }
+
+    // Extract sizing advice from text
+    const advicePatterns = [
+        /runs?\s+(small|large|true\s+to\s+size)/gi,
+        /model\s+(?:is\s+)?wearing\s+size\s+(\w+)/gi,
+        /recommend\s+sizing\s+(up|down)/gi,
+        /suggest\s+sizing\s+(up|down)/gi,
+        /we\s+recommend\s+sizing\s+(up|down)/gi,
+        /consider\s+sizing\s+(up|down)/gi,
+        /size\s+(up|down)\s+for\s+(.+)fit/gi,
+        /runs?\s+(tight|loose|narrow|wide)/gi
+    ];
+    
+    for (const pattern of advicePatterns) {
+        const matches = text.match(pattern);
+        if (matches) {
+            data.sizingAdvice.push(...matches);
+            console.log(`[PointFour] Found sizing advice: ${matches.join(', ')}`);
+        }
+    }
+
+    console.log(`[PointFour] Final extracted data:`, data);
+    return data;
+}
 
 
 // ========================================
@@ -3233,6 +3581,9 @@ function extractRelevantQuotes(data, section = null, sectionClaim = null) {
 // WIDGET CREATION AND LIFECYCLE
 // ========================================
 
+// Make the size input function globally available
+window.pointFourShowSizeInput = showSizeInputModal;
+
 function createWidget() {
     const widgetInjected = getState('widgetInjected');
     if (widgetInjected) {
@@ -3696,6 +4047,24 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         contentHTML += '</div>';
     }
     
+    // Enhanced Size Chart - show if available
+    if (data.enhancedSizeChart && data.enhancedSizeChart.measurements && Object.keys(data.enhancedSizeChart.measurements).length > 0) {
+        contentHTML += renderEnhancedSizeChart(data.enhancedSizeChart);
+        
+        // Add tailored recommendations button after size chart
+        contentHTML += `
+            <div class="pointfour-tailored-recommendations">
+                <button class="pointfour-tailored-btn" onclick="window.pointFourShowSizeInput()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    Get Tailored Recommendations
+                </button>
+                <p class="pointfour-tailored-description">Share your size for personalized fit advice</p>
+            </div>
+        `;
+    }
+    
     // Materials and Care - only show on product pages
     if (isProductPage()) {
         const materials = extractMaterialsFromPage();
@@ -4054,6 +4423,386 @@ function getCategoryDisplayText(category, productType = null) {
     }
     
     return category || 'product';
+}
+
+function renderEnhancedSizeChart(sizeChart) {
+    const { brand, productType, measurements, sizeSystem, confidence, sizingAdvice, modelInfo } = sizeChart;
+    
+    // Create size chart table
+    const sizes = Object.keys(measurements).slice(0, 6); // Limit to first 6 sizes
+    const measurementKeys = ['waist', 'hips', 'bust', 'chest', 'length', 'inseam'];
+    
+    let tableHTML = '';
+    if (sizes.length > 0) {
+        // Get available measurements from the first size
+        const firstSize = measurements[sizes[0]];
+        const availableMeasurements = measurementKeys.filter(key => firstSize[key] !== undefined);
+        
+        if (availableMeasurements.length > 0) {
+            tableHTML = `
+                <div class="pointfour-size-chart">
+                    <h4>📏 Size Chart (${sizeSystem})</h4>
+                    <div class="pointfour-size-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Size</th>
+                                    ${availableMeasurements.map(key => `<th>${key.charAt(0).toUpperCase() + key.slice(1)}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${sizes.map(size => `
+                                    <tr>
+                                        <td><strong>${size}</strong></td>
+                                        ${availableMeasurements.map(key => `<td>${measurements[size][key] || '-'}</td>`).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Add sizing advice if available
+    let adviceHTML = '';
+    if (sizingAdvice && sizingAdvice.length > 0) {
+        adviceHTML = `
+            <div class="pointfour-sizing-advice">
+                <h4>💡 Sizing Tips</h4>
+                <ul>
+                    ${sizingAdvice.slice(0, 3).map(advice => `<li>${advice}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    // Add model info if available
+    let modelHTML = '';
+    if (modelInfo && (modelInfo.height || modelInfo.size)) {
+        modelHTML = `
+            <div class="pointfour-model-info">
+                <small>Model info: ${modelInfo.height ? `Height: ${modelInfo.height}` : ''}${modelInfo.height && modelInfo.size ? ', ' : ''}${modelInfo.size ? `Wearing size: ${modelInfo.size}` : ''}</small>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="pointfour-enhanced-size-chart">
+            ${tableHTML}
+            ${adviceHTML}
+            ${modelHTML}
+        </div>
+    `;
+}
+
+// ========================================
+// TAILORED RECOMMENDATIONS - SIZE INPUT MODAL
+// ========================================
+
+function showSizeInputModal() {
+    console.log('[PointFour] Showing size input modal...');
+    
+    // Get the current size chart data
+    const currentData = getState('currentData');
+    const sizeChart = currentData?.enhancedSizeChart;
+    
+    if (!sizeChart || !sizeChart.measurements || Object.keys(sizeChart.measurements).length === 0) {
+        console.log('[PointFour] No size chart data available for tailored recommendations');
+        return;
+    }
+    
+    // Create modal overlay
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'pointfour-modal-overlay';
+    modalOverlay.innerHTML = `
+        <div class="pointfour-modal">
+            <div class="pointfour-modal-header">
+                <h3>Get Tailored Recommendations</h3>
+                <button class="pointfour-modal-close" onclick="window.pointFourCloseSizeInput()">&times;</button>
+            </div>
+            <div class="pointfour-modal-content">
+                <p class="pointfour-modal-description">
+                    Share your measurements to get personalized sizing advice for this product.
+                </p>
+                <form id="pointfour-size-form" class="pointfour-size-form">
+                    <div class="pointfour-form-group">
+                        <label for="pointfour-size-select">Your Size</label>
+                        <select id="pointfour-size-select" name="size">
+                            <option value="">Select your size</option>
+                            ${Object.keys(sizeChart.measurements).map(size => 
+                                `<option value="${size}">${size.toUpperCase()}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="pointfour-form-group">
+                        <label for="pointfour-measurements">Measurements (optional)</label>
+                        <div class="pointfour-measurements-grid">
+                            <input type="number" id="pointfour-bust" placeholder="Bust (cm)" min="0" max="200">
+                            <input type="number" id="pointfour-waist" placeholder="Waist (cm)" min="0" max="200">
+                            <input type="number" id="pointfour-hips" placeholder="Hips (cm)" min="0" max="200">
+                        </div>
+                    </div>
+                    <div class="pointfour-form-actions">
+                        <button type="button" class="pointfour-btn-secondary" onclick="window.pointFourCloseSizeInput()">
+                            Cancel
+                        </button>
+                        <button type="submit" class="pointfour-btn-primary">
+                            Get Recommendations
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    // Add modal styles
+    const modalStyles = document.createElement('style');
+    modalStyles.textContent = `
+        .pointfour-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .pointfour-modal {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .pointfour-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .pointfour-modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #212529;
+        }
+        
+        .pointfour-modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+        
+        .pointfour-modal-close:hover {
+            background: #f8f9fa;
+            color: #495057;
+        }
+        
+        .pointfour-modal-content {
+            padding: 24px;
+        }
+        
+        .pointfour-modal-description {
+            margin: 0 0 20px 0;
+            color: #6c757d;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .pointfour-size-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .pointfour-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .pointfour-form-group label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .pointfour-form-group select,
+        .pointfour-form-group input {
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+        
+        .pointfour-form-group select:focus,
+        .pointfour-form-group input:focus {
+            outline: none;
+            border-color: #8b7355;
+            box-shadow: 0 0 0 3px rgba(139, 115, 85, 0.1);
+        }
+        
+        .pointfour-measurements-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .pointfour-form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 8px;
+        }
+        
+        .pointfour-btn-primary,
+        .pointfour-btn-secondary {
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+        
+        .pointfour-btn-primary {
+            background: linear-gradient(135deg, #8b7355 0%, #a68b5b 100%);
+            color: white;
+        }
+        
+        .pointfour-btn-primary:hover {
+            background: linear-gradient(135deg, #7a6349 0%, #957a4f 100%);
+            transform: translateY(-1px);
+        }
+        
+        .pointfour-btn-secondary {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 1px solid #dee2e6;
+        }
+        
+        .pointfour-btn-secondary:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+    `;
+    
+    document.head.appendChild(modalStyles);
+    document.body.appendChild(modalOverlay);
+    
+    // Handle form submission
+    const form = document.getElementById('pointfour-size-form');
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleSizeFormSubmission(form, sizeChart);
+    });
+    
+    // Make close function globally available
+    window.pointFourCloseSizeInput = () => {
+        document.body.removeChild(modalOverlay);
+        document.head.removeChild(modalStyles);
+    };
+}
+
+function handleSizeFormSubmission(form, sizeChart) {
+    const formData = new FormData(form);
+    const selectedSize = formData.get('size');
+    const bust = document.getElementById('pointfour-bust').value;
+    const waist = document.getElementById('pointfour-waist').value;
+    const hips = document.getElementById('pointfour-hips').value;
+    
+    console.log('[PointFour] Size form submitted:', { selectedSize, bust, waist, hips });
+    
+    // Generate tailored recommendations
+    const recommendations = generateTailoredRecommendations(selectedSize, { bust, waist, hips }, sizeChart);
+    
+    // Show recommendations
+    showTailoredRecommendations(recommendations, sizeChart);
+    
+    // Close the modal
+    window.pointFourCloseSizeInput();
+}
+
+function generateTailoredRecommendations(selectedSize, measurements, sizeChart) {
+    const recommendations = {
+        sizeMatch: null,
+        fitAdvice: [],
+        confidence: 'low'
+    };
+    
+    // Find the best size match
+    if (selectedSize && sizeChart.measurements[selectedSize]) {
+        recommendations.sizeMatch = {
+            size: selectedSize,
+            measurements: sizeChart.measurements[selectedSize]
+        };
+        recommendations.confidence = 'high';
+    }
+    
+    // Generate fit advice based on size chart data
+    if (sizeChart.sizingAdvice && sizeChart.sizingAdvice.length > 0) {
+        recommendations.fitAdvice = sizeChart.sizingAdvice.slice(0, 3);
+    }
+    
+    // Add generic advice based on size chart confidence
+    if (sizeChart.confidence === 'high') {
+        recommendations.fitAdvice.push('Size chart data is reliable for this product');
+    }
+    
+    return recommendations;
+}
+
+function showTailoredRecommendations(recommendations, sizeChart) {
+    console.log('[PointFour] Showing tailored recommendations:', recommendations);
+    
+    // Create recommendations display
+    const recommendationsHTML = `
+        <div class="pointfour-tailored-results">
+            <h4>Your Personalized Recommendations</h4>
+            ${recommendations.sizeMatch ? `
+                <div class="pointfour-size-match">
+                    <strong>Recommended Size:</strong> ${recommendations.sizeMatch.size.toUpperCase()}
+                </div>
+            ` : ''}
+            ${recommendations.fitAdvice.length > 0 ? `
+                <div class="pointfour-fit-advice">
+                    <strong>Fit Tips:</strong>
+                    <ul>
+                        ${recommendations.fitAdvice.map(advice => `<li>${advice}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    // Find the tailored recommendations section and replace it
+    const tailoredSection = document.querySelector('.pointfour-tailored-recommendations');
+    if (tailoredSection) {
+        tailoredSection.innerHTML = recommendationsHTML;
+    }
 }
 
 // ========================================

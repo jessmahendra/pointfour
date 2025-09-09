@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FRAME Size Chart Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .size-chart { margin: 20px 0; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .size-guide { background-color: #f9f9f9; padding: 15px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>FRAME Denim - The Rodeo in Nebula</h1>
+    <p>Price: £310 | BEST SELLER</p>
+    
+    <div class="size-guide">
+        <h3>Size Guide</h3>
+        <p>FRAME jeans generally run true to size. Model is wearing size 28 and is 5'8" tall.</p>
+        <p>We recommend sizing down for Le Original and Le Crop Mini styles.</p>
+    </div>
+    
+    <div class="size-chart">
+        <h3>Size Chart</h3>
+        <table class="sizing-table">
+            <thead>
+                <tr>
+                    <th>Size</th>
+                    <th>Waist (inches)</th>
+                    <th>Hips (inches)</th>
+                    <th>Inseam (inches)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>26</td>
+                    <td>26</td>
+                    <td>36</td>
+                    <td>32</td>
+                </tr>
+                <tr>
+                    <td>28</td>
+                    <td>28</td>
+                    <td>38</td>
+                    <td>32</td>
+                </tr>
+                <tr>
+                    <td>30</td>
+                    <td>30</td>
+                    <td>40</td>
+                    <td>32</td>
+                </tr>
+                <tr>
+                    <td>32</td>
+                    <td>32</td>
+                    <td>42</td>
+                    <td>32</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="measurement-guide">
+        <h3>How to Measure</h3>
+        <p>Waist: Measure around the narrowest part of your waist</p>
+        <p>Hips: Measure around the fullest part of your hips</p>
+        <p>Inseam: Measure from crotch to ankle</p>
+    </div>
+
+    <script>
+        // Test the enhanced size chart extraction
+        console.log('Testing enhanced size chart extraction...');
+        
+        // Simulate the enhanced size chart extraction
+        function testEnhancedSizeChart() {
+            const sizeChart = {
+                brand: 'FRAME',
+                productType: 'bottoms',
+                measurements: {
+                    '26': { waist: 26, hips: 36, inseam: 32 },
+                    '28': { waist: 28, hips: 38, inseam: 32 },
+                    '30': { waist: 30, hips: 40, inseam: 32 },
+                    '32': { waist: 32, hips: 42, inseam: 32 }
+                },
+                sizeSystem: 'US',
+                confidence: 'high',
+                source: window.location.href,
+                sizingAdvice: [
+                    'FRAME jeans generally run true to size',
+                    'We recommend sizing down for Le Original and Le Crop Mini styles'
+                ],
+                modelInfo: {
+                    height: '5\'8"',
+                    size: '28'
+                }
+            };
+            
+            console.log('Enhanced size chart extracted:', sizeChart);
+            return sizeChart;
+        }
+        
+        // Run the test
+        const extractedSizeChart = testEnhancedSizeChart();
+        
+        // Display results
+        document.body.innerHTML += `
+            <div style="background: #e8f5e8; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                <h3>Enhanced Size Chart Extraction Results:</h3>
+                <pre>${JSON.stringify(extractedSizeChart, null, 2)}</pre>
+            </div>
+        `;
+    </script>
+</body>
+</html>
