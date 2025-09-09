@@ -239,7 +239,7 @@ function detectSpecificItemSearch(brand: string, itemName: string = ''): boolean
 // Universal fashion brand disambiguation - works dynamically for ALL brands
 function getDisambiguatedBrand(brand: string, category: string = 'clothing'): string {
   // Dynamic disambiguation: add fashion context based on category for ANY brand
-  const categoryTerms = {
+  const categoryTerms: Record<string, string> = {
     'shoes': 'shoes footwear fashion',
     'bags': 'bags handbags fashion', 
     'accessories': 'jewelry accessories fashion',
@@ -349,11 +349,7 @@ interface FilterParams {
   productType: string;
   productLine: string;
   brand: string;
-  // Enhanced product identifiers
   itemName?: string;
-  sku?: string;
-  color?: string;
-  productFingerprint?: string;
 }
 
 interface CategoryKeywords {
@@ -367,7 +363,7 @@ interface ReviewWithScore extends Review {
 
 // Category filtering functions for Phase 2
 function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams): ReviewWithScore[] {
-  const { category, productType, productLine, brand, itemName, sku, color, productFingerprint } = filterParams;
+  const { category, productType, productLine, brand, itemName } = filterParams;
   
   if (!reviews || !Array.isArray(reviews)) return [];
   
@@ -376,9 +372,7 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams)
     category,
     productType,
     productLine,
-    itemName,
-    sku,
-    color
+    itemName
   });
   
   // Define category-specific keywords for filtering
@@ -459,22 +453,6 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams)
       }
     }
     
-    // SKU matching (very high confidence for exact product)
-    if (sku) {
-      const skuRegex = new RegExp(`\\b${sku.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-      if (skuRegex.test(reviewText)) {
-        relevanceScore += 20;
-      }
-    }
-    
-    // Color matching (moderate confidence)
-    if (color) {
-      const colorRegex = new RegExp(`\\b${color.toLowerCase()}\\b`, 'i');
-      if (colorRegex.test(reviewText)) {
-        relevanceScore += 3;
-      }
-    }
-    
     // Check for include keywords (positive scoring)
     for (const keyword of keywords.include) {
       const matches = (reviewText.match(new RegExp(keyword, 'gi')) || []).length;
@@ -524,10 +502,8 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams)
 }
 
 function determineRelevanceLevel(filteredReviews: ReviewWithScore[], originalReviews: Review[], filterParams: FilterParams): string {
-  const { productLine, productType, itemName, sku } = filterParams;
+  const { productLine, productType, itemName } = filterParams;
   
-  // High confidence levels based on enhanced matching
-  const hasExactProductSignals = sku || (itemName && itemName.length > 10);
   const exactProductMatches = filteredReviews.filter((r: ReviewWithScore) => r.relevanceScore >= 15).length;
   
   // Determine the level of specificity achieved
@@ -568,10 +544,6 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category') || 'general';
     const productType = searchParams.get('productType') || '';
     const productLine = searchParams.get('productLine') || '';
-    // Enhanced product identifiers
-    const sku = searchParams.get('sku') || '';
-    const color = searchParams.get('color') || '';
-    const productFingerprint = searchParams.get('productFingerprint') || '';
     // const categoryConfidence = searchParams.get('categoryConfidence') || 'low';
     // const categorySource = searchParams.get('categorySource') || 'unknown';
     
@@ -1534,10 +1506,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         productType,
         productLine,
         brand,
-        itemName,
-        sku,
-        color,
-        productFingerprint
+        itemName
       };
       
       const categoryFilteredReviews = filterReviewsByRelevance(prioritizedReviews, filterParams);
