@@ -1057,9 +1057,10 @@ function showSizeInputModal() {
         `;
     };
     
-    // Make the size input function globally available
-    window.pointFourShowSizeInput = showSizeInputModal;
 }
+
+// Make the size input function globally available immediately
+window.pointFourShowSizeInput = showSizeInputModal;
 
 function handleSizeFormSubmission(form, sizeChart) {
     const formData = new FormData(form);
