@@ -1271,3 +1271,67 @@
   left: -20px;
   font-size: 12px;
 }
+
+/* ========================================
+   EXPANDABLE SIZE SECTION STYLES
+   ======================================== */
+
+.pointfour-size-section {
+  margin: 0;
+}
+
+.pointfour-size-toggle {
+  width: 100%;
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.pointfour-size-toggle:hover {
+  background: #333;
+}
+
+.pointfour-arrow {
+  font-size: 12px;
+  transition: transform 0.3s ease;
+  margin-left: 8px;
+}
+
+.pointfour-size-section.expanded .pointfour-arrow {
+  transform: rotate(180deg);
+}
+
+.pointfour-size-content {
+  display: none;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 0 0 8px 8px;
+  border: 1px solid #e9ecef;
+  border-top: none;
+  margin-top: -1px;
+}
+
+.pointfour-size-section.expanded .pointfour-size-content {
+  display: block;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

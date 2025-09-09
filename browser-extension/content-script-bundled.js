@@ -4115,9 +4115,15 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
     // Always show tailored recommendations section (even without size chart)
     contentHTML += `
         <div class="pointfour-tailored-recommendations">
-            <button class="pointfour-tailored-btn" onclick="window.pointFourShowSizeInput()">
-                Find my size
-            </button>
+            <div class="pointfour-size-section">
+                <button class="pointfour-size-toggle">
+                    Find my size
+                    <span class="pointfour-arrow">▼</span>
+                </button>
+                <div class="pointfour-size-content">
+                    <p>Size recommendation feature coming soon!</p>
+                </div>
+            </div>
         </div>
     `;
     
@@ -4986,6 +4992,21 @@ function showTailoredRecommendations(recommendations, sizeChart) {
         tailoredSection.innerHTML = recommendationsHTML;
     }
 }
+
+// ========================================
+// EVENT DELEGATION FOR EXPANDABLE SECTIONS
+// ========================================
+
+// Set up event delegation for expandable size sections
+document.addEventListener('click', (event) => {
+    if (event.target.classList.contains('pointfour-size-toggle')) {
+        const section = event.target.closest('.pointfour-size-section');
+        if (section) {
+            section.classList.toggle('expanded');
+            console.log('[PointFour] Size section toggled');
+        }
+    }
+});
 
 // ========================================
 // PUBLIC API
