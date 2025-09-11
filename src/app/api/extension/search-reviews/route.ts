@@ -293,14 +293,19 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
     }
   })();
 
-  // Add platform-specific queries to target high-quality fashion content
+  // Add platform-specific queries to target high-quality fashion content across all categories
   const platformBrand = getDisambiguatedBrand(brand, category);
   const platformQueries = [
-    `${platformBrand} site:substack.com review fit quality`,
-    `${platformBrand} site:reddit.com "runs small" OR "runs large" OR "true to size"`,
-    `${platformBrand} site:youtube.com review "fit" OR "size" OR "quality"`,
-    `${platformBrand} fashion blog review fit sizing`,
-    `${platformBrand} "wardrobe" OR "closet" review fit size`,
+    `${platformBrand} fashion site:substack.com review fit quality`,
+    `${platformBrand} clothing site:reddit.com "runs small" OR "runs large" OR "true to size"`,
+    `${platformBrand} fashion site:youtube.com review "fit" OR "size" OR "quality"`,
+    `${platformBrand} fashion blog review fit sizing quality`,
+    `${platformBrand} shoes footwear site:reddit.com review`,
+    `${platformBrand} bags handbag site:reddit.com review quality`,
+    `${platformBrand} accessories jewelry site:reddit.com review`,
+    `${platformBrand} fashion "wardrobe" OR "closet" review fit size`,
+    `${platformBrand} clothing brand site:youtube.com`,
+    `${platformBrand} fashion influencer review`
   ];
 
   // If this is a specific item search, add item-focused queries with exact matching
@@ -327,8 +332,22 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
     return specificItemQueries;
   }
   
-  // For general brand searches, include both base queries and platform-specific queries
-  return [...baseQueries, ...platformQueries];
+  // Add comprehensive fashion-focused fallback queries for lesser-known brands
+  const simpleFallbackQueries = [
+    `"${brand}" fashion review`,
+    `"${brand}" clothing review`,
+    `"${brand}" shoes footwear review`,
+    `"${brand}" bags handbag review`,
+    `"${brand}" accessories jewelry review`,
+    `${brand} fashion brand quality`,
+    `${brand} clothing fit sizing`,
+    `${brand} fashion "runs small" OR "runs large" OR "true to size"`,
+    `${brand} fashion quality "well made" OR "poorly made"`,
+    `${brand} clothing brand fit size`
+  ];
+  
+  // For general brand searches, include base queries, platform queries, and simple fallbacks
+  return [...baseQueries, ...platformQueries, ...simpleFallbackQueries];
 }
 
 // Helper function to create responses with CORS headers
@@ -911,33 +930,68 @@ export async function POST(request: NextRequest) {
     
     console.log('📊 SERPER: Total results collected:', allResults.length);
     
-    // If no results collected, return early with informative message
+    // If no results collected, try broader fallback search queries
     if (allResults.length === 0) {
-      console.warn('⚠️ SERPER: No search results collected - all queries may have failed');
+      console.warn('⚠️ SERPER: No search results from initial queries - trying fallback search...');
       
-      const fallbackSummary = `Unable to find reviews for ${brand} at this time. This may be due to temporary connectivity issues. Please try again in a few moments or use the full analysis page for more comprehensive results.`;
+      // Generate comprehensive fashion-focused fallback queries for external search
+      const fallbackQueries = [
+        `"${enhancedBrand}" fashion review`,
+        `"${enhancedBrand}" clothing review`,
+        `"${enhancedBrand}" shoes review`,
+        `"${enhancedBrand}" bags handbag review`,
+        `"${enhancedBrand}" accessories review`,
+        `${enhancedBrand} fashion brand`,
+        `${enhancedBrand} clothing fit sizing`,
+        `${enhancedBrand} fashion quality`,
+        `${enhancedBrand} footwear shoes`,
+        `${enhancedBrand} fashion "runs small" OR "runs large"`
+      ];
       
-      return createCorsResponse({
-        brandFitSummary: {
-          summary: fallbackSummary,
-          confidence: 'low',
-          sections: {},
-          hasData: false,
-          totalResults: 0,
-          sources: []
-        },
-        reviews: [],
-        groupedReviews: {
-          primary: [],
-          community: [],
-          blogs: [],
-          videos: [],
-          social: [],
-          publications: [],
-          other: []
-        },
-        totalResults: 0
-      });
+      console.log('🔍 SERPER FALLBACK: Trying broader search queries:', fallbackQueries);
+      
+      // Execute fallback queries
+      for (const query of fallbackQueries) {
+        const queryResults = await executeSearchQuery(query);
+        allResults = [...allResults, ...queryResults];
+        
+        // Stop if we get enough results
+        if (allResults.length >= 10) {
+          console.log(`✅ SERPER FALLBACK: Found ${allResults.length} results, stopping early`);
+          break;
+        }
+      }
+      
+      // If still no results after fallback, return informative message
+      if (allResults.length === 0) {
+        console.warn('⚠️ SERPER: No search results collected even with fallback queries');
+        
+        const fallbackSummary = `Unable to find reviews for ${brand} at this time. This may be a very new or niche brand with limited online review coverage. Please try again later or check the brand's official website for more information.`;
+        
+        return createCorsResponse({
+          brandFitSummary: {
+            summary: fallbackSummary,
+            confidence: 'low',
+            sections: {},
+            hasData: false,
+            totalResults: 0,
+            sources: []
+          },
+          reviews: [],
+          groupedReviews: {
+            primary: [],
+            community: [],
+            blogs: [],
+            videos: [],
+            social: [],
+            publications: [],
+            other: []
+          },
+          totalResults: 0
+        });
+      } else {
+        console.log(`✅ SERPER FALLBACK: Successfully found ${allResults.length} results with fallback queries`);
+      }
     }
     
     // Limit results sent to GPT analysis to prevent rate limiting (max 30 results)
@@ -1553,43 +1607,13 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         filteredReviews = categoryFilteredReviews;
         console.log(`✅ CATEGORY FILTER SUCCESS: Using ${categoryFilteredReviews.length} ${category} reviews (${relevanceLevel})`);
       } else {
-        console.log(`❌ INSUFFICIENT DATA: Only ${categoryFilteredReviews.length} ${category} reviews found, minimum 3 required`);
+        console.log(`⚠️ INSUFFICIENT CATEGORY DATA: Only ${categoryFilteredReviews.length} ${category} reviews found, falling back to all reviews`);
         
-        // Return empty result with clear messaging
-        const response = createCorsResponse({
-          brandName: brand,
-          category,
-          productType,
-          productLine,
-          relevanceLevel: 'insufficient_data',
-          totalResults: 0,
-          status: 'no_relevant_data',
-          message: `No sufficient ${category} reviews found for ${brand}`,
-          externalSearchResults: {
-            brandFitSummary: {
-              summary: `Unable to find enough ${category}-specific reviews for ${brand}. Try viewing all brand reviews or check individual product pages.`,
-              confidence: 'low',
-              sections: {},
-              hasData: false,
-              totalResults: 0,
-              sources: [],
-              hasMoreSources: false
-            },
-            reviews: [],
-            totalResults: 0
-          },
-          groupedReviews: {
-            primary: [],
-            community: [],
-            blogs: [],
-            videos: [],
-            social: [],
-            publications: [],
-            other: []
-          }
-        });
+        // Instead of returning empty, use all available reviews for analysis
+        filteredReviews = prioritizedReviews;
+        relevanceLevel = 'general'; // Mark as general since we're using all reviews
         
-        return response;
+        console.log(`📋 FALLBACK: Using all ${prioritizedReviews.length} reviews for analysis instead of category-specific ones`);
       }
     } else {
       console.log(`📋 NO CATEGORY FILTERING: Using all ${prioritizedReviews.length} reviews`);
