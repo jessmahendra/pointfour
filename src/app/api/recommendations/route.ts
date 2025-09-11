@@ -197,14 +197,20 @@ export async function POST(request: NextRequest) {
           : '=== DEBUG: AUTOMATICALLY attempting external search (insufficient database data) ===');
         externalSearchAttempted = true;
         
-        // More robust URL construction for Vercel
+        // More robust URL construction for Vercel deployment
         let baseUrl = 'http://localhost:3000';
+        
+        // In production/Vercel, use the VERCEL_URL or construct from headers
         if (process.env.VERCEL_URL) {
           baseUrl = `https://${process.env.VERCEL_URL}`;
         } else if (process.env.NEXTAUTH_URL) {
           baseUrl = process.env.NEXTAUTH_URL;
-        } else if (typeof window !== 'undefined') {
-          baseUrl = window.location.origin;
+        } else if (process.env.NODE_ENV === 'production') {
+          // For production, try to get the host from the request
+          const host = request.headers.get('host');
+          if (host) {
+            baseUrl = `https://${host}`;
+          }
         }
         
         console.log('=== DEBUG: API fetch details ===');
@@ -215,7 +221,10 @@ export async function POST(request: NextRequest) {
         
         const externalResponse = await fetch(`${baseUrl}/api/extension/search-reviews`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'User-Agent': 'PointFour-Internal'
+          },
           body: JSON.stringify({ 
             brand: brandName, 
             itemName: itemName,
@@ -225,7 +234,9 @@ export async function POST(request: NextRequest) {
               ukClothingSize: query.includes('UK clothing size:') ? query.match(/UK clothing size:\s*([^\n]+)/)?.[1]?.trim() : '',
               ukShoeSize: query.includes('UK shoe size:') ? query.match(/UK shoe size:\s*([^\n]+)/)?.[1]?.trim() : ''
             }
-          })
+          }),
+          // Add timeout to prevent hanging
+          signal: AbortSignal.timeout(30000) // 30 second timeout
         });
         
         if (externalResponse.ok) {
@@ -244,7 +255,19 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.log('=== DEBUG: External search error ===');
         console.error('External search error:', error);
-        externalSearchError = error instanceof Error ? error.message : 'Unknown error';
+        
+        // Better error handling for different types of errors
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+          externalSearchError = `Network error: Unable to connect to search service`;
+        } else if (error instanceof Error && error.name === 'AbortError') {
+          externalSearchError = `Timeout: Search request took too long (30s+)`;
+        } else if (error instanceof Error) {
+          externalSearchError = `Search error: ${error.message}`;
+        } else {
+          externalSearchError = `Unknown search error occurred`;
+        }
+        
+        console.log('=== DEBUG: Processed error message ===', externalSearchError);
       }
     } else if (hasSufficientData) {
       console.log('=== DEBUG: Skipping external search - sufficient database data available ===');
