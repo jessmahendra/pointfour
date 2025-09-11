@@ -347,7 +347,9 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
   ];
   
   // For general brand searches, include base queries, platform queries, and simple fallbacks
-  return [...baseQueries, ...platformQueries, ...simpleFallbackQueries];
+  // Limit to prevent timeout - prioritize most important queries
+  const allQueries = [...baseQueries, ...platformQueries.slice(0, 5), ...simpleFallbackQueries.slice(0, 5)];
+  return allQueries.slice(0, 10); // Limit to max 10 queries to prevent timeout
 }
 
 // Helper function to create responses with CORS headers
@@ -879,7 +881,8 @@ export async function POST(request: NextRequest) {
               'X-API-KEY': serperApiKey,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ q: query, gl: 'us', num: 20 })
+            body: JSON.stringify({ q: query, gl: 'us', num: 20 }),
+            signal: AbortSignal.timeout(10000) // 10 second timeout per query
           });
           
           if (response.ok) {
