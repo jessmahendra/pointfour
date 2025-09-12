@@ -803,7 +803,15 @@ export async function POST(request: NextRequest) {
 
     const serperApiKey = process.env.SERPER_API_KEY;
     
+    console.log('🔍 SERPER API KEY DEBUG:', {
+      hasKey: !!serperApiKey,
+      keyLength: serperApiKey ? serperApiKey.length : 0,
+      keyPrefix: serperApiKey ? serperApiKey.substring(0, 8) + '...' : 'none',
+      environment: process.env.NODE_ENV
+    });
+    
     if (!serperApiKey) {
+      console.error('❌ SERPER_API_KEY is missing from environment variables');
       return createCorsResponse({
         brandFitSummary: {
           summary: `Search API not configured. Add SERPER_API_KEY to environment.`,
@@ -910,6 +918,15 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           console.error(`❌ SERPER: Search error for query (attempt ${attempt}/${maxRetries}):`, query, error);
           
+          // Log detailed error information
+          if (error instanceof Error) {
+            console.error(`❌ SERPER: Error details:`, {
+              message: error.message,
+              name: error.name,
+              stack: error.stack?.substring(0, 200) + '...'
+            });
+          }
+          
           if (error instanceof Error && error.message.includes('certificate')) {
             console.log(`⏰ SERPER: Waiting 1 second before retry due to certificate error...`);
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -918,6 +935,7 @@ export async function POST(request: NextRequest) {
           // If this is the last attempt, return empty array
           if (attempt === maxRetries) {
             console.error(`💥 SERPER: All retry attempts failed for query: ${query}`);
+            console.error(`💥 SERPER: Final error:`, error);
             return [];
           }
         }
@@ -965,33 +983,15 @@ export async function POST(request: NextRequest) {
         }
       }
       
-      // If still no results after fallback, return informative message
+      // If still no results after fallback, provide basic fallback data
       if (allResults.length === 0) {
         console.warn('⚠️ SERPER: No search results collected even with fallback queries');
+        console.warn('⚠️ SERPER: This indicates a Serper API issue - check API key and connectivity');
         
-        const fallbackSummary = `Unable to find reviews for ${brand} at this time. This may be a very new or niche brand with limited online review coverage. Please try again later or check the brand's official website for more information.`;
+        // Provide basic fallback data instead of empty response
+        const fallbackData = generateFallbackBrandData(brand, productCategory);
         
-        return createCorsResponse({
-          brandFitSummary: {
-            summary: fallbackSummary,
-            confidence: 'low',
-            sections: {},
-            hasData: false,
-            totalResults: 0,
-            sources: []
-          },
-          reviews: [],
-          groupedReviews: {
-            primary: [],
-            community: [],
-            blogs: [],
-            videos: [],
-            social: [],
-            publications: [],
-            other: []
-          },
-          totalResults: 0
-        });
+        return createCorsResponse(fallbackData);
       } else {
         console.log(`✅ SERPER FALLBACK: Successfully found ${allResults.length} results with fallback queries`);
       }
@@ -3301,4 +3301,71 @@ function generateDetailedSummary(analysis: AnalysisResult, results: Review[], br
   
   // Join parts with proper line breaks
   return summaryParts.join('\n').trim();
+}
+
+// Fallback function to generate basic brand data when Serper API fails
+function generateFallbackBrandData(brand: string, category: string = 'general'): {
+  brandFitSummary: {
+    summary: string;
+    confidence: string;
+    sections: Record<string, { content: string; sources: string[] }>;
+    hasData: boolean;
+    totalResults: number;
+    sources: string[];
+  };
+  reviews: SerperResult[];
+  groupedReviews: {
+    primary: SerperResult[];
+    community: SerperResult[];
+    blogs: SerperResult[];
+    videos: SerperResult[];
+    social: SerperResult[];
+    publications: SerperResult[];
+    other: SerperResult[];
+  };
+  totalResults: number;
+  fallbackMode: boolean;
+  serperApiIssue: boolean;
+} {
+  console.log(`🔄 FALLBACK: Generating basic data for ${brand} (category: ${category})`);
+  
+  // Basic brand information based on category
+  const categoryAdvice = {
+    'clothing': 'For clothing items, check the brand\'s size guide and consider ordering your usual size. Many brands provide detailed measurements.',
+    'shoes': 'For footwear, check the brand\'s sizing chart as shoe sizes can vary significantly between brands.',
+    'bags': 'For bags and accessories, consider the brand\'s typical sizing and style preferences.',
+    'accessories': 'For accessories, check the brand\'s size specifications and material information.',
+    'general': 'Check the brand\'s official website for sizing guides and customer reviews.'
+  };
+  
+  const advice = categoryAdvice[category as keyof typeof categoryAdvice] || categoryAdvice.general;
+  
+  return {
+    brandFitSummary: {
+      summary: `We're currently unable to fetch live reviews for ${brand}. ${advice} Please check the brand's official website for the most up-to-date sizing information and customer reviews.`,
+      confidence: 'low',
+      sections: {
+        'General Advice': {
+          content: advice,
+          sources: []
+        }
+      },
+      hasData: true,
+      totalResults: 0,
+      sources: []
+    },
+    reviews: [],
+    groupedReviews: {
+      primary: [],
+      community: [],
+      blogs: [],
+      videos: [],
+      social: [],
+      publications: [],
+      other: []
+    },
+    totalResults: 0,
+    fallbackMode: true,
+    serperApiIssue: true
+  };
 }

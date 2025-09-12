@@ -337,9 +337,9 @@ function detectFashionItem() {
 async function checkBrandReviewData(brand) {
   try {
     console.log('Attempting to fetch brand data for:', brand);
-    console.log('Fetching from:', 'http://localhost:3002/api/extension/check-brand');
+    console.log('Fetching from:', 'https://www.pointfour.in/api/extension/check-brand');
     
-    const response = await fetch('http://localhost:3002/api/extension/check-brand', {
+    const response = await fetch('https://www.pointfour.in/api/extension/check-brand', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -386,7 +386,7 @@ async function checkBrandReviewData(brand) {
 async function testCORSConnection() {
   try {
     console.log('Testing CORS connection...');
-    const response = await fetch('http://localhost:3002/api/extension/test', {
+    const response = await fetch('https://www.pointfour.in/api/extension/test', {
       method: 'GET',
       headers: { 
         'Accept': 'application/json'
@@ -439,7 +439,7 @@ async function fetchAndDisplayReviews(brand, itemName) {
   try {
     console.log('🔍 Fetching reviews for brand:', brand, 'item:', itemName);
     
-    const response = await fetch('http://localhost:3002/api/extension/get-reviews', {
+    const response = await fetch('https://www.pointfour.in/api/extension/get-reviews', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -543,7 +543,7 @@ async function searchForReviews(brandName, itemName = '') {
   try {
     console.log('🔍 Dynamic search initiated for brand:', brandName, 'item:', itemName);
     
-    const response = await fetch('http://localhost:3002/api/extension/search-reviews', {
+    const response = await fetch('https://www.pointfour.in/api/extension/search-reviews', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
