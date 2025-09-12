@@ -163,6 +163,12 @@ export function extractBrandFromHeadings() {
             // Use cleaned text for all brand detection
             const textToAnalyze = cleanedText.length > 0 ? cleanedText : text;
             
+            // ENHANCEMENT: Check if this looks like a product name rather than a brand
+            if (isLikelyProductName(textToAnalyze)) {
+                console.log('[PointFour] Skipping likely product name:', textToAnalyze);
+                continue;
+            }
+            
             // Priority: All-caps standalone words that look like brand names (like "TOTEME")
             if (textToAnalyze.length >= 2 && textToAnalyze.length <= 25 && textToAnalyze === textToAnalyze.toUpperCase() && /^[A-Z][A-Z\s&]+$/.test(textToAnalyze)) {
                 // Exclude common all-caps words that aren't brands
@@ -181,7 +187,7 @@ export function extractBrandFromHeadings() {
             const separatorMatch = textToAnalyze.match(/^([A-Z][a-zA-Z\s&]+?)\s*[-|]\s*.+/);
             if (separatorMatch) {
                 const potentialBrand = separatorMatch[1].trim();
-                if (potentialBrand.length < 25) { // Reasonable brand name length
+                if (potentialBrand.length < 25 && !isLikelyProductName(potentialBrand)) { // Reasonable brand name length and not a product name
                     return potentialBrand;
                 }
             }
@@ -192,7 +198,7 @@ export function extractBrandFromHeadings() {
                 // Look for multi-word brand patterns first (like "Golden Goose", "Saint Laurent")
                 for (let i = 2; i <= Math.min(words.length, 4); i++) { // Try 2-4 word combinations
                     const multiWordBrand = words.slice(0, i).join(' ');
-                    if (isValidBrandName(multiWordBrand)) {
+                    if (isValidBrandName(multiWordBrand) && !isLikelyProductName(multiWordBrand)) {
                         return multiWordBrand;
                     }
                 }
@@ -201,19 +207,19 @@ export function extractBrandFromHeadings() {
                 const firstWord = words[0];
                 if (firstWord.length >= 3 && firstWord.length <= 20 && // Increased minimum length to avoid incomplete brands
                     (firstWord === firstWord.toUpperCase() || /^[A-Z][a-z]+$/.test(firstWord)) &&
-                    !isLikelyIncomplete(firstWord, words)) {
+                    !isLikelyIncomplete(firstWord, words) && !isLikelyProductName(firstWord)) {
                     return firstWord;
                 }
             }
             
             // Enhanced pattern recognition for complex brand headings
             const extractedBrand = extractBrandFromComplexPattern(textToAnalyze);
-            if (extractedBrand) {
+            if (extractedBrand && !isLikelyProductName(extractedBrand)) {
                 return extractedBrand;
             }
             
             // If we cleaned the text and it's a reasonable brand name, return it
-            if (cleanedText !== text && cleanedText.length >= 2 && cleanedText.length <= 25) {
+            if (cleanedText !== text && cleanedText.length >= 2 && cleanedText.length <= 25 && !isLikelyProductName(cleanedText)) {
                 return cleanedText;
             }
         }
@@ -637,6 +643,62 @@ export function isReasonableBrandName(brandName) {
     return true;
 }
 
+export function isLikelyProductName(text) {
+    if (!text || text.length < 2) return false;
+    
+    const lowerText = text.toLowerCase();
+    
+    // Common product name patterns
+    const productPatterns = [
+        // Single word product names (like "Coda", "Explorer", "Combat")
+        /^[A-Z][a-z]+$/, // Title case single word
+        
+        // Product names with descriptive words
+        /\b(boot|shoe|sneaker|sandal|heel|flat|loafer|oxford|pump|stiletto|wedge|clog|moccasin|trainer|runner|athletic|dress|casual|ankle|knee|combat|chelsea|ballerina|ballet|espadrille|slip-on|footwear)$/i,
+        
+        // Color + product combinations
+        /\b(black|white|grey|gray|blue|red|green|brown|navy|cream|beige|tan|khaki|olive|burgundy|wine|pink|purple|yellow|orange|silver|gold|bronze|copper)\s+(boot|shoe|sneaker|sandal|heel|flat|loafer)$/i,
+        
+        // Size indicators
+        /\b(xs|s|m|l|xl|xxl|xxxl|\d+)\s*$/i,
+        
+        // Material + product
+        /\b(leather|suede|canvas|rubber|fabric|cotton|wool|silk|linen|cashmere|polyester|viscose|lyocell|tencel|modal|spandex|elastane|nylon|rayon|bamboo|hemp)\s+(boot|shoe|sneaker|sandal|heel|flat|loafer)$/i
+    ];
+    
+    // Check if text matches product patterns
+    const matchesProductPattern = productPatterns.some(pattern => pattern.test(text));
+    
+    // Common product name words
+    const productWords = [
+        'boot', 'boots', 'shoe', 'shoes', 'sneaker', 'sneakers', 'sandal', 'sandals',
+        'heel', 'heels', 'flat', 'flats', 'loafer', 'loafers', 'oxford', 'oxfords',
+        'pump', 'pumps', 'stiletto', 'stilettos', 'wedge', 'wedges', 'clog', 'clogs',
+        'moccasin', 'moccasins', 'trainer', 'trainers', 'runner', 'runners',
+        'athletic', 'dress', 'casual', 'ankle', 'knee', 'combat', 'chelsea',
+        'ballerina', 'ballerinas', 'ballet', 'espadrille', 'espadrilles', 'slip-on', 'slip-ons',
+        'footwear', 'chaussures', 'scarpe', 'zapatos', 'schuhe'
+    ];
+    
+    // Check if text contains product words
+    const containsProductWords = productWords.some(word => lowerText.includes(word));
+    
+    // Exclude common brand names that might match product patterns
+    const commonBrands = [
+        'nike', 'adidas', 'puma', 'converse', 'vans', 'new balance', 'reebok',
+        'timberland', 'dr martens', 'clarks', 'cole haan', 'allen edmonds',
+        'thursday boot', 'thursday boots', 'thursday boot co'
+    ];
+    
+    const isCommonBrand = commonBrands.some(brand => lowerText.includes(brand));
+    
+    // If it's a common brand, it's not a product name
+    if (isCommonBrand) return false;
+    
+    // If it matches product patterns or contains product words, likely a product name
+    return matchesProductPattern || containsProductWords;
+}
+
 export default {
     extractBrandFromContent,
     extractBrandFromJSONLD,
@@ -653,5 +715,6 @@ export default {
     isCommonWord,
     isDescriptiveText,
     looksLikeBrandInContext,
-    isReasonableBrandName
+    isReasonableBrandName,
+    isLikelyProductName
 };

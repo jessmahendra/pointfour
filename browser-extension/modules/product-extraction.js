@@ -104,6 +104,18 @@ export function extractProductFromURL() {
             }
         },
         
+        // Thursday Boot Co - /products/item-name
+        'thursdayboots.com': {
+            pattern: /\/products\/([^\/\?]+)/,
+            brandName: 'Thursday Boot Co',
+            itemProcessor: (match) => {
+                let itemName = match[1];
+                // Remove common color/size suffixes
+                itemName = itemName.replace(/-(?:black|white|grey|gray|blue|red|green|brown|navy|cream|beige|tan|khaki|olive|burgundy|wine|pink|purple|yellow|orange|silver|gold|bronze|copper)(?:-\w+)*$/i, '');
+                return itemName.replace(/-/g, ' ').trim();
+            }
+        },
+        
         // Generic patterns for common e-commerce platforms
         'shopify.com': {
             pattern: /\/products\/([^\/\?]+)/,
@@ -308,6 +320,7 @@ export function extractItemNameFromPage() {
         'h1' // Fallback to any h1
     ];
     
+    // First pass: Look for specific product selectors
     for (const selector of selectors) {
         const element = document.querySelector(selector);
         if (element) {
@@ -315,10 +328,51 @@ export function extractItemNameFromPage() {
             if (text && text.length > 3 && text.length < 200) {
                 // Clean up the text
                 text = cleanProductName(text);
-                if (text.length > 3) {
+                if (text.length > 3 && !isPromotionalText(text)) {
                     console.log('🎨 Found item name with selector:', selector, 'Text:', text);
                     return text;
                 }
+            }
+        }
+    }
+    
+    // Second pass: Look for structured data (JSON-LD)
+    const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+    for (const script of jsonLdScripts) {
+        try {
+            const data = JSON.parse(script.textContent);
+            const items = Array.isArray(data) ? data : [data];
+            
+            for (const item of items) {
+                if (item['@type'] === 'Product' || (Array.isArray(item['@type']) && item['@type'].includes('Product'))) {
+                    if (item.name) {
+                        const itemName = cleanProductName(item.name);
+                        if (itemName.length > 3 && !isPromotionalText(itemName)) {
+                            console.log('🎨 Found item name in JSON-LD:', itemName);
+                            return itemName;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('[PointFour] Failed to parse JSON-LD:', e);
+        }
+    }
+    
+    // Third pass: Look for meta tags
+    const metaSelectors = [
+        'meta[property="og:title"]',
+        'meta[name="title"]',
+        'meta[property="twitter:title"]'
+    ];
+    
+    for (const selector of metaSelectors) {
+        const metaTag = document.querySelector(selector);
+        if (metaTag && metaTag.content) {
+            const content = cleanProductName(metaTag.content);
+            if (content.length > 3 && !isPromotionalText(content)) {
+                console.log('🎨 Found item name in meta tag:', content);
+                return content;
             }
         }
     }
@@ -329,7 +383,7 @@ export function extractItemNameFromPage() {
         // Clean up title by removing common e-commerce suffixes
         let cleanTitle = title.replace(/\s*[-|]\s*.+$/g, '').trim();
         cleanTitle = cleanProductName(cleanTitle);
-        if (cleanTitle.length > 3) {
+        if (cleanTitle.length > 3 && !isPromotionalText(cleanTitle)) {
             console.log('🎨 Using cleaned page title as item name:', cleanTitle);
             return cleanTitle;
         }
@@ -973,6 +1027,66 @@ export function cleanProductName(name) {
     return cleaned;
 }
 
+export function isPromotionalText(text) {
+    if (!text || text.length < 3) return false;
+    
+    const lowerText = text.toLowerCase();
+    
+    // Common promotional phrases
+    const promotionalPhrases = [
+        'free shipping',
+        'free returns',
+        'free shipping & returns',
+        'free shipping and returns',
+        'shipping & returns',
+        'shipping and returns',
+        'buy now',
+        'shop now',
+        'add to cart',
+        'add to bag',
+        'order now',
+        'purchase now',
+        'sale',
+        'discount',
+        'off',
+        'save',
+        'deal',
+        'offer',
+        'promotion',
+        'limited time',
+        'while supplies last',
+        'new arrival',
+        'bestseller',
+        'best seller',
+        'featured',
+        'trending',
+        'popular',
+        'recommended',
+        'customer favorite',
+        'editor\'s choice',
+        'staff pick'
+    ];
+    
+    // Check if text contains promotional phrases
+    const containsPromotionalPhrase = promotionalPhrases.some(phrase => lowerText.includes(phrase));
+    
+    // Check if text is mostly promotional words
+    const words = lowerText.split(/\s+/);
+    const promotionalWords = words.filter(word => promotionalPhrases.some(phrase => phrase.includes(word)));
+    const promotionalRatio = promotionalWords.length / words.length;
+    
+    // If more than 50% of words are promotional, likely promotional text
+    const isMostlyPromotional = promotionalRatio > 0.5;
+    
+    // Check for price patterns (likely promotional)
+    const hasPricePattern = /\$[\d,]+(?:\.\d{2})?|\d+% off|\d+% discount/i.test(text);
+    
+    // Check for action words (likely promotional)
+    const hasActionWords = /\b(buy|shop|order|purchase|add|get|save|discount|sale|offer|deal)\b/i.test(text);
+    
+    return containsPromotionalPhrase || isMostlyPromotional || (hasPricePattern && hasActionWords);
+}
+
 export function extractBrandFromHostname(hostname) {
     const brandMap = {
         'zara.com': 'Zara',
@@ -985,7 +1099,8 @@ export function extractBrandFromHostname(hostname) {
         'stories.com': '& Other Stories',
         'aritzia.com': 'Aritzia',
         'toteme-studio.com': 'Toteme',
-        'ganni.com': 'Ganni'
+        'ganni.com': 'Ganni',
+        'thursdayboots.com': 'Thursday Boot Co'
     };
     
     return brandMap[hostname] || null;
@@ -1347,6 +1462,7 @@ export default {
     extractAllProductData,
     // New enhanced functions
     cleanProductName,
+    isPromotionalText,
     extractBrandFromHostname,
     extractProductSKU,
     extractProductColor,
