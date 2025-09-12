@@ -631,6 +631,14 @@ function shouldRunOnThisPage() {
 function extractBrandFromContent() {
     console.log('[PointFour] Starting dynamic content-based brand extraction...');
     
+    // Method 0: URL-based detection (highest priority for known domains)
+    const hostname = window.location.hostname.replace('www.', '').toLowerCase();
+    const urlBrand = extractBrandFromHostname(hostname);
+    if (urlBrand) {
+        console.log('[PointFour] Brand found via URL/hostname:', urlBrand);
+        return urlBrand;
+    }
+    
     // Method 1: JSON-LD Structured Data
     let brand = extractBrandFromJSONLD();
     if (brand) {
@@ -785,6 +793,12 @@ function extractBrandFromHeadings() {
             // Use cleaned text for all brand detection
             const textToAnalyze = cleanedText.length > 0 ? cleanedText : text;
             
+            // ENHANCEMENT: Check if this looks like a product name rather than a brand
+            if (isLikelyProductName(textToAnalyze)) {
+                console.log('[PointFour] Skipping likely product name:', textToAnalyze);
+                continue;
+            }
+            
             // Priority: All-caps standalone words that look like brand names (like "TOTEME")
             if (textToAnalyze.length >= 2 && textToAnalyze.length <= 25 && textToAnalyze === textToAnalyze.toUpperCase() && /^[A-Z][A-Z\s&]+$/.test(textToAnalyze)) {
                 // Exclude common all-caps words that aren't brands
@@ -803,7 +817,7 @@ function extractBrandFromHeadings() {
             const separatorMatch = textToAnalyze.match(/^([A-Z][a-zA-Z\s&]+?)\s*[-|]\s*.+/);
             if (separatorMatch) {
                 const potentialBrand = separatorMatch[1].trim();
-                if (potentialBrand.length < 25) { // Reasonable brand name length
+                if (potentialBrand.length < 25 && !isLikelyProductName(potentialBrand)) { // Reasonable brand name length and not a product name
                     return potentialBrand;
                 }
             }
@@ -814,7 +828,7 @@ function extractBrandFromHeadings() {
                 // Look for multi-word brand patterns first (like "Golden Goose", "Saint Laurent")
                 for (let i = 2; i <= Math.min(words.length, 4); i++) { // Try 2-4 word combinations
                     const multiWordBrand = words.slice(0, i).join(' ');
-                    if (isValidBrandName(multiWordBrand)) {
+                    if (isValidBrandName(multiWordBrand) && !isLikelyProductName(multiWordBrand)) {
                         return multiWordBrand;
                     }
                 }
@@ -823,19 +837,19 @@ function extractBrandFromHeadings() {
                 const firstWord = words[0];
                 if (firstWord.length >= 3 && firstWord.length <= 20 && // Increased minimum length to avoid incomplete brands
                     (firstWord === firstWord.toUpperCase() || /^[A-Z][a-z]+$/.test(firstWord)) &&
-                    !isLikelyIncomplete(firstWord, words)) {
+                    !isLikelyIncomplete(firstWord, words) && !isLikelyProductName(firstWord)) {
                     return firstWord;
                 }
             }
             
             // Enhanced pattern recognition for complex brand headings
             const extractedBrand = extractBrandFromComplexPattern(textToAnalyze);
-            if (extractedBrand) {
+            if (extractedBrand && !isLikelyProductName(extractedBrand)) {
                 return extractedBrand;
             }
             
             // If we cleaned the text and it's a reasonable brand name, return it
-            if (cleanedText !== text && cleanedText.length >= 2 && cleanedText.length <= 25) {
+            if (cleanedText !== text && cleanedText.length >= 2 && cleanedText.length <= 25 && !isLikelyProductName(cleanedText)) {
                 return cleanedText;
             }
         }
@@ -890,6 +904,25 @@ function extractBrandFromDomain() {
     }
     
     return null;
+}
+
+function extractBrandFromHostname(hostname) {
+    const brandMap = {
+        'zara.com': 'Zara',
+        'everlane.com': 'Everlane',
+        'reformation.com': 'Reformation',
+        'roheframes.com': 'Rohe',
+        'cosstores.com': 'COS',
+        'cos.com': 'COS',
+        'arket.com': 'Arket',
+        'stories.com': '& Other Stories',
+        'aritzia.com': 'Aritzia',
+        'toteme-studio.com': 'Toteme',
+        'ganni.com': 'Ganni',
+        'thursdayboots.com': 'Thursday Boot Co'
+    };
+    
+    return brandMap[hostname] || null;
 }
 
 // ========================================
@@ -1259,6 +1292,62 @@ function isReasonableBrandName(brandName) {
     return true;
 }
 
+function isLikelyProductName(text) {
+    if (!text || text.length < 2) return false;
+    
+    const lowerText = text.toLowerCase();
+    
+    // Common product name patterns
+    const productPatterns = [
+        // Single word product names (like "Coda", "Explorer", "Combat")
+        /^[A-Z][a-z]+$/, // Title case single word
+        
+        // Product names with descriptive words
+        /\b(boot|shoe|sneaker|sandal|heel|flat|loafer|oxford|pump|stiletto|wedge|clog|moccasin|trainer|runner|athletic|dress|casual|ankle|knee|combat|chelsea|ballerina|ballet|espadrille|slip-on|footwear)$/i,
+        
+        // Color + product combinations
+        /\b(black|white|grey|gray|blue|red|green|brown|navy|cream|beige|tan|khaki|olive|burgundy|wine|pink|purple|yellow|orange|silver|gold|bronze|copper)\s+(boot|shoe|sneaker|sandal|heel|flat|loafer)$/i,
+        
+        // Size indicators
+        /\b(xs|s|m|l|xl|xxl|xxxl|\d+)\s*$/i,
+        
+        // Material + product
+        /\b(leather|suede|canvas|rubber|fabric|cotton|wool|silk|linen|cashmere|polyester|viscose|lyocell|tencel|modal|spandex|elastane|nylon|rayon|bamboo|hemp)\s+(boot|shoe|sneaker|sandal|heel|flat|loafer)$/i
+    ];
+    
+    // Check if text matches product patterns
+    const matchesProductPattern = productPatterns.some(pattern => pattern.test(text));
+    
+    // Common product name words
+    const productWords = [
+        'boot', 'boots', 'shoe', 'shoes', 'sneaker', 'sneakers', 'sandal', 'sandals',
+        'heel', 'heels', 'flat', 'flats', 'loafer', 'loafers', 'oxford', 'oxfords',
+        'pump', 'pumps', 'stiletto', 'stilettos', 'wedge', 'wedges', 'clog', 'clogs',
+        'moccasin', 'moccasins', 'trainer', 'trainers', 'runner', 'runners',
+        'athletic', 'dress', 'casual', 'ankle', 'knee', 'combat', 'chelsea',
+        'ballerina', 'ballerinas', 'ballet', 'espadrille', 'espadrilles', 'slip-on', 'slip-ons',
+        'footwear', 'chaussures', 'scarpe', 'zapatos', 'schuhe'
+    ];
+    
+    // Check if text contains product words
+    const containsProductWords = productWords.some(word => lowerText.includes(word));
+    
+    // Exclude common brand names that might match product patterns
+    const commonBrands = [
+        'nike', 'adidas', 'puma', 'converse', 'vans', 'new balance', 'reebok',
+        'timberland', 'dr martens', 'clarks', 'cole haan', 'allen edmonds',
+        'thursday boot', 'thursday boots', 'thursday boot co'
+    ];
+    
+    const isCommonBrand = commonBrands.some(brand => lowerText.includes(brand));
+    
+    // If it's a common brand, it's not a product name
+    if (isCommonBrand) return false;
+    
+    // If it matches product patterns or contains product words, likely a product name
+    return matchesProductPattern || containsProductWords;
+}
+
 
 
 
@@ -1369,6 +1458,18 @@ function extractProductFromURL() {
                 const item = match[1];
                 if (['collections', 'pages', 'blogs', 'search', 'cart', 'account'].includes(item)) return null;
                 return item.replace(/-/g, ' ');
+            }
+        },
+        
+        // Thursday Boot Co - /products/item-name
+        'thursdayboots.com': {
+            pattern: /\/products\/([^\/\?]+)/,
+            brandName: 'Thursday Boot Co',
+            itemProcessor: (match) => {
+                let itemName = match[1];
+                // Remove common color/size suffixes
+                itemName = itemName.replace(/-(?:black|white|grey|gray|blue|red|green|brown|navy|cream|beige|tan|khaki|olive|burgundy|wine|pink|purple|yellow|orange|silver|gold|bronze|copper)(?:-\w+)*$/i, '');
+                return itemName.replace(/-/g, ' ').trim();
             }
         },
         
@@ -1576,6 +1677,7 @@ function extractItemNameFromPage() {
         'h1' // Fallback to any h1
     ];
     
+    // First pass: Look for specific product selectors
     for (const selector of selectors) {
         const element = document.querySelector(selector);
         if (element) {
@@ -1583,10 +1685,51 @@ function extractItemNameFromPage() {
             if (text && text.length > 3 && text.length < 200) {
                 // Clean up the text
                 text = cleanProductName(text);
-                if (text.length > 3) {
+                if (text.length > 3 && !isPromotionalText(text)) {
                     console.log('🎨 Found item name with selector:', selector, 'Text:', text);
                     return text;
                 }
+            }
+        }
+    }
+    
+    // Second pass: Look for structured data (JSON-LD)
+    const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+    for (const script of jsonLdScripts) {
+        try {
+            const data = JSON.parse(script.textContent);
+            const items = Array.isArray(data) ? data : [data];
+            
+            for (const item of items) {
+                if (item['@type'] === 'Product' || (Array.isArray(item['@type']) && item['@type'].includes('Product'))) {
+                    if (item.name) {
+                        const itemName = cleanProductName(item.name);
+                        if (itemName.length > 3 && !isPromotionalText(itemName)) {
+                            console.log('🎨 Found item name in JSON-LD:', itemName);
+                            return itemName;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('[PointFour] Failed to parse JSON-LD:', e);
+        }
+    }
+    
+    // Third pass: Look for meta tags
+    const metaSelectors = [
+        'meta[property="og:title"]',
+        'meta[name="title"]',
+        'meta[property="twitter:title"]'
+    ];
+    
+    for (const selector of metaSelectors) {
+        const metaTag = document.querySelector(selector);
+        if (metaTag && metaTag.content) {
+            const content = cleanProductName(metaTag.content);
+            if (content.length > 3 && !isPromotionalText(content)) {
+                console.log('🎨 Found item name in meta tag:', content);
+                return content;
             }
         }
     }
@@ -1597,7 +1740,7 @@ function extractItemNameFromPage() {
         // Clean up title by removing common e-commerce suffixes
         let cleanTitle = title.replace(/\s*[-|]\s*.+$/g, '').trim();
         cleanTitle = cleanProductName(cleanTitle);
-        if (cleanTitle.length > 3) {
+        if (cleanTitle.length > 3 && !isPromotionalText(cleanTitle)) {
             console.log('🎨 Using cleaned page title as item name:', cleanTitle);
             return cleanTitle;
         }
@@ -2241,6 +2384,66 @@ function cleanProductName(name) {
     return cleaned;
 }
 
+function isPromotionalText(text) {
+    if (!text || text.length < 3) return false;
+    
+    const lowerText = text.toLowerCase();
+    
+    // Common promotional phrases
+    const promotionalPhrases = [
+        'free shipping',
+        'free returns',
+        'free shipping & returns',
+        'free shipping and returns',
+        'shipping & returns',
+        'shipping and returns',
+        'buy now',
+        'shop now',
+        'add to cart',
+        'add to bag',
+        'order now',
+        'purchase now',
+        'sale',
+        'discount',
+        'off',
+        'save',
+        'deal',
+        'offer',
+        'promotion',
+        'limited time',
+        'while supplies last',
+        'new arrival',
+        'bestseller',
+        'best seller',
+        'featured',
+        'trending',
+        'popular',
+        'recommended',
+        'customer favorite',
+        'editor\'s choice',
+        'staff pick'
+    ];
+    
+    // Check if text contains promotional phrases
+    const containsPromotionalPhrase = promotionalPhrases.some(phrase => lowerText.includes(phrase));
+    
+    // Check if text is mostly promotional words
+    const words = lowerText.split(/\s+/);
+    const promotionalWords = words.filter(word => promotionalPhrases.some(phrase => phrase.includes(word)));
+    const promotionalRatio = promotionalWords.length / words.length;
+    
+    // If more than 50% of words are promotional, likely promotional text
+    const isMostlyPromotional = promotionalRatio > 0.5;
+    
+    // Check for price patterns (likely promotional)
+    const hasPricePattern = /\$[\d,]+(?:\.\d{2})?|\d+% off|\d+% discount/i.test(text);
+    
+    // Check for action words (likely promotional)
+    const hasActionWords = /\b(buy|shop|order|purchase|add|get|save|discount|sale|offer|deal)\b/i.test(text);
+    
+    return containsPromotionalPhrase || isMostlyPromotional || (hasPricePattern && hasActionWords);
+}
+
 function extractBrandFromHostname(hostname) {
     const brandMap = {
         'zara.com': 'Zara',
@@ -2253,7 +2456,8 @@ function extractBrandFromHostname(hostname) {
         'stories.com': '& Other Stories',
         'aritzia.com': 'Aritzia',
         'toteme-studio.com': 'Toteme',
-        'ganni.com': 'Ganni'
+        'ganni.com': 'Ganni',
+        'thursdayboots.com': 'Thursday Boot Co'
     };
     
     return brandMap[hostname] || null;

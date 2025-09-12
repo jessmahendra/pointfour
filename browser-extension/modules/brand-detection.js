@@ -9,6 +9,14 @@
 export function extractBrandFromContent() {
     console.log('[PointFour] Starting dynamic content-based brand extraction...');
     
+    // Method 0: URL-based detection (highest priority for known domains)
+    const hostname = window.location.hostname.replace('www.', '').toLowerCase();
+    const urlBrand = extractBrandFromHostname(hostname);
+    if (urlBrand) {
+        console.log('[PointFour] Brand found via URL/hostname:', urlBrand);
+        return urlBrand;
+    }
+    
     // Method 1: JSON-LD Structured Data
     let brand = extractBrandFromJSONLD();
     if (brand) {
@@ -274,6 +282,25 @@ export function extractBrandFromDomain() {
     }
     
     return null;
+}
+
+export function extractBrandFromHostname(hostname) {
+    const brandMap = {
+        'zara.com': 'Zara',
+        'everlane.com': 'Everlane',
+        'reformation.com': 'Reformation',
+        'roheframes.com': 'Rohe',
+        'cosstores.com': 'COS',
+        'cos.com': 'COS',
+        'arket.com': 'Arket',
+        'stories.com': '& Other Stories',
+        'aritzia.com': 'Aritzia',
+        'toteme-studio.com': 'Toteme',
+        'ganni.com': 'Ganni',
+        'thursdayboots.com': 'Thursday Boot Co'
+    };
+    
+    return brandMap[hostname] || null;
 }
 
 // ========================================
@@ -706,6 +733,7 @@ export default {
     extractBrandFromHeadings,
     extractBrandFromMetaTags,
     extractBrandFromDomain,
+    extractBrandFromHostname,
     isValidBrandName,
     isLikelyIncomplete,
     cleanBrandName,
