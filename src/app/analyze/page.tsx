@@ -1985,57 +1985,6 @@ Please provide a specific answer to this follow-up question.`;
           </div>
         )}
 
-        {/* Data Source Indicator */}
-        {analysisResult && (
-          <div
-            style={{
-              backgroundColor: "#F8F7F4",
-              padding: "16px",
-              borderRadius: "12px",
-              border: "1px solid #E9DED5",
-              marginBottom: "24px",
-              fontSize: "14px",
-              color: "#666",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                marginBottom: "8px",
-              }}
-            >
-              <span style={{ fontWeight: "600", color: "#333" }}>
-                📊 Data Sources:
-              </span>
-              <span
-                style={{
-                  backgroundColor: analysisResult.hasExternalData
-                    ? "#D4EDDA"
-                    : "#F8D7DA",
-                  color: analysisResult.hasExternalData ? "#155724" : "#721C24",
-                  padding: "4px 8px",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                  fontWeight: "500",
-                }}
-              >
-                {analysisResult.hasExternalData
-                  ? "🌐 Real Web Reviews"
-                  : "📚 Database Only"}
-              </span>
-            </div>
-            <div style={{ fontSize: "12px", color: "#666" }}>
-              {analysisResult.hasExternalData
-                ? `Found ${
-                    analysisResult.externalSearchResults?.totalResults || 0
-                  } real customer reviews from across the web`
-                : "Using internal database information"}
-            </div>
-          </div>
-        )}
-
         {/* External Search Results */}
         {analysisResult?.externalSearchResults && (
           <div
