@@ -20,6 +20,7 @@ interface AnalysisResult {
   hasDatabaseData?: boolean;
   hasExternalData?: boolean;
   searchType?: "database" | "hybrid" | "external" | "fallback";
+  dataSource?: "database" | "web_search" | "hybrid_data" | "no_data";
   externalSearchResults?: {
     brandFitSummary: {
       summary: string | null;
@@ -754,21 +755,34 @@ Please provide a specific answer to this follow-up question.`;
 
         return apiResponse.externalSearchResults.reviews
           .slice(0, 6)
-          .map((review: any, index: number) => ({
-            sizeBought: review.sizeBought || "N/A",
-            usualSize: review.usualSize || "N/A",
-            fitRating: review.fitRating || 0,
-            fitComments:
-              review.fitComments ||
-              review.snippet ||
-              "No specific fit comments",
-            wouldRecommend: review.wouldRecommend || "Unknown",
-            userBodyType: review.userBodyType || "Not specified",
-            itemName: review.itemName || brandQuery,
-            garmentType:
-              review.garmentType || (isFootwear ? "Footwear" : "Clothing"),
-            source: review.source || "External Review",
-          }));
+          .map(
+            (review: {
+              sizeBought?: string;
+              usualSize?: string;
+              fitRating?: number;
+              fitComments?: string;
+              snippet?: string;
+              wouldRecommend?: string;
+              userBodyType?: string;
+              itemName?: string;
+              garmentType?: string;
+              source?: string;
+            }) => ({
+              sizeBought: review.sizeBought || "N/A",
+              usualSize: review.usualSize || "N/A",
+              fitRating: review.fitRating || 0,
+              fitComments:
+                review.fitComments ||
+                review.snippet ||
+                "No specific fit comments",
+              wouldRecommend: review.wouldRecommend || "Unknown",
+              userBodyType: review.userBodyType || "Not specified",
+              itemName: review.itemName || brandQuery,
+              garmentType:
+                review.garmentType || (isFootwear ? "Footwear" : "Clothing"),
+              source: review.source || "External Review",
+            })
+          );
       }
 
       if (brandNotFound) {
