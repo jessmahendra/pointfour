@@ -236,11 +236,13 @@ export async function POST(request: NextRequest) {
             }
           }),
           // Add timeout to prevent hanging
-          signal: AbortSignal.timeout(30000) // 30 second timeout
+          signal: AbortSignal.timeout(15000) // 15 second timeout
         });
         
         if (externalResponse.ok) {
-          externalSearchResults = await externalResponse.json();
+          const rawExternalData = await externalResponse.json();
+          // Extract the nested externalSearchResults data
+          externalSearchResults = rawExternalData.externalSearchResults || rawExternalData;
           console.log('=== DEBUG: External search successful ===');
           console.log('External results count:', externalSearchResults.totalResults || 0);
           console.log('Has brand fit summary:', !!externalSearchResults.brandFitSummary);
