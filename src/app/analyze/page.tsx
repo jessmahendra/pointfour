@@ -474,6 +474,11 @@ Please provide a specific answer to this follow-up question.`;
 
   // Parse real analysis data from API response
   const parseAnalysisData = (apiResponse: AnalysisResult) => {
+    console.log("=== ANALYZE PAGE: Parsing API response ===");
+    console.log("API Response:", apiResponse);
+    console.log("Has external data:", apiResponse.hasExternalData);
+    console.log("Data source:", apiResponse.dataSource);
+    console.log("Search type:", apiResponse.searchType);
     const isFootwear = userProfile.category === "footwear";
 
     // Better brand name extraction - try to identify the actual brand from the query
@@ -736,6 +741,36 @@ Please provide a specific answer to this follow-up question.`;
 
     // Generate reviews based on available data
     const generateReviews = () => {
+      // Use real external search results if available
+      if (
+        apiResponse.hasExternalData &&
+        apiResponse.externalSearchResults?.reviews
+      ) {
+        console.log("=== ANALYZE PAGE: Using real external search reviews ===");
+        console.log(
+          "External reviews count:",
+          apiResponse.externalSearchResults.reviews.length
+        );
+
+        return apiResponse.externalSearchResults.reviews
+          .slice(0, 6)
+          .map((review: any, index: number) => ({
+            sizeBought: review.sizeBought || "N/A",
+            usualSize: review.usualSize || "N/A",
+            fitRating: review.fitRating || 0,
+            fitComments:
+              review.fitComments ||
+              review.snippet ||
+              "No specific fit comments",
+            wouldRecommend: review.wouldRecommend || "Unknown",
+            userBodyType: review.userBodyType || "Not specified",
+            itemName: review.itemName || brandQuery,
+            garmentType:
+              review.garmentType || (isFootwear ? "Footwear" : "Clothing"),
+            source: review.source || "External Review",
+          }));
+      }
+
       if (brandNotFound) {
         return [
           {
@@ -893,10 +928,20 @@ Please provide a specific answer to this follow-up question.`;
         },
       ],
       relevantReviews: generateReviews(),
-      confidence: brandNotFound ? 1 : 3,
-      reviewCount: brandNotFound ? 0 : Math.floor(Math.random() * 8) + 5,
-      totalReviews: brandNotFound ? 0 : Math.floor(Math.random() * 10) + 15,
-      isLimitedData: brandNotFound,
+      confidence: brandNotFound ? 1 : apiResponse.hasExternalData ? 4 : 3,
+      reviewCount: apiResponse.hasExternalData
+        ? apiResponse.externalSearchResults?.reviews?.length || 0
+        : brandNotFound
+        ? 0
+        : Math.floor(Math.random() * 8) + 5,
+      totalReviews: apiResponse.hasExternalData
+        ? apiResponse.externalSearchResults?.totalResults || 0
+        : brandNotFound
+        ? 0
+        : Math.floor(Math.random() * 10) + 15,
+      isLimitedData: brandNotFound && !apiResponse.hasExternalData,
+      dataSource: apiResponse.dataSource,
+      hasExternalData: apiResponse.hasExternalData,
     };
   };
 
@@ -1926,8 +1971,59 @@ Please provide a specific answer to this follow-up question.`;
           </div>
         )}
 
-        {/* External Search Results - DISABLED */}
-        {false && analysisResult?.externalSearchResults && (
+        {/* Data Source Indicator */}
+        {analysisResult && (
+          <div
+            style={{
+              backgroundColor: "#F8F7F4",
+              padding: "16px",
+              borderRadius: "12px",
+              border: "1px solid #E9DED5",
+              marginBottom: "24px",
+              fontSize: "14px",
+              color: "#666",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "8px",
+              }}
+            >
+              <span style={{ fontWeight: "600", color: "#333" }}>
+                📊 Data Sources:
+              </span>
+              <span
+                style={{
+                  backgroundColor: analysisResult.hasExternalData
+                    ? "#D4EDDA"
+                    : "#F8D7DA",
+                  color: analysisResult.hasExternalData ? "#155724" : "#721C24",
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  fontWeight: "500",
+                }}
+              >
+                {analysisResult.hasExternalData
+                  ? "🌐 Real Web Reviews"
+                  : "📚 Database Only"}
+              </span>
+            </div>
+            <div style={{ fontSize: "12px", color: "#666" }}>
+              {analysisResult.hasExternalData
+                ? `Found ${
+                    analysisResult.externalSearchResults?.totalResults || 0
+                  } real customer reviews from across the web`
+                : "Using internal database information"}
+            </div>
+          </div>
+        )}
+
+        {/* External Search Results */}
+        {analysisResult?.externalSearchResults && (
           <div
             style={{
               backgroundColor: "#FFFFFF",

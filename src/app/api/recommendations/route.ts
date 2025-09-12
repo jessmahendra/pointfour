@@ -175,16 +175,16 @@ export async function POST(request: NextRequest) {
       matchingBrand.fitSummary.length > 20 && // Has meaningful fit summary
       (matchingBrand.reviews || matchingBrand.userQuotes); // Has some review data
     
-    // Check test flag for external search behavior
-    const enableExternalForAll = process.env.ENABLE_EXTERNAL_SEARCH_FOR_ALL_BRANDS === 'true';
-    const shouldUseExternal = enableExternalForAll ? !!brandName : (!hasSufficientData && !!brandName);
+    // ALWAYS try external search first for better review coverage
+    // This matches the widget behavior which successfully finds reviews
+    const shouldUseExternal = !!brandName;
     
     console.log('=== DEBUG: Data sufficiency check ===');
     console.log('Has sufficient database data:', hasSufficientData);
-    console.log('External search for all brands enabled:', enableExternalForAll);
     console.log('Will use external search:', shouldUseExternal);
+    console.log('Reason: Always prioritize external search for real reviews like the widget does');
     
-    // AUTOMATICALLY use external search when database data is insufficient OR test flag is enabled
+    // AUTOMATICALLY use external search for all brands to find real reviews
     let externalSearchResults = null;
     let externalSearchAttempted = false;
     let externalSearchError = null;
@@ -192,9 +192,7 @@ export async function POST(request: NextRequest) {
     // Search externally based on test flag or data sufficiency
     if (shouldUseExternal) {
       try {
-        console.log(enableExternalForAll 
-          ? '=== DEBUG: AUTOMATICALLY attempting external search (test flag enabled) ===' 
-          : '=== DEBUG: AUTOMATICALLY attempting external search (insufficient database data) ===');
+        console.log('=== DEBUG: AUTOMATICALLY attempting external search (prioritizing real reviews like widget) ===');
         externalSearchAttempted = true;
         
         // More robust URL construction for Vercel deployment
@@ -423,15 +421,13 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
       totalBrands: brands.length,
       hasDatabaseData: !!matchingBrand && hasSufficientData,
       hasExternalData: !!externalSearchResults,
-      searchType: (hasSufficientData && externalSearchResults) ? 'hybrid' : 
-                 hasSufficientData ? 'database' : 
-                 (externalSearchResults ? 'external' : 'fallback'),
+      searchType: externalSearchResults ? 'external' : 
+                 hasSufficientData ? 'database' : 'fallback',
       externalSearchResults: externalSearchResults || null,
       externalSearchAttempted: externalSearchAttempted,
       externalSearchError: externalSearchError,
-      dataSource: (hasSufficientData && externalSearchResults) ? 'hybrid_data' :
-                  hasSufficientData ? 'database' : 
-                  (externalSearchResults ? 'web_search' : 'no_data')
+      dataSource: externalSearchResults ? 'web_search' :
+                  hasSufficientData ? 'database' : 'no_data'
     };
     
     console.log('=== DEBUG: Final result created ===');
