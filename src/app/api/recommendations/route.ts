@@ -251,6 +251,99 @@ export async function POST(request: NextRequest) {
           }
         }
         
+        // Group reviews by source type
+        const groupedReviews = {
+          primary: [] as Array<{
+            title: string;
+            snippet: string;
+            url: string;
+            source: string;
+            tags: string[];
+            confidence: "high" | "medium" | "low";
+            brandLevel: boolean;
+            fullContent: string;
+          }>,
+          community: [] as Array<{
+            title: string;
+            snippet: string;
+            url: string;
+            source: string;
+            tags: string[];
+            confidence: "high" | "medium" | "low";
+            brandLevel: boolean;
+            fullContent: string;
+          }>,
+          blogs: [] as Array<{
+            title: string;
+            snippet: string;
+            url: string;
+            source: string;
+            tags: string[];
+            confidence: "high" | "medium" | "low";
+            brandLevel: boolean;
+            fullContent: string;
+          }>,
+          videos: [] as Array<{
+            title: string;
+            snippet: string;
+            url: string;
+            source: string;
+            tags: string[];
+            confidence: "high" | "medium" | "low";
+            brandLevel: boolean;
+            fullContent: string;
+          }>,
+          social: [] as Array<{
+            title: string;
+            snippet: string;
+            url: string;
+            source: string;
+            tags: string[];
+            confidence: "high" | "medium" | "low";
+            brandLevel: boolean;
+            fullContent: string;
+          }>,
+          publications: [] as Array<{
+            title: string;
+            snippet: string;
+            url: string;
+            source: string;
+            tags: string[];
+            confidence: "high" | "medium" | "low";
+            brandLevel: boolean;
+            fullContent: string;
+          }>,
+          other: [] as Array<{
+            title: string;
+            snippet: string;
+            url: string;
+            source: string;
+            tags: string[];
+            confidence: "high" | "medium" | "low";
+            brandLevel: boolean;
+            fullContent: string;
+          }>
+        };
+        
+        allResults.forEach(review => {
+          const source = review.source.toLowerCase();
+          if (source.includes('reddit') || source.includes('substack')) {
+            groupedReviews.primary.push(review);
+          } else if (source.includes('forum') || source.includes('community')) {
+            groupedReviews.community.push(review);
+          } else if (source.includes('blog') || source.includes('wordpress')) {
+            groupedReviews.blogs.push(review);
+          } else if (source.includes('youtube') || source.includes('vimeo')) {
+            groupedReviews.videos.push(review);
+          } else if (source.includes('instagram') || source.includes('twitter') || source.includes('facebook')) {
+            groupedReviews.social.push(review);
+          } else if (source.includes('magazine') || source.includes('publication')) {
+            groupedReviews.publications.push(review);
+          } else {
+            groupedReviews.other.push(review);
+          }
+        });
+        
         // Create external search results structure
         externalSearchResults = {
           brandFitSummary: {
@@ -266,6 +359,7 @@ export async function POST(request: NextRequest) {
             }
           },
           reviews: allResults.slice(0, 10),
+          groupedReviews: groupedReviews,
           totalResults: allResults.length
         };
         console.log('=== DEBUG: External search successful ===');
