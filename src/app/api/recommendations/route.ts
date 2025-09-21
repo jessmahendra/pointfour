@@ -5,6 +5,16 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// GPT-5 Testing Configuration
+const ENABLE_GPT5_TESTING = process.env.ENABLE_GPT5_TESTING === 'true';
+const GPT5_TEST_PERCENTAGE = parseInt(process.env.GPT5_TEST_PERCENTAGE || '10') || 10;
+
+console.log('🔍 RECOMMENDATIONS API GPT-5 CONFIG:', {
+  enabled: ENABLE_GPT5_TESTING,
+  testPercentage: GPT5_TEST_PERCENTAGE,
+  model: 'gpt-5-mini'
+});
+
 export async function POST(request: NextRequest) {
   let query = '';
   
@@ -504,8 +514,14 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
     console.log('=== DEBUG: AI prompt created ===');
     console.log('Prompt length:', aiPrompt.length);
     
+    // Choose model based on GPT-5 testing configuration
+    const useGPT5 = ENABLE_GPT5_TESTING && Math.random() * 100 < GPT5_TEST_PERCENTAGE;
+    const modelToUse = useGPT5 ? "gpt-5-mini" : "gpt-4o-mini";
+    
+    console.log(`🤖 RECOMMENDATIONS API: Using ${modelToUse} ${useGPT5 ? '(GPT-5 test)' : '(standard)'}`);
+    
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: modelToUse,
       messages: [
         {
           role: "system",

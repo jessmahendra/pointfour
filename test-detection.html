@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Enhanced Detection</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .fashion { background-color: #e8f5e8; border-color: #4caf50; }
+        .non-fashion { background-color: #ffe8e8; border-color: #f44336; }
+        .ambiguous { background-color: #fff3cd; border-color: #ffc107; }
+        .result { margin-top: 10px; font-weight: bold; }
+        .details { font-size: 0.9em; color: #666; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Enhanced Fashion Site Detection Test</h1>
+    <p>This page simulates different types of e-commerce sites to test the enhanced detection logic.</p>
+
+    <div class="test-case fashion">
+        <h3>✅ Fashion Site (Zara)</h3>
+        <div class="details">
+            <strong>Meta:</strong> "Zara - Women's clothing, fashion, apparel, style"<br>
+            <strong>Content:</strong> "Size guide, measurements, bust, waist, hip, small medium large XL"<br>
+            <strong>Expected:</strong> Should show widget (high fashion-specific score)
+        </div>
+        <div class="result" id="fashion-result">Loading...</div>
+    </div>
+
+    <div class="test-case non-fashion">
+        <h3>❌ Electronics Site (Best Buy)</h3>
+        <div class="details">
+            <strong>Meta:</strong> "Best Buy - Electronics, computers, smartphones, specifications"<br>
+            <strong>Content:</strong> "Processor, memory, storage, battery life, screen resolution"<br>
+            <strong>Expected:</strong> Should NOT show widget (negative signals detected)
+        </div>
+        <div class="result" id="electronics-result">Loading...</div>
+    </div>
+
+    <div class="test-case non-fashion">
+        <h3>❌ Automotive Site (AutoZone)</h3>
+        <div class="details">
+            <strong>Meta:</strong> "AutoZone - Car parts, engine, transmission, automotive"<br>
+            <strong>Content:</strong> "Engine parts, horsepower, mpg, warranty, vehicle accessories"<br>
+            <strong>Expected:</strong> Should NOT show widget (negative signals detected)
+        </div>
+        <div class="result" id="automotive-result">Loading...</div>
+    </div>
+
+    <div class="test-case ambiguous">
+        <h3>⚠️ Ambiguous E-commerce (Generic Store)</h3>
+        <div class="details">
+            <strong>Meta:</strong> "Online Store - Products, shopping, buy now"<br>
+            <strong>Content:</strong> "Add to cart, price, product details, specifications"<br>
+            <strong>Expected:</strong> Should NOT show widget (insufficient fashion-specific signals)
+        </div>
+        <div class="result" id="ambiguous-result">Loading...</div>
+    </div>
+
+    <script>
+        // Simulate the enhanced detection logic
+        function simulateDetection(metaContent, pageTitle, pageText) {
+            let score = 0;
+            let fashionSpecificScore = 0;
+            const signals = [];
+
+            // Fashion keywords in meta
+            const fashionKeywords = ['fashion', 'clothing', 'apparel', 'style', 'wear', 'dress', 'shirt'];
+            const fashionFound = fashionKeywords.filter(keyword => metaContent.includes(keyword));
+            if (fashionFound.length > 0) {
+                score += Math.min(fashionFound.length, 3);
+                fashionSpecificScore += Math.min(fashionFound.length, 3);
+                signals.push(`Fashion keywords: ${fashionFound.join(', ')}`);
+            }
+
+            // Size-related content
+            const sizeIndicators = ['size guide', 'measurements', 'bust', 'waist', 'hip', 'small', 'medium', 'large'];
+            const sizeMatches = sizeIndicators.filter(indicator => pageText.includes(indicator));
+            if (sizeMatches.length >= 2) {
+                score += 2;
+                fashionSpecificScore += 2;
+                signals.push('Size-related content');
+            }
+
+            // Generic e-commerce signals
+            if (pageText.includes('add to cart') || pageText.includes('price')) {
+                score += 2;
+                signals.push('E-commerce signals');
+            }
+
+            // Negative signals
+            const negativeCategories = {
+                electronics: ['specifications', 'processor', 'memory', 'storage', 'battery', 'screen', 'computer'],
+                automotive: ['engine', 'horsepower', 'mpg', 'transmission', 'warranty', 'car', 'vehicle'],
+                home: ['dimensions', 'assembly', 'installation', 'furniture', 'appliance'],
+                books: ['pages', 'author', 'isbn', 'publication', 'book']
+            };
+
+            let negativePenalty = 0;
+            const detectedCategories = [];
+            for (const [category, keywords] of Object.entries(negativeCategories)) {
+                const matches = keywords.filter(keyword => 
+                    metaContent.includes(keyword) || pageTitle.includes(keyword) || pageText.includes(keyword)
+                );
+                if (matches.length >= 2) {
+                    negativePenalty += -5;
+                    detectedCategories.push(category);
+                }
+            }
+
+            score += negativePenalty;
+            if (negativePenalty < 0) {
+                signals.push(`Negative signals: ${detectedCategories.join(', ')}`);
+            }
+
+            // Enhanced detection logic
+            const isClearFashionSite = score >= 8 && fashionSpecificScore >= 3;
+            const isAmbiguousSite = score >= 4 && score < 8;
+            const hasStrongFashionSignals = fashionSpecificScore >= 2;
+            const hasVeryStrongFashionSignals = fashionSpecificScore >= 4;
+            const isFashionSite = isClearFashionSite || (isAmbiguousSite && hasStrongFashionSignals) || hasVeryStrongFashionSignals;
+
+            return {
+                score,
+                fashionSpecificScore,
+                isFashionSite,
+                signals,
+                isClearFashionSite,
+                isAmbiguousSite,
+                hasStrongFashionSignals,
+                negativePenalty
+            };
+        }
+
+        // Test cases
+        const testCases = [
+            {
+                id: 'fashion-result',
+                meta: 'Zara - Women\'s clothing, fashion, apparel, style',
+                title: 'Zara Women\'s Fashion',
+                content: 'Size guide available. Measurements: bust, waist, hip. Available in small, medium, large, XL. Add to cart. Price: $29.99'
+            },
+            {
+                id: 'electronics-result',
+                meta: 'Best Buy - Electronics, computers, smartphones, specifications',
+                title: 'Best Buy Electronics',
+                content: 'Processor: Intel Core i7. Memory: 16GB RAM. Storage: 512GB SSD. Battery life: 10 hours. Screen resolution: 4K. Add to cart. Price: $999.99'
+            },
+            {
+                id: 'automotive-result',
+                meta: 'AutoZone - Car parts, engine, transmission, automotive',
+                title: 'AutoZone Car Parts',
+                content: 'Engine parts available. Horsepower: 300HP. MPG: 25 city/30 highway. Transmission: Automatic. Warranty: 3 years. Vehicle accessories. Add to cart. Price: $199.99'
+            },
+            {
+                id: 'ambiguous-result',
+                meta: 'Online Store - Products, shopping, buy now',
+                title: 'Generic Online Store',
+                content: 'Product specifications available. Add to cart. Price: $49.99. Product details and features.'
+            }
+        ];
+
+        // Run tests
+        testCases.forEach(testCase => {
+            const result = simulateDetection(testCase.meta, testCase.title, testCase.content);
+            const element = document.getElementById(testCase.id);
+            
+            let status = result.isFashionSite ? '✅ SHOW WIDGET' : '❌ HIDE WIDGET';
+            let color = result.isFashionSite ? 'green' : 'red';
+            
+            element.innerHTML = `
+                <span style="color: ${color}">${status}</span><br>
+                <small>
+                    Score: ${result.score} | Fashion-Specific: ${result.fashionSpecificScore}<br>
+                    Signals: ${result.signals.join(', ')}<br>
+                    ${result.negativePenalty < 0 ? `Penalty: ${result.negativePenalty}` : ''}
+                </small>
+            `;
+        });
+    </script>
+</body>
+</html>

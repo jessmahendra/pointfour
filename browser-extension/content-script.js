@@ -238,6 +238,21 @@ import {
             const data = await response.json();
             console.log('[PointFour] API Response:', data);
 
+            // Log GPT-5 model information if available
+            if (data.modelInfo) {
+                console.log('🤖 GPT MODEL INFO:', {
+                    modelUsed: data.modelInfo.modelUsed,
+                    isGPT5Test: data.modelInfo.isGPT5Test,
+                    gpt5Config: data.modelInfo.gpt5Config
+                });
+                
+                if (data.modelInfo.isGPT5Test) {
+                    console.log('🎉 GPT-5 IS BEING USED! Model:', data.modelInfo.modelUsed);
+                } else {
+                    console.log('📝 Using standard model:', data.modelInfo.modelUsed);
+                }
+            }
+
             // Update widget with results
             updateWidgetContent(data);
 

@@ -13,6 +13,7 @@ export function detectFashionSite() {
     console.log('[PointFour] Starting intelligent fashion site detection...');
     let score = 0;
     const signals = [];
+    let fashionSpecificScore = 0; // Track fashion-specific signals separately
     
     // Check 1: Meta tags analysis
     const metaTags = {
@@ -31,7 +32,16 @@ export function detectFashionSite() {
     
     if (fashionKeywordsFound.length > 0) {
         score += Math.min(fashionKeywordsFound.length, 3); // Cap at 3 points
+        fashionSpecificScore += Math.min(fashionKeywordsFound.length, 3); // Count as fashion-specific
         signals.push(`Meta tags contain fashion keywords: ${fashionKeywordsFound.slice(0, 3).join(', ')}`);
+    }
+    
+    // Check 1.5: NEGATIVE SIGNALS - Detect non-fashion categories and penalize heavily
+    const negativeSignals = detectNegativeSignals(metaContent, document.title.toLowerCase(), document.body?.innerText?.toLowerCase() || '');
+    if (negativeSignals.score < 0) {
+        score += negativeSignals.score; // Apply penalty
+        signals.push(`Negative signals detected: ${negativeSignals.reasons.join(', ')}`);
+        console.log('[PointFour] Heavy penalty applied for non-fashion signals:', negativeSignals);
     }
     
     // Check 2: Structured data (Schema.org)
@@ -101,6 +111,7 @@ export function detectFashionSite() {
     
     if (urlMatches.length > 0) {
         score += Math.min(urlMatches.length, 2); // Cap at 2 points
+        fashionSpecificScore += Math.min(urlMatches.length, 2); // Count as fashion-specific
         signals.push(`URL contains fashion terms: ${urlMatches.join(', ')}`);
     }
     
@@ -122,6 +133,7 @@ export function detectFashionSite() {
     
     if (sizeMatches.length >= 2) {
         score += 2;
+        fashionSpecificScore += 2; // Count as fashion-specific
         signals.push('Found size-related content');
     }
     
@@ -164,18 +176,40 @@ export function detectFashionSite() {
     
     if (fashionImages.length >= 3) {
         score += 1;
+        fashionSpecificScore += 1; // Count as fashion-specific
         signals.push('Found fashion-related images');
     }
     
+    // Enhanced detection logic: Require fashion-specific signals for ambiguous sites
+    const isClearFashionSite = score >= CONFIG.DETECTION_THRESHOLDS.HIGH_CONFIDENCE && fashionSpecificScore >= 3;
+    const isAmbiguousSite = score >= CONFIG.DETECTION_THRESHOLDS.MIN_SCORE && score < CONFIG.DETECTION_THRESHOLDS.HIGH_CONFIDENCE;
+    const hasStrongFashionSignals = fashionSpecificScore >= 2;
+    
+    // Special case: If we have very strong fashion signals, ignore penalties
+    const hasVeryStrongFashionSignals = fashionSpecificScore >= 4;
+    
+    // For ambiguous sites, require strong fashion-specific signals
+    // But if we have very strong fashion signals, always show widget regardless of penalties
+    const isFashionSite = isClearFashionSite || (isAmbiguousSite && hasStrongFashionSignals) || hasVeryStrongFashionSignals;
+    
     // Log detection results
     console.log('[PointFour] Detection Score:', score);
+    console.log('[PointFour] Fashion-Specific Score:', fashionSpecificScore);
     console.log('[PointFour] Signals found:', signals);
+    console.log('[PointFour] Detection Logic:', {
+        isClearFashionSite,
+        isAmbiguousSite,
+        hasStrongFashionSignals,
+        hasVeryStrongFashionSignals,
+        finalDecision: isFashionSite
+    });
     
     setState('detectionScore', score);
     return {
-        isFashionSite: score >= CONFIG.DETECTION_THRESHOLDS.MIN_SCORE,
+        isFashionSite: isFashionSite,
         isHighConfidence: score >= CONFIG.DETECTION_THRESHOLDS.HIGH_CONFIDENCE,
         score: score,
+        fashionSpecificScore: fashionSpecificScore,
         signals: signals,
         productElementsCount: productElementsCount,
         hasPriceElements: hasPriceElements
@@ -404,6 +438,63 @@ export function shouldRunOnThisPage() {
     }
     
     return true;
+}
+
+// ========================================
+// NEGATIVE SIGNAL DETECTION
+// ========================================
+
+function detectNegativeSignals(metaContent, pageTitle, pageText) {
+    const negativeCategories = {
+        electronics: {
+            keywords: ['tech specs', 'processor', 'memory', 'storage', 'battery', 'cpu', 'gpu', 'ram', 'operating system', 'smartphone', 'laptop', 'tablet', 'computer', 'gaming console', 'motherboard', 'graphics card'],
+            penalty: -3
+        },
+        automotive: {
+            keywords: ['engine', 'horsepower', 'mpg', 'transmission', 'warranty', 'mileage', 'fuel', 'gas', 'hybrid', 'electric vehicle', 'car', 'truck', 'suv', 'automotive', 'vehicle parts', 'tires', 'oil'],
+            penalty: -3
+        },
+        home: {
+            keywords: ['assembly required', 'installation', 'maintenance', 'furniture', 'appliance', 'home decor', 'kitchen', 'bathroom', 'bedroom', 'living room', 'outdoor', 'garden', 'tools', 'hardware', 'construction', 'renovation'],
+            penalty: -2
+        },
+        books: {
+            keywords: ['pages', 'author', 'isbn', 'publication', 'edition', 'book', 'ebook', 'audiobook', 'magazine', 'journal', 'textbook', 'novel', 'fiction', 'non-fiction', 'publisher'],
+            penalty: -2
+        },
+        health: {
+            keywords: ['supplement', 'vitamin', 'medicine', 'pharmaceutical', 'medical', 'health', 'wellness', 'fitness equipment', 'exercise', 'nutrition', 'diet', 'protein', 'organic'],
+            penalty: -2
+        },
+        business: {
+            keywords: ['business', 'enterprise', 'saas', 'crm', 'erp', 'accounting', 'finance', 'investment', 'trading', 'insurance', 'legal', 'consulting'],
+            penalty: -2
+        }
+    };
+    
+    let totalPenalty = 0;
+    const detectedCategories = [];
+    
+    // Check each category
+    for (const [category, config] of Object.entries(negativeCategories)) {
+        const matches = config.keywords.filter(keyword => 
+            metaContent.includes(keyword) || 
+            pageTitle.includes(keyword) || 
+            pageText.includes(keyword)
+        );
+        
+        if (matches.length >= 2) { // Require at least 2 matches to avoid false positives
+            totalPenalty += config.penalty;
+            detectedCategories.push(category);
+            console.log(`[PointFour] Detected ${category} signals:`, matches.slice(0, 3));
+        }
+    }
+    
+    return {
+        score: totalPenalty,
+        reasons: detectedCategories,
+        categories: detectedCategories
+    };
 }
 
 export default {

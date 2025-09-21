@@ -1019,7 +1019,7 @@ export async function POST(request: NextRequest) {
     let modelUsed = '';
     let isGPT5Test = false;
     
-    if (false) { // Temporarily disable GPT-5 testing to use regular analysis
+    if (ENABLE_GPT5_TESTING && Math.random() * 100 < GPT5_TEST_PERCENTAGE) {
       // Use GPT-5 test function for a percentage of requests
       console.log(`🧪 GPT-5 TESTING: Using GPT-5 test function for ${enhancedBrand} (${GPT5_TEST_PERCENTAGE}% chance)`);
       modelUsed = 'gpt-5-mini';
@@ -1739,7 +1739,17 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         filteredReviewCount: finalPrioritizedReviews.length,
         filterParams: { category, productType, productLine },
         relevanceLevel
-      } : null
+      } : null,
+      // Add GPT-5 model information for debugging
+      modelInfo: {
+        modelUsed: modelUsed,
+        isGPT5Test: isGPT5Test,
+        gpt5Config: {
+          enabled: ENABLE_GPT5_TESTING,
+          testPercentage: GPT5_TEST_PERCENTAGE,
+          model: 'gpt-5-mini'
+        }
+      }
     });
     
     return response;
