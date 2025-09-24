@@ -1155,8 +1155,8 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
             role: "user", 
             content: prompt
           }],
-          max_tokens: 2000,
-          temperature: 0.3
+          max_completion_tokens: 2000,
+          temperature: 1
           // Note: GPT-5 models only support default temperature (1)
         });
 
@@ -1633,6 +1633,21 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
     
     // Create detailed summary based on analysis using filtered/prioritized results
     const summary = generateDetailedSummary(analysis, finalPrioritizedReviews, brand, productCategory);
+    
+    // Fallback: Generate basic fit analysis if GPT analysis failed but we have reviews
+    // Always generate fit analysis for clothing/shoes when we have reviews, regardless of GPT analysis
+    if ((category === 'clothing' || category === 'shoes') && finalPrioritizedReviews.length > 0) {
+      console.log('🔍 API: Generating fit analysis for clothing/shoes with reviews');
+      console.log('🔍 API: Current sections:', Object.keys(sections));
+      console.log('🔍 API: Analysis object keys:', Object.keys(analysis));
+      const fallbackFitAnalysis = generateFallbackFitAnalysis(finalPrioritizedReviews, brand, category);
+      if (fallbackFitAnalysis) {
+        sections.fit = fallbackFitAnalysis;
+        console.log('🔍 API: Fit analysis created:', fallbackFitAnalysis.recommendation.substring(0, 100));
+      } else {
+        console.log('🔍 API: Fit analysis failed to generate');
+      }
+    }
     
     // Group reviews by source type with proper Review structure using filtered reviews
     const groupedReviews = {
@@ -2465,6 +2480,8 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting.`;
   }
 }
 
+
+
 // REMOVED: Duplicate function definition
 
 // Renamed original function as fallback
@@ -2516,12 +2533,16 @@ function analyzeResultsRuleBased(results: SerperResult[], brand: string, categor
     
     if (dominantFit[1] > 0) {
       // Extract actual quotes from reviews instead of using templates
-      const fitEvidence = extractEvidence(results, dominantFit[0]);
+      const fitEvidence = extractEvidence(results, dominantFit[0], brand, itemName);
       
-      // ONLY generate fit analysis if we have actual evidence from reviews
+      // Generate fit analysis even with limited evidence - better to provide some analysis than none
       if (fitEvidence.length === 0) {
-        console.log(`🔍 ANALYSIS: No fit evidence found in reviews despite ${dominantFit[1]} pattern matches, skipping fit analysis`);
-      } else {
+        console.log(`🔍 ANALYSIS: No specific fit evidence found, but ${dominantFit[1]} pattern matches detected - generating basic fit analysis`);
+        // Create basic evidence from the pattern matches themselves
+        fitEvidence.push(`Customer reviews mention ${dominantFit[0].replace(/([A-Z])/g, ' $1').toLowerCase()} patterns`);
+      }
+      
+      if (fitEvidence.length > 0) {
         // Get source information for authenticity
         const fitSources = extractSourcesFromEvidence(results, fitEvidence);
         const sourceText = fitSources.length > 0 ? ` (sources: ${fitSources.join(', ')})` : '';
@@ -2577,7 +2598,7 @@ function analyzeResultsRuleBased(results: SerperResult[], brand: string, categor
     }
     
     // Extract actual quality-related quotes from reviews
-    const qualityEvidence = extractQualityEvidence(results, isPositive);
+    const qualityEvidence = extractQualityEvidence(results, isPositive, brand, itemName);
     
     let recommendation: string | undefined;
     let confidence: 'low' | 'medium' | 'high' | undefined;
@@ -2819,25 +2840,52 @@ function analyzeResultsRuleBased(results: SerperResult[], brand: string, categor
   return analysis;
 }
 
-function extractEvidence(results: SerperResult[], pattern: string): string[] {
+function extractEvidence(results: SerperResult[], pattern: string, brand?: string, itemName?: string): string[] {
   const evidence: string[] = [];
   const keywords = {
-    runsSmall: ['runs small', 'size up', 'tight', 'small', 'snug', 'fitted'],
-    runsLarge: ['runs large', 'size down', 'loose', 'big', 'oversized', 'baggy'],
-    trueToSize: ['true to size', 'fits perfectly', 'accurate', 'normal', 'as expected', 'usual size']
+    runsSmall: ['runs small', 'size up', 'tight', 'small', 'snug', 'fitted', 'too small', 'smaller'],
+    runsLarge: ['runs large', 'size down', 'loose', 'big', 'oversized', 'baggy', 'too big', 'larger'],
+    trueToSize: ['true to size', 'fits perfectly', 'accurate', 'normal', 'as expected', 'usual size', 'perfect fit']
   };
   
   const relevant = keywords[pattern as keyof typeof keywords] || [];
   
-  // More flexible evidence extraction - look through more results
-  for (const result of results.slice(0, 10)) {
+  // Filter results to only include those relevant to the brand/item
+  const relevantResults = results.filter(result => {
+    const text = `${result.title} ${result.snippet}`.toLowerCase();
+    
+    // Must mention the brand if brand is provided
+    if (brand && !text.includes(brand.toLowerCase())) {
+      return false;
+    }
+    
+    // Must mention the specific item if itemName is provided
+    if (itemName) {
+      const itemWords = itemName.toLowerCase().split(' ').filter(word => word.length > 2);
+      const matchingWords = itemWords.filter(word => text.includes(word));
+      const matchPercentage = matchingWords.length / itemWords.length;
+      
+      // At least 50% of item words must be present
+      if (matchPercentage < 0.5) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+  
+  console.log(`🔍 [EVIDENCE] Filtered ${results.length} results to ${relevantResults.length} relevant results for ${brand} ${itemName}`);
+  
+  // More flexible evidence extraction - look through filtered results
+  for (const result of relevantResults.slice(0, 15)) {
     const text = `${result.title} ${result.snippet}`.toLowerCase();
     
     // Check for any relevant keywords
     const hasRelevantKeyword = relevant.some(k => text.includes(k));
     
     // Also look for fit-related context even without exact keywords
-    const hasFitContext = text.includes('fit') || text.includes('size') || text.includes('sizing');
+    const hasFitContext = text.includes('fit') || text.includes('size') || text.includes('sizing') || 
+                         text.includes('measurement') || text.includes('dimension');
     
     if (hasRelevantKeyword || (hasFitContext && pattern !== 'quality')) {
       const snippet = result.snippet || result.title;
@@ -2849,13 +2897,87 @@ function extractEvidence(results: SerperResult[], pattern: string): string[] {
         }
       }
     }
-    if (evidence.length >= 3) break; // Increased from 2 to 3
+    if (evidence.length >= 3) break;
+  }
+  
+  // If still no evidence found, try to extract any fit-related snippets from relevant results
+  if (evidence.length === 0 && pattern !== 'quality') {
+    for (const result of relevantResults.slice(0, 10)) {
+      const text = `${result.title} ${result.snippet}`.toLowerCase();
+      if (text.includes('fit') || text.includes('size')) {
+        const snippet = result.snippet || result.title;
+        if (snippet && snippet.length > 10) {
+          const cleanSnippet = snippet.substring(0, 150).trim();
+          if (cleanSnippet && !evidence.some(e => e.includes(cleanSnippet.substring(0, 30)))) {
+            evidence.push(cleanSnippet + (cleanSnippet.length >= 150 ? '...' : ''));
+            break; // Just need one piece of evidence
+          }
+        }
+      }
+    }
   }
   
   return evidence;
 }
 
-function extractQualityEvidence(results: SerperResult[], isPositive: boolean): string[] {
+function generateFallbackFitAnalysis(reviews: SerperResult[], brand: string, category: string): {
+  title: string;
+  recommendation: string;
+  confidence: 'low' | 'medium' | 'high';
+  evidence: string[];
+} | null {
+  if (reviews.length === 0) return null;
+  
+  const allText = reviews.map(r => `${r.title} ${r.snippet}`).join(' ').toLowerCase();
+  
+  // Simple pattern matching for fit analysis
+  const fitPatterns = category === 'shoes' 
+    ? {
+        runsSmall: (allText.match(/runs small|size up|tight|narrow|small fit/g) || []).length,
+        runsLarge: (allText.match(/runs large|size down|loose|wide|big fit/g) || []).length,
+        trueToSize: (allText.match(/true to size|fits perfectly|accurate sizing|perfect fit/g) || []).length
+      }
+    : {
+        runsSmall: (allText.match(/runs small|size up|tight|snug/g) || []).length,
+        runsLarge: (allText.match(/runs large|size down|loose|baggy/g) || []).length,
+        trueToSize: (allText.match(/true to size|fits perfectly|accurate sizing/g) || []).length
+      };
+  
+  const dominantFit = Object.entries(fitPatterns).sort((a, b) => b[1] - a[1])[0];
+  
+  if (dominantFit[1] > 0) {
+    const productType = category === 'shoes' ? 'shoes' : 'items';
+    let recommendation = '';
+    
+    if (dominantFit[0] === 'runsSmall') {
+      recommendation = `Based on customer reviews, ${brand} ${productType} tend to run small. Consider sizing up for the best fit.`;
+    } else if (dominantFit[0] === 'runsLarge') {
+      recommendation = `Customer reviews suggest ${brand} ${productType} run large. Consider sizing down for the best fit.`;
+    } else {
+      recommendation = `Reviews indicate ${brand} ${productType} are generally true to size. Order your usual size.`;
+    }
+    
+    // Extract basic evidence
+    const evidence: string[] = [];
+    for (const review of reviews.slice(0, 3)) {
+      const snippet = review.snippet || review.title;
+      if (snippet && snippet.length > 10) {
+        evidence.push(snippet.substring(0, 120) + (snippet.length > 120 ? '...' : ''));
+      }
+    }
+    
+    return {
+      title: 'Fit',
+      recommendation,
+      confidence: dominantFit[1] >= 3 ? 'medium' : 'low',
+      evidence: evidence.length > 0 ? evidence : [`Customer reviews mention ${dominantFit[0].replace(/([A-Z])/g, ' $1').toLowerCase()} patterns`]
+    };
+  }
+  
+  return null;
+}
+
+function extractQualityEvidence(results: SerperResult[], isPositive: boolean, brand?: string, itemName?: string): string[] {
   const evidence: string[] = [];
   
   // More comprehensive and flexible keyword matching
@@ -2877,8 +2999,34 @@ function extractQualityEvidence(results: SerperResult[], isPositive: boolean): s
   
   const keywords = isPositive ? positiveKeywords : negativeKeywords;
   
-  // Look through more results and be more flexible
-  for (const result of results.slice(0, 15)) {
+  // Filter results to only include those relevant to the brand/item
+  const relevantResults = results.filter(result => {
+    const text = `${result.title} ${result.snippet}`.toLowerCase();
+    
+    // Must mention the brand if brand is provided
+    if (brand && !text.includes(brand.toLowerCase())) {
+      return false;
+    }
+    
+    // Must mention the specific item if itemName is provided
+    if (itemName) {
+      const itemWords = itemName.toLowerCase().split(' ').filter(word => word.length > 2);
+      const matchingWords = itemWords.filter(word => text.includes(word));
+      const matchPercentage = matchingWords.length / itemWords.length;
+      
+      // At least 50% of item words must be present
+      if (matchPercentage < 0.5) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+  
+  console.log(`🔍 [QUALITY EVIDENCE] Filtered ${results.length} results to ${relevantResults.length} relevant results for ${brand} ${itemName}`);
+  
+  // Look through filtered results and be more flexible
+  for (const result of relevantResults.slice(0, 15)) {
     const text = `${result.title} ${result.snippet}`.toLowerCase();
     const matchingKeywords = keywords.filter(k => text.includes(k));
     

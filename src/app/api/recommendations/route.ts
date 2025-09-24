@@ -9,11 +9,131 @@ const openai = new OpenAI({
 const ENABLE_GPT5_TESTING = process.env.ENABLE_GPT5_TESTING === 'true';
 const GPT5_TEST_PERCENTAGE = parseInt(process.env.GPT5_TEST_PERCENTAGE || '10') || 10;
 
+// Caching Configuration
+const CACHE_CONFIG = {
+  // Cache timeouts
+  serperCacheTimeout: 24 * 60 * 60 * 1000,        // 24 hours for Serper results
+  aiResponseCacheTimeout: 7 * 24 * 60 * 60 * 1000, // 7 days for AI responses
+  brandDataCacheTimeout: 30 * 24 * 60 * 60 * 1000, // 30 days for brand data
+  
+  // Cache size limits
+  maxCacheSize: 1000, // Maximum number of cached entries
+};
+
+// In-memory caches
+type CacheEntry<T> = { data: T; timestamp: number; hits: number };
+const serperCache = new Map<string, CacheEntry<unknown>>();
+const aiResponseCache = new Map<string, CacheEntry<string>>();
+const brandDataCache = new Map<string, CacheEntry<unknown>>();
+
+// Cache management functions
+function getCachedData<T>(cache: Map<string, CacheEntry<T>>, key: string, timeout: number): T | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  
+  if (Date.now() - entry.timestamp > timeout) {
+    cache.delete(key);
+    return null;
+  }
+  
+  entry.hits++;
+  return entry.data;
+}
+
+function setCachedData<T>(cache: Map<string, CacheEntry<T>>, key: string, data: T): void {
+  // Implement LRU eviction if cache is full
+  if (cache.size >= CACHE_CONFIG.maxCacheSize) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey) {
+      cache.delete(oldestKey);
+    }
+  }
+  
+  cache.set(key, {
+    data,
+    timestamp: Date.now(),
+    hits: 0
+  });
+}
+
+function generateCacheKey(brandName: string, itemName: string, query: string): string {
+  return `${brandName.toLowerCase()}::${itemName.toLowerCase()}::${query.toLowerCase().slice(0, 100)}`;
+}
+
 console.log('🔍 RECOMMENDATIONS API GPT-5 CONFIG:', {
   enabled: ENABLE_GPT5_TESTING,
   testPercentage: GPT5_TEST_PERCENTAGE,
   model: 'gpt-5-mini'
 });
+
+// Cache management endpoint
+export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const action = url.searchParams.get('action');
+  
+  if (action === 'stats') {
+    // Return cache statistics
+    return NextResponse.json({
+      cacheStats: {
+        aiResponseCache: {
+          size: aiResponseCache.size,
+          entries: Array.from(aiResponseCache.entries()).map(([key, entry]) => ({
+            key: key.substring(0, 50) + '...',
+            timestamp: entry.timestamp,
+            hits: entry.hits,
+            age: Date.now() - entry.timestamp
+          }))
+        },
+        serperCache: {
+          size: serperCache.size,
+          entries: Array.from(serperCache.entries()).map(([key, entry]) => ({
+            key: key.substring(0, 50) + '...',
+            timestamp: entry.timestamp,
+            hits: entry.hits,
+            age: Date.now() - entry.timestamp
+          }))
+        },
+        brandDataCache: {
+          size: brandDataCache.size,
+          entries: Array.from(brandDataCache.entries()).map(([key, entry]) => ({
+            key: key.substring(0, 50) + '...',
+            timestamp: entry.timestamp,
+            hits: entry.hits,
+            age: Date.now() - entry.timestamp
+          }))
+        }
+      }
+    });
+  }
+  
+  if (action === 'clear') {
+    const cacheType = url.searchParams.get('type') || 'all';
+    
+    if (cacheType === 'all' || cacheType === 'ai') {
+      aiResponseCache.clear();
+      console.log('🧹 CLEARED: AI Response Cache');
+    }
+    if (cacheType === 'all' || cacheType === 'serper') {
+      serperCache.clear();
+      console.log('🧹 CLEARED: Serper Cache');
+    }
+    if (cacheType === 'all' || cacheType === 'brand') {
+      brandDataCache.clear();
+      console.log('🧹 CLEARED: Brand Data Cache');
+    }
+    
+    return NextResponse.json({
+      message: `Cleared ${cacheType} cache`,
+      cacheStats: {
+        aiResponseCacheSize: aiResponseCache.size,
+        serperCacheSize: serperCache.size,
+        brandDataCacheSize: brandDataCache.size
+      }
+    });
+  }
+  
+  return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+}
 
 export async function POST(request: NextRequest) {
   let query = '';
@@ -26,6 +146,27 @@ export async function POST(request: NextRequest) {
     console.log('=== DEBUG: Starting recommendation request ===');
     console.log('Query received:', query);
     console.log('OpenAI API Key exists:', !!process.env.OPENAI_API_KEY);
+    
+    // Generate cache key early for potential cache hits
+    const brandMatch = query.match(/Brand\/Item:\s*([^\n]+)/);
+    const brandItemText = brandMatch ? brandMatch[1].trim() : '';
+    const cacheKey = generateCacheKey(brandItemText, '', query);
+    
+    // Check AI response cache first (most expensive operation)
+    const cachedAIResponse = getCachedData(aiResponseCache, cacheKey, CACHE_CONFIG.aiResponseCacheTimeout);
+    if (cachedAIResponse) {
+      console.log('🎯 CACHE HIT: Returning cached AI response');
+      return NextResponse.json({
+        recommendation: cachedAIResponse,
+        query: query,
+        totalBrands: 0,
+        hasDatabaseData: false,
+        hasExternalData: false,
+        searchType: 'cached',
+        dataSource: 'cache',
+        cacheHit: true
+      });
+    }
     
     if (!process.env.OPENAI_API_KEY) {
       console.error('❌ OPENAI_API_KEY is missing!');
@@ -51,8 +192,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Extract brand name and item name from query for external search
-    const brandMatch = query.match(/Brand\/Item:\s*([^\n]+)/);
-    const brandItemText = brandMatch ? brandMatch[1].trim() : '';
+    // brandMatch and brandItemText already declared above
     
     // Parse brand and item name using intelligent brand recognition
     let brandName = '';
@@ -103,23 +243,38 @@ export async function POST(request: NextRequest) {
     console.log('Item name:', itemName);
     console.log('Full Brand/Item text:', brandItemText);
     
-    // Fetch your real brand data
+    // Fetch your real brand data with caching
     console.log('=== DEBUG: Fetching Airtable data ===');
-    const response = await fetch(
-      `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Brands`,
-      {
-        headers: {
-          'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-        },
+    
+    // Check brand data cache first
+    const brandDataCacheKey = 'all_brands';
+    const cachedBrandData = getCachedData(brandDataCache, brandDataCacheKey, CACHE_CONFIG.brandDataCacheTimeout);
+    
+    let data;
+    if (cachedBrandData) {
+      console.log('🎯 CACHE HIT: Using cached brand data');
+      data = cachedBrandData;
+    } else {
+      console.log('🔄 CACHE MISS: Fetching fresh brand data from Airtable');
+      const response = await fetch(
+        `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Brands`,
+        {
+          headers: {
+            'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Airtable fetch failed: ${response.status} ${response.statusText}`);
       }
-    );
-    
-    if (!response.ok) {
-      throw new Error(`Airtable fetch failed: ${response.status} ${response.statusText}`);
+      
+      data = await response.json();
+      console.log('Airtable records fetched:', data.records?.length || 0);
+      
+      // Cache the brand data
+      setCachedData(brandDataCache, brandDataCacheKey, data);
     }
-    
-    const data = await response.json();
-    console.log('Airtable records fetched:', data.records?.length || 0);
     
     // Process your Airtable data for AI
     interface Brand {
@@ -205,60 +360,84 @@ export async function POST(request: NextRequest) {
         console.log('=== DEBUG: AUTOMATICALLY attempting external search (prioritizing real reviews like widget) ===');
         externalSearchAttempted = true;
         
-        // Direct Serper API call for external search
-        const serperApiKey = process.env.SERPER_API_KEY;
-        if (!serperApiKey) {
-          throw new Error('SERPER_API_KEY not configured');
-        }
+        // Check Serper cache first
+        const serperCacheKey = `${brandName}::${itemName}::serper`;
+        const cachedSerperResults = getCachedData(serperCache, serperCacheKey, CACHE_CONFIG.serperCacheTimeout);
         
-        // Create search queries for the brand
-        const searchQueries = [
-          `${brandName} ${itemName} reviews`,
-          `${brandName} ${itemName} fit sizing`,
-          `${brandName} ${itemName} quality`,
-          `${brandName} boots reviews reddit`,
-          `${brandName} sizing guide`
-        ];
+        let allResults: Array<{
+          title: string;
+          snippet: string;
+          url: string;
+          source: string;
+          tags: string[];
+          confidence: "high" | "medium" | "low";
+          brandLevel: boolean;
+          fullContent: string;
+        }> = [];
         
-        const allResults = [];
-        
-        // Search each query
-        for (const searchQuery of searchQueries.slice(0, 2)) { // Limit to 2 queries to avoid rate limits
-          try {
-            const serperResponse = await fetch('https://google.serper.dev/search', {
-              method: 'POST',
-              headers: {
-                'X-API-KEY': serperApiKey,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                q: searchQuery,
-                num: 10
-              }),
-            });
-            
-            if (serperResponse.ok) {
-              const serperData = await serperResponse.json();
-              if (serperData.organic) {
-                allResults.push(...serperData.organic.map((result: {
-                  title?: string;
-                  snippet?: string;
-                  link?: string;
-                }) => ({
-                  title: result.title || '',
-                  snippet: result.snippet || '',
-                  url: result.link || '',
-                  source: new URL(result.link || '').hostname,
-                  tags: [brandName, itemName],
-                  confidence: 'medium' as const,
-                  brandLevel: true,
-                  fullContent: result.snippet || ''
-                })));
-              }
-            }
-          } catch (error) {
-            console.log(`Search query "${searchQuery}" failed:`, error);
+        if (cachedSerperResults) {
+          console.log('🎯 CACHE HIT: Using cached Serper results');
+          allResults = cachedSerperResults as typeof allResults;
+        } else {
+          console.log('🔄 CACHE MISS: Making fresh Serper API calls');
+          
+          // Direct Serper API call for external search
+          const serperApiKey = process.env.SERPER_API_KEY;
+          if (!serperApiKey) {
+            throw new Error('SERPER_API_KEY not configured');
           }
+        
+          // Create search queries for the brand
+          const searchQueries = [
+            `${brandName} ${itemName} reviews`,
+            `${brandName} ${itemName} fit sizing`,
+            `${brandName} ${itemName} quality`,
+            `${brandName} boots reviews reddit`,
+            `${brandName} sizing guide`
+          ];
+          
+          // Search each query
+          for (const searchQuery of searchQueries.slice(0, 2)) { // Limit to 2 queries to avoid rate limits
+            try {
+              const serperResponse = await fetch('https://google.serper.dev/search', {
+                method: 'POST',
+                headers: {
+                  'X-API-KEY': serperApiKey,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  q: searchQuery,
+                  num: 10
+                }),
+              });
+              
+              if (serperResponse.ok) {
+                const serperData = await serperResponse.json();
+                if (serperData.organic) {
+                  allResults.push(...serperData.organic.map((result: {
+                    title?: string;
+                    snippet?: string;
+                    link?: string;
+                  }) => ({
+                    title: result.title || '',
+                    snippet: result.snippet || '',
+                    url: result.link || '',
+                    source: new URL(result.link || '').hostname,
+                    tags: [brandName, itemName],
+                    confidence: 'medium' as const,
+                    brandLevel: true,
+                    fullContent: result.snippet || ''
+                  })));
+                }
+              }
+            } catch (error) {
+              console.log(`Search query "${searchQuery}" failed:`, error);
+            }
+          }
+          
+          // Cache the Serper results
+          setCachedData(serperCache, serperCacheKey, allResults);
+          console.log(`💾 CACHED: Serper results for ${brandName} ${itemName}`);
         }
         
         // Group reviews by source type
@@ -335,7 +514,7 @@ export async function POST(request: NextRequest) {
           }>
         };
         
-        allResults.forEach(review => {
+        allResults.forEach((review) => {
           const source = review.source.toLowerCase();
           if (source.includes('reddit') || source.includes('substack')) {
             groupedReviews.primary.push(review);
@@ -451,7 +630,7 @@ export async function POST(request: NextRequest) {
       // Add some key external reviews if available
       if (externalSearchResults.reviews && externalSearchResults.reviews.length > 0) {
         enhancedContext += `\nKey External Reviews:\n`;
-        externalSearchResults.reviews.slice(0, 3).forEach((review: { title: string, source: string, snippet: string }, index: number) => {
+        externalSearchResults.reviews.slice(0, 3).forEach((review: { title: string; source: string; snippet: string }, index: number) => {
           enhancedContext += `${index + 1}. ${review.title} (${review.source}): ${review.snippet}\n`;
         });
       }
@@ -532,8 +711,8 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
           content: aiPrompt
         }
       ],
-      max_tokens: 2000,
-      temperature: 0.3,
+      max_completion_tokens: 2000,
+      temperature: 1,
     });
     
     const aiResponse = completion.choices[0]?.message?.content || "Sorry, I couldn't generate a response.";
@@ -542,6 +721,10 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
     console.log('Response length:', aiResponse.length);
     console.log('=== DEBUG: AI response content (first 500 chars) ===');
     console.log(aiResponse.substring(0, 500));
+    
+    // Cache the AI response for future identical queries
+    setCachedData(aiResponseCache, cacheKey, aiResponse);
+    console.log(`💾 CACHED: AI response for query: ${query.substring(0, 50)}...`);
     
     // Create enhanced result with external search data
     const enhancedResult = {
@@ -556,7 +739,13 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
       externalSearchAttempted: externalSearchAttempted,
       externalSearchError: externalSearchError,
       dataSource: externalSearchResults ? 'web_search' :
-                  hasSufficientData ? 'database' : 'no_data'
+                  hasSufficientData ? 'database' : 'no_data',
+      cacheStats: {
+        aiResponseCacheSize: aiResponseCache.size,
+        serperCacheSize: serperCache.size,
+        brandDataCacheSize: brandDataCache.size,
+        cacheHit: false // This was a cache miss since we generated new response
+      }
     };
     
     console.log('=== DEBUG: Final result created ===');

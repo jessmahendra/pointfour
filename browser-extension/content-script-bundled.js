@@ -3968,7 +3968,7 @@ function showWidget() {
     widgetContainer.style.visibility = 'visible';
     
     // Trigger reflow to ensure CSS transition works
-    widgetContainer.offsetHeight;
+    void widgetContainer.offsetHeight;
     
     // Add the visible class
     widgetContainer.classList.add('pointfour-visible');
@@ -4166,8 +4166,6 @@ function renderMainContent(data, contentDiv) {
     const dataUpdateCount = getState('dataUpdateCount') + 1;
     setState('dataUpdateCount', dataUpdateCount);
     
-    const lastDataQuality = getState('lastDataQuality');
-    const qualityImproved = dataQuality > lastDataQuality;
     setState('lastDataQuality', dataQuality);
     
     // Check if we should force completion due to timeout or processing state
@@ -4258,8 +4256,16 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         qualityRecommendation: sections.quality?.recommendation?.substring(0, 100),
         fitEvidence: sections.fit?.evidence?.length || 0,
         qualityEvidence: sections.quality?.evidence?.length || 0,
-        washCareEvidence: sections.washCare?.evidence?.length || 0
+        washCareEvidence: sections.washCare?.evidence?.length || 0,
+        fitIsUseful: sections.fit?.recommendation ? isUsefulRecommendation(sections.fit.recommendation) : false,
+        dataSource: data.externalSearchResults ? 'externalSearchResults' : 'directData',
+        // Show actual evidence content for debugging
+        fitEvidenceContent: sections.fit?.evidence?.slice(0, 2) || [],
+        qualityEvidenceContent: sections.quality?.evidence?.slice(0, 2) || []
     });
+    
+    // Generate sophisticated fit analysis
+    const fitAnalysisBullets = generateSophisticatedFitAnalysis(data, brandName, sections);
     
     // Determine if this is item-specific or brand-general
     const urlExtraction = window.pointFourURLExtraction || null;
@@ -4325,31 +4331,37 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
             </div>
     `;
     
-    // Main recommendation - only show if we have sections with evidence
-    const hasMeaningfulData = Object.values(sections).some(section => 
-        section && section.evidence && section.evidence.length > 0
-    );
+    // Check if we have structured sections with fit data
+    const hasFitSection = !!sections.fit;
     
-    console.log('🔍 [PointFour] Main recommendation check:', {
-        hasRecommendation: !!data.recommendation,
-        hasMeaningfulData,
-        recommendation: data.recommendation?.substring(0, 100),
-        sectionsWithEvidence: Object.values(sections).map(section => ({
-            hasEvidence: !!(section && section.evidence && section.evidence.length > 0),
-            evidenceCount: section?.evidence?.length || 0
-        }))
-    });
-    
-    if (data.recommendation) {
-        const cleanedRecommendation = cleanRecommendationText(data.recommendation);
-        console.log('🔍 [PointFour] Showing main recommendation:', cleanedRecommendation.substring(0, 100));
+    // Show fit analysis in these cases:
+    // 1. We have structured sections with fit data (preferred)
+    // 2. We have sophisticated fit analysis bullets as fallback
+    // 3. We have reviews but no specific fit info (basic fallback)
+    if (hasFitSection) {
+        // We have structured fit data - this will be rendered in the sections below
+        console.log('🔍 [PointFour] Has structured fit section - will render in sections');
+    } else if (fitAnalysisBullets.length > 0) {
+        // Fallback to sophisticated fit analysis
+        console.log('🔍 [PointFour] Showing sophisticated fit analysis as fallback:', fitAnalysisBullets);
         contentHTML += `
             <div class="pointfour-fit-info">
-                <div class="pointfour-main-rec">${cleanedRecommendation}</div>
+                <h4>Fit Analysis:</h4>
+                <ul class="pointfour-bullet-list">
+                    ${fitAnalysisBullets.map(bullet => `<li>${bullet}</li>`).join('')}
+                </ul>
             </div>
         `;
-    } else {
-        console.log('🔍 [PointFour] Not showing main recommendation - missing recommendation');
+    } else if (totalReviews > 0) {
+        // Basic fallback when we have reviews but no specific fit info
+        contentHTML += `
+            <div class="pointfour-fit-info">
+                <h4>Fit Analysis:</h4>
+                <ul class="pointfour-bullet-list">
+                    <li>Analysis in progress. Found ${totalReviews} review${totalReviews === 1 ? '' : 's'} for ${brandName}.</li>
+                </ul>
+            </div>
+        `;
     }
     
     // Quality insights
@@ -4385,19 +4397,39 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
                 recommendation: section?.recommendation?.substring(0, 100),
                 isUseful: section && section.recommendation ? isUsefulRecommendation(section.recommendation) : false,
                 hasEvidence: !!(section && section.evidence && section.evidence.length > 0),
-                evidenceCount: section?.evidence?.length || 0
+                evidenceCount: section?.evidence?.length || 0,
+                evidencePreview: section?.evidence?.slice(0, 2) || [] // Show first 2 evidence items
             });
             
-            if (section && section.recommendation) {
+            if (section && section.recommendation && isUsefulRecommendation(section.recommendation)) {
                 const renderedSection = renderSectionWithQuotes(sectionKey, section);
                 console.log(`🔍 [PointFour] Rendered section ${sectionKey}:`, renderedSection.substring(0, 200) + '...');
                 contentHTML += renderedSection;
             } else {
-                console.log(`🔍 [PointFour] Skipping section ${sectionKey} - missing data`);
+                console.log(`🔍 [PointFour] Skipping section ${sectionKey} - missing data or not useful:`, {
+                    hasSection: !!section,
+                    hasRecommendation: !!(section && section.recommendation),
+                    isUseful: section && section.recommendation ? isUsefulRecommendation(section.recommendation) : false,
+                    recommendation: section?.recommendation?.substring(0, 100)
+                });
             }
         }
         
         contentHTML += '</div>';
+        
+        // If we have sections but no fit section was rendered, show fallback fit analysis
+        const renderedSections = contentHTML.match(/pointfour-section/g) || [];
+        if (hasFitSection && renderedSections.length === 0 && fitAnalysisBullets.length > 0) {
+            console.log('🔍 [PointFour] Fit section exists but was not rendered - showing fallback');
+            contentHTML += `
+                <div class="pointfour-fit-info">
+                    <h4>Fit Analysis:</h4>
+                    <ul class="pointfour-bullet-list">
+                        ${fitAnalysisBullets.map(bullet => `<li>${bullet}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
     } else {
         console.log('🔍 [PointFour] No sections to render - sections object is empty');
     }
@@ -4480,7 +4512,6 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
 
 function renderSectionWithQuotes(sectionKey, section) {
     const sectionTitle = getSectionTitle(sectionKey);
-    const sectionIcon = getSectionIcon(sectionKey);
     
     // Extract the main insight from recommendation (before the quotes)
     let mainInsight = section.recommendation;
@@ -4500,7 +4531,19 @@ function renderSectionWithQuotes(sectionKey, section) {
     
     // Add real user quotes if evidence exists - filter for section relevance
     if (section.evidence && section.evidence.length > 0) {
-        const relevantQuotes = filterQuotesForSection(section.evidence, sectionKey);
+        console.log(`🔍 [PointFour] ${sectionKey} section evidence:`, {
+            evidenceCount: section.evidence.length,
+            evidence: section.evidence.slice(0, 2) // Show first 2 for debugging
+        });
+        
+        // For now, let's show the evidence directly without filtering to see if that fixes the issue
+        // const relevantQuotes = filterQuotesForSection(section.evidence, sectionKey);
+        const relevantQuotes = section.evidence; // Show all evidence for this section
+        
+        console.log(`🔍 [PointFour] ${sectionKey} quotes to show:`, {
+            relevantCount: relevantQuotes.length,
+            relevantQuotes: relevantQuotes.slice(0, 2) // Show first 2 for debugging
+        });
         
         if (relevantQuotes.length > 0) {
             html += '<div class="pointfour-quotes-container">';
@@ -4511,7 +4554,11 @@ function renderSectionWithQuotes(sectionKey, section) {
                 }
             }
             html += '</div>';
+        } else {
+            console.log(`🔍 [PointFour] No quotes shown for ${sectionKey} section - all evidence filtered out`);
         }
+    } else {
+        console.log(`🔍 [PointFour] No evidence available for ${sectionKey} section`);
     }
     
     // Show confidence warning only if confidence is low
@@ -4588,11 +4635,19 @@ function filterQuotesForSection(quotes, sectionKey) {
         return { quote, score };
     });
     
-    // Filter out quotes with no relevance and sort by relevance score
-    return scoredQuotes
-        .filter(item => item.score > 0) // Only keep quotes with at least one keyword match
+    // Sort by relevance score and return quotes
+    const sortedQuotes = scoredQuotes
         .sort((a, b) => b.score - a.score) // Sort by relevance (highest first)
         .map(item => item.quote); // Return just the quotes
+    
+    // If we have quotes with keyword matches, return them
+    const relevantQuotes = scoredQuotes
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(item => item.quote);
+    
+    // If we have relevant quotes, return them. Otherwise, return all quotes (less strict filtering)
+    return relevantQuotes.length > 0 ? relevantQuotes : sortedQuotes.slice(0, 3);
 }
 
 function cleanQuoteText(quote) {
@@ -4735,14 +4790,7 @@ function isUsefulRecommendation(recommendation) {
     return !isGeneric;
 }
 
-function cleanRecommendationText(text) {
-    // Remove redundant phrases and clean up the recommendation
-    return text
-        .replace(/Based on \d+ reviews?,?\s*/gi, '')
-        .replace(/According to reviews?,?\s*/gi, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
+// Removed unused function
 
 function getSectionTitle(sectionKey) {
     const titles = {
@@ -4754,15 +4802,7 @@ function getSectionTitle(sectionKey) {
     return titles[sectionKey] || sectionKey;
 }
 
-function getSectionIcon(sectionKey) {
-    const icons = {
-        fit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/></svg>',
-        quality: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" stroke-width="2"/></svg>',
-        fabric: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2L2 7v10l10 5 10-5V7l-10-5z" stroke-width="2"/></svg>',
-        washCare: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3" stroke-width="2"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" stroke-width="2"/></svg>'
-    };
-    return icons[sectionKey] || '';
-}
+// Removed unused function
 
 function getCategoryDisplayText(category, productType = null) {
     // Map category and product type to user-friendly display text
@@ -4783,7 +4823,7 @@ function getCategoryDisplayText(category, productType = null) {
 }
 
 function renderEnhancedSizeChart(sizeChart) {
-    const { brand, productType, measurements, sizeSystem, confidence, sizingAdvice, modelInfo } = sizeChart;
+    const { measurements, sizeSystem, sizingAdvice, modelInfo } = sizeChart;
     
     // Create size chart table
     const sizes = Object.keys(measurements).slice(0, 6); // Limit to first 6 sizes
@@ -4945,7 +4985,7 @@ function handleSizeFormSubmission(form, sizeChart) {
     const recommendations = generateTailoredRecommendations(selectedSize, { bust, waist, hips }, sizeChart);
     
     // Show recommendations
-    showTailoredRecommendations(recommendations, sizeChart);
+    showTailoredRecommendations(recommendations);
     
     // Close the modal
     window.pointFourCloseSizeInput();
@@ -4974,9 +5014,9 @@ function generateTailoredRecommendations(selectedSize, measurements, sizeChart) 
         
         recommendations.sizeMatch = bestMatch;
         recommendations.confidence = bestMatch.confidence;
-        recommendations.fitAdvice = generateSizeAdvice(bestMatch, measurements, sizeChart);
+        recommendations.fitAdvice = generateSizeAdvice(bestMatch);
         recommendations.alternativeSizes = findAlternativeSizes(bestMatch, sizeChart.measurements);
-        recommendations.fitAnalysis = analyzeFitPatterns(bestMatch, sizeChart);
+        recommendations.fitAnalysis = analyzeFitPatterns(bestMatch);
         
         // TODO: Add review insights when we implement review filtering
         // recommendations.reviewInsights = findSimilarReviewers(measurements, sizeChart);
@@ -5018,7 +5058,6 @@ function findBestSizeMatch(selectedSize, measurements, sizeChartMeasurements) {
     // If user provided measurements, find the closest match
     if (measurements.bust || measurements.waist || measurements.hips) {
         let bestScore = Infinity;
-        let bestSize = selectedSize;
         
         for (const size of availableSizes) {
             const sizeData = sizeChartMeasurements[size];
@@ -5027,10 +5066,9 @@ function findBestSizeMatch(selectedSize, measurements, sizeChartMeasurements) {
             const score = calculateSizeMatchScore(measurements, sizeData);
             console.log(`[PointFour] Size ${size} score:`, score);
             
-            if (score < bestScore) {
-                bestScore = score;
-                bestSize = size;
-                bestMatch = {
+        if (score < bestScore) {
+            bestScore = score;
+            bestMatch = {
                     size: size,
                     confidence: score < 2 ? 'high' : score < 5 ? 'medium' : 'low',
                     score: score,
@@ -5172,7 +5210,7 @@ function getSizeOrder(sizes) {
 /**
  * Generate size advice based on the match and size chart
  */
-function generateSizeAdvice(bestMatch, measurements, sizeChart) {
+function generateSizeAdvice(bestMatch) {
     const advice = [];
     
     // Add fit notes
@@ -5205,7 +5243,7 @@ function generateSizeAdvice(bestMatch, measurements, sizeChart) {
 /**
  * Analyze fit patterns for future review integration
  */
-function analyzeFitPatterns(bestMatch, sizeChart) {
+function analyzeFitPatterns(bestMatch) {
     return {
         recommendedSize: bestMatch.size,
         confidence: bestMatch.confidence,
@@ -5216,7 +5254,7 @@ function analyzeFitPatterns(bestMatch, sizeChart) {
     };
 }
 
-function showTailoredRecommendations(recommendations, sizeChart) {
+function showTailoredRecommendations(recommendations) {
     console.log('[PointFour] Showing tailored recommendations:', recommendations);
     
     // Create recommendations display
@@ -5236,7 +5274,7 @@ function showTailoredRecommendations(recommendations, sizeChart) {
                         <div class="pointfour-size-measurements">
                             <small>Size chart measurements: 
                                 ${Object.entries(recommendations.sizeMatch.measurements)
-                                    .filter(([key, value]) => typeof value === 'number' && !isNaN(value))
+                                    .filter(([, value]) => typeof value === 'number' && !isNaN(value))
                                     .map(([key, value]) => `${key}: ${value}cm`)
                                     .join(', ')}
                             </small>
@@ -5262,8 +5300,8 @@ function showTailoredRecommendations(recommendations, sizeChart) {
                             <li>
                                 <strong>${alt.size.toUpperCase()}</strong> - ${alt.reason}
                                 ${alt.measurements ? `
-                                    <small>(${Object.entries(alt.measurements)
-                                        .filter(([key, value]) => typeof value === 'number' && !isNaN(value))
+                                    <small>(                                    ${Object.entries(alt.measurements)
+                                        .filter(([, value]) => typeof value === 'number' && !isNaN(value))
                                         .map(([key, value]) => `${key}: ${value}cm`)
                                         .join(', ')})</small>
                                 ` : ''}
@@ -5304,8 +5342,239 @@ document.addEventListener('click', (event) => {
 });
 
 // ========================================
+// SOPHISTICATED FIT ANALYSIS
+// ========================================
+
+/**
+ * Generate sophisticated fit analysis with item-specific insights and frequency analysis
+ */
+function generateSophisticatedFitAnalysis(data, brandName, sections) {
+    const fitAnalysisBullets = [];
+    
+    // Get item-specific data
+    const urlExtraction = window.pointFourURLExtraction || null;
+    const itemName = urlExtraction?.itemName || null;
+    const isItemSpecific = itemName && itemName.length > 0;
+    
+    // Get reviews for analysis
+    const reviews = data.externalSearchResults?.reviews || data.reviews || [];
+    const totalReviews = reviews.length;
+    
+    console.log('🔍 [PointFour] Generating sophisticated fit analysis:', {
+        itemName,
+        isItemSpecific,
+        totalReviews,
+        hasSections: Object.keys(sections).length > 0,
+        sectionsKeys: Object.keys(sections)
+    });
+    
+    // Analyze item-specific reviews for fit patterns
+    if (isItemSpecific && totalReviews > 0) {
+        const itemSpecificFitReviews = filterItemSpecificFitReviews(reviews, itemName);
+        
+        if (itemSpecificFitReviews.length > 0) {
+            const consolidatedSummary = analyzeItemSpecificFit(itemSpecificFitReviews, itemName);
+            if (consolidatedSummary) {
+                fitAnalysisBullets.push(consolidatedSummary);
+            }
+        }
+    }
+    
+    // Add structured fit analysis from sections
+    if (sections.fit && sections.fit.recommendation) {
+        const fitRecommendation = sections.fit.recommendation;
+        const confidence = sections.fit.confidence || 'low';
+        
+        // Only add if it's useful and not generic
+        if (isUsefulRecommendation(fitRecommendation)) {
+            fitAnalysisBullets.push(`🏷️ ${brandName} general sizing: ${fitRecommendation}`);
+            
+            // Add confidence indicator for low confidence
+            if (confidence === 'low') {
+                fitAnalysisBullets.push(`Confidence: ${confidence.toUpperCase()}`);
+            }
+        }
+    }
+    
+    // Add fallback analysis from main recommendation if no structured data
+    if (fitAnalysisBullets.length === 0 && data.recommendation && data.recommendation !== 'Analyzing fit information...') {
+        const recommendation = data.recommendation;
+        const fitKeywords = ['runs small', 'runs large', 'true to size', 'size up', 'size down', 'tight', 'loose', 'fits'];
+        const hasFitInfo = fitKeywords.some(keyword => recommendation.toLowerCase().includes(keyword));
+        
+        if (hasFitInfo) {
+            fitAnalysisBullets.push(`🏷️ ${brandName} general sizing: ${recommendation}`);
+        }
+    }
+    
+    // Add relevant quotes from reviews (only when no structured sections available)
+    const hasStructuredSections = Object.keys(sections).length > 0;
+    if (!hasStructuredSections) {
+        const fitQuotes = extractRelevantFitQuotes(data);
+        if (fitQuotes.length > 0) {
+            fitQuotes.slice(0, 2).forEach(quote => {
+                fitAnalysisBullets.push(`"${quote}"`);
+            });
+        }
+    }
+    
+    console.log('🔍 [PointFour] Generated fit analysis bullets:', fitAnalysisBullets);
+    return fitAnalysisBullets;
+}
+
+/**
+ * Filter reviews for item-specific fit information
+ */
+function filterItemSpecificFitReviews(reviews, itemName) {
+    const genericTerms = ['shop', 'store', 'collection', 'brand', 'clothing', 'fashion'];
+    const isGenericTerm = genericTerms.includes(itemName.toLowerCase());
+    
+    if (isGenericTerm) {
+        return []; // Skip generic terms
+    }
+    
+    return reviews.filter(review => {
+        const text = (review.snippet + ' ' + (review.fullContent || '')).toLowerCase();
+        const itemWords = itemName.toLowerCase().split(' ').filter(word => word.length > 2);
+        
+        // Check if review mentions the specific item
+        const mentionsItem = itemWords.some(word => text.includes(word));
+        
+        // Check if review has fit-related content
+        const fitKeywords = ['fit', 'size', 'runs small', 'runs large', 'true to size', 'tight', 'loose', 'sizing'];
+        const hasFitContent = fitKeywords.some(keyword => text.includes(keyword));
+        
+        return mentionsItem && hasFitContent;
+    });
+}
+
+/**
+ * Analyze item-specific reviews for fit patterns
+ */
+function analyzeItemSpecificFit(itemSpecificReviews, itemName) {
+    const fitTerms = [];
+    const sizeRecommendations = [];
+    
+    itemSpecificReviews.forEach(review => {
+        const text = (review.snippet + ' ' + (review.fullContent || '')).toLowerCase();
+        
+        // Extract fit characteristics
+        if (text.includes('runs small') || text.includes('size up')) {
+            sizeRecommendations.push('runs small');
+        } else if (text.includes('runs large') || text.includes('size down')) {
+            sizeRecommendations.push('runs large');
+        } else if (text.includes('true to size') || text.includes('fits as expected')) {
+            sizeRecommendations.push('true to size');
+        }
+        
+        // Extract other fit details
+        if (text.includes('tight') || text.includes('snug')) fitTerms.push('tight fit');
+        if (text.includes('loose') || text.includes('roomy')) fitTerms.push('loose fit');
+        if (text.includes('comfortable')) fitTerms.push('comfortable');
+    });
+    
+    // Create consolidated summary
+    let consolidatedSummary = `📍 ${itemName}: `;
+    
+    // Determine most common size recommendation
+    const sizeFreq = {};
+    sizeRecommendations.forEach(rec => sizeFreq[rec] = (sizeFreq[rec] || 0) + 1);
+    const mostCommonSize = Object.keys(sizeFreq).reduce((a, b) => sizeFreq[a] > sizeFreq[b] ? a : b, 'true to size');
+    
+    if (mostCommonSize === 'runs small') {
+        consolidatedSummary += 'Tends to run small, consider sizing up';
+    } else if (mostCommonSize === 'runs large') {
+        consolidatedSummary += 'Tends to run large, consider sizing down';
+    } else {
+        consolidatedSummary += 'Generally true to size';
+    }
+    
+    // Add fit characteristics if available
+    if (fitTerms.length > 0) {
+        const uniqueTerms = [...new Set(fitTerms)];
+        consolidatedSummary += `, ${uniqueTerms.slice(0, 2).join(' and ')}`;
+    }
+    
+    consolidatedSummary += ` (based on ${itemSpecificReviews.length} review${itemSpecificReviews.length === 1 ? '' : 's'})`;
+    
+    return consolidatedSummary;
+}
+
+/**
+ * Extract relevant fit quotes from data (simplified working version)
+ */
+function extractRelevantFitQuotes(data) {
+    const quotes = [];
+    
+    // Get reviews from data
+    const reviews = data.externalSearchResults?.reviews || data.reviews || [];
+    
+    // Filter for fit-related quotes
+    const fitKeywords = ['runs small', 'runs large', 'true to size', 'size up', 'size down', 'tight', 'loose', 'fits', 'sizing'];
+    
+    reviews.forEach(review => {
+        const text = (review.snippet + ' ' + (review.fullContent || '')).toLowerCase();
+        const hasFitContent = fitKeywords.some(keyword => text.includes(keyword));
+        
+        if (hasFitContent && review.snippet && review.snippet.length > 20) {
+            quotes.push({
+                text: review.snippet.substring(0, 120) + '...',
+                relevance: calculateFitRelevance(review.snippet)
+            });
+        }
+    });
+    
+    // Sort by relevance and return top quotes
+    return quotes
+        .sort((a, b) => b.relevance - a.relevance)
+        .slice(0, 2)
+        .map(quote => quote.text);
+}
+
+/**
+ * Calculate relevance score for fit quotes
+ */
+function calculateFitRelevance(text) {
+    let score = 0;
+    const lowerText = text.toLowerCase();
+    
+    // High priority fit terms
+    const highPriorityTerms = [
+        'runs small', 'runs large', 'true to size', 'fits small', 'fits large',
+        'size up', 'size down', 'sized up', 'sized down',
+        'too small', 'too big', 'too large', 'too tight', 'too loose',
+        'fits perfectly', 'perfect fit', 'great fit', 'good fit'
+    ];
+    
+    // Count high priority terms
+    highPriorityTerms.forEach(term => {
+        if (lowerText.includes(term)) {
+            score += 10;
+        }
+    });
+    
+    // Bonus for experience indicators
+    const experienceTerms = ['i bought', 'i ordered', 'i tried', 'i wear', 'i own', 'my size', 'my usual'];
+    experienceTerms.forEach(term => {
+        if (lowerText.includes(term)) {
+            score += 5;
+        }
+    });
+    
+    return score;
+}
+
+
+// ========================================
 // PUBLIC API
 // ========================================
+
+const widgetManagement = {
+    createWidget,
+    showWidget,
+    hideWidget,
+    updateWidgetContent
+};
 
 
 
@@ -5471,7 +5740,7 @@ document.addEventListener('click', (event) => {
             params.set('pageTitle', document.title);
 
             // Make API call
-            const apiUrl = `https://www.pointfour.in/api/extension/search-reviews?${params.toString()}`;
+            const apiUrl = `http://localhost:3000/api/extension/search-reviews?${params.toString()}`;
             console.log('[PointFour] API Request:', apiUrl);
 
             const response = await fetch(apiUrl, {
