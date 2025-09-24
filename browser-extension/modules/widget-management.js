@@ -574,20 +574,7 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         contentHTML += renderEnhancedSizeChart(data.enhancedSizeChart);
     }
     
-    // Always show tailored recommendations section (even without size chart)
-    contentHTML += `
-        <div class="pointfour-tailored-recommendations">
-            <div class="pointfour-size-section">
-                <button class="pointfour-size-toggle">
-                    Find my size
-                    <span class="pointfour-arrow">▼</span>
-                </button>
-                <div class="pointfour-size-content">
-                    <p>Size recommendation feature coming soon!</p>
-                </div>
-            </div>
-        </div>
-    `;
+    // Tailored recommendations section removed - no longer showing "Find my size" button
     
     // Materials and Care - only show on product pages
     if (isProductPage()) {
