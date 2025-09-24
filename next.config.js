@@ -24,6 +24,15 @@ const nextConfig = {
     ENABLE_GPT5_TESTING: process.env.ENABLE_GPT5_TESTING || 'false',
     GPT5_TEST_PERCENTAGE: process.env.GPT5_TEST_PERCENTAGE || '10',
   },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/analyze',
+        permanent: false, // temporary redirect - easy to remove later
+      },
+    ];
+  },
   webpack: (config, { isServer }) => {
     // Handle Konva canvas dependency
     if (!isServer) {

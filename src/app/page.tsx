@@ -103,8 +103,12 @@ export default function HomePage() {
             </div>
           </Link>
 
-          {/* Get Recommendations Card */}
-          <Link href="/recommendations" className="flex-shrink-0">
+          {/* Get Recommendations Card - HIDDEN FOR NOW */}
+          <Link
+            href="/recommendations"
+            className="flex-shrink-0"
+            style={{ display: "none" }}
+          >
             <div
               className="p-6 cursor-pointer group transition-all duration-200 hover:shadow-sm"
               style={{
@@ -178,8 +182,8 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Browse Directory Link */}
-        <div className="text-center">
+        {/* Browse Directory Link - HIDDEN FOR NOW */}
+        <div className="text-center" style={{ display: "none" }}>
           <Link
             href="/directory"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
