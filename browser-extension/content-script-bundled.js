@@ -4954,7 +4954,33 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         contentHTML += renderEnhancedSizeChart(data.enhancedSizeChart);
     }
     
-    // Tailored recommendations section removed - no longer showing "Find my size" button
+    // Tailored recommendations section - show "Find my size" button if we have size chart data
+    console.log('[PointFour] Checking for size chart data:', {
+        hasSizeGuide: !!data.sizeGuide,
+        sizeGuideKeys: data.sizeGuide ? Object.keys(data.sizeGuide) : [],
+        hasMeasurements: data.sizeGuide && data.sizeGuide.measurements ? true : false,
+        measurementsCount: data.sizeGuide && data.sizeGuide.measurements ? Object.keys(data.sizeGuide.measurements).length : 0,
+        fullSizeGuide: data.sizeGuide
+    });
+    
+    // Check if we have any size data at all (even if not in measurements format)
+    const hasAnySizeData = data.sizeGuide && (
+        (data.sizeGuide.measurements && Object.keys(data.sizeGuide.measurements).length > 0) ||
+        (data.sizeGuide.body && Object.keys(data.sizeGuide.body).length > 0) ||
+        (data.sizeGuide.garment && Object.keys(data.sizeGuide.garment).length > 0) ||
+        (data.sizeGuide.sizes && Object.keys(data.sizeGuide.sizes).length > 0)
+    );
+    
+    // For now, always show the button to test functionality
+    // TODO: Make this conditional once we confirm the data structure
+    console.log('[PointFour] Adding tailored recommendations section - testing with button always visible');
+    contentHTML += `
+        <div class="pointfour-tailored-recommendations">
+            <button class="pointfour-tailored-btn" onclick="window.pointFourShowSizeInput()">
+                Find my size
+            </button>
+        </div>
+    `;
     
     // Materials and Care - only show on product pages
     if (isProductPage()) {
@@ -5405,7 +5431,7 @@ function showSizeInputModal() {
     
     // Get the current size chart data
     const currentData = getState('currentData');
-    const sizeChart = currentData?.enhancedSizeChart;
+    const sizeChart = currentData?.sizeGuide;
     
     // Find the tailored recommendations section
     const tailoredSection = document.querySelector('.pointfour-tailored-recommendations');
@@ -5489,8 +5515,8 @@ function handleSizeFormSubmission(form, sizeChart) {
     // Show recommendations
     showTailoredRecommendations(recommendations);
     
-    // Close the modal
-    window.pointFourCloseSizeInput();
+    // Close the modal by resetting to button
+    window.pointFourResetSizeInput();
 }
 
 function generateTailoredRecommendations(selectedSize, measurements, sizeChart, socialReviews = [], productInfo = {}) {
@@ -5551,12 +5577,13 @@ function generateTailoredRecommendations(selectedSize, measurements, sizeChart, 
  * Find the best size match using ease calculations (PRIMARY) and social reviews (ENHANCEMENT)
  */
 function findBestSizeMatchWithEase(measurements, sizeChart, socialReviews = [], productInfo = {}) {
-    console.log('[PointFour] Finding best size match with ease calculations...');
-    
-    // Import ease calculation functions (these would be imported from the ease-calculation-engine module)
-    const garmentType = detectGarmentType(productInfo.name, productInfo.category);
-    const easeTargets = calculateEaseTargets(garmentType);
-    const idealMeasurements = calculateIdealGarmentMeasurements(measurements, easeTargets);
+    console.log('[PointFour] Finding best size match with enhanced measurements...');
+    console.log('[PointFour] Size chart structure:', {
+        hasMeasurements: !!sizeChart.measurements,
+        measurementCount: sizeChart.measurements ? Object.keys(sizeChart.measurements).length : 0,
+        measurementType: sizeChart.measurementType,
+        sizeSystem: sizeChart.sizeSystem
+    });
     
     const availableSizes = Object.keys(sizeChart.measurements || {});
     let bestMatch = {
@@ -5565,48 +5592,96 @@ function findBestSizeMatchWithEase(measurements, sizeChart, socialReviews = [], 
         confidence: 'low',
         measurements: null,
         fitNotes: [],
-        easeAnalysis: {},
-        garmentType: garmentType,
+        garmentType: sizeChart.productType || 'general',
         fitAdvice: []
     };
     
-    // Find best matching size using ease calculations
+    // Find best matching size using enhanced measurement comparison
     availableSizes.forEach(size => {
         const sizeData = sizeChart.measurements[size];
         if (!sizeData || typeof sizeData !== 'object') return;
         
-        const matchScore = calculateEaseMatchScore(idealMeasurements, sizeData, easeTargets);
+        const matchScore = calculateSizeMatchScore(measurements, sizeData);
         
-        if (matchScore.totalScore < bestMatch.score) {
+        if (matchScore < bestMatch.score) {
             bestMatch = {
                 size: size,
-                score: matchScore.totalScore,
-                confidence: matchScore.confidence,
+                score: matchScore,
+                confidence: matchScore < 2 ? 'high' : matchScore < 5 ? 'medium' : 'low',
                 measurements: sizeData,
-                fitNotes: matchScore.fitNotes,
-                easeAnalysis: matchScore.easeAnalysis,
-                garmentType: garmentType,
-                fitAdvice: generateEaseBasedFitAdvice(matchScore.easeAnalysis, garmentType)
+                fitNotes: generateFitNotes(measurements, sizeData, matchScore),
+                garmentType: sizeChart.productType || 'general',
+                fitAdvice: generateFitAdviceFromScore(matchScore, sizeChart.measurementType)
             };
         }
     });
     
     // Enhance with social review insights
     if (socialReviews && socialReviews.length > 0) {
-        const reviewAnalysis = analyzeSocialReviewPatterns(socialReviews);
-        if (reviewAnalysis.pattern !== 'no_data' && reviewAnalysis.confidence > 0.3) {
-            bestMatch = applySocialReviewEnhancement(bestMatch, reviewAnalysis);
-        }
+        const reviewInsights = extractReviewInsights(socialReviews);
+        bestMatch.fitAdvice.push(...reviewInsights);
     }
     
-    console.log('[PointFour] Enhanced size match found:', {
+    console.log('[PointFour] Best size match found:', {
         size: bestMatch.size,
+        score: bestMatch.score,
         confidence: bestMatch.confidence,
-        garmentType: bestMatch.garmentType,
-        socialReviewCount: socialReviews.length
+        fitNotes: bestMatch.fitNotes.length
     });
     
     return bestMatch;
+}
+
+/**
+ * Generate fit advice based on match score and measurement type
+ */
+function generateFitAdviceFromScore(score, measurementType) {
+    const advice = [];
+    
+    if (score < 2) {
+        advice.push('Excellent fit match!');
+    } else if (score < 5) {
+        advice.push('Good fit match with minor adjustments needed');
+    } else {
+        advice.push('Consider trying a different size');
+    }
+    
+    // Add measurement type specific advice
+    if (measurementType === 'body') {
+        advice.push('Based on body measurements - should fit well');
+    } else if (measurementType === 'garment') {
+        advice.push('Based on garment measurements - check length and fit');
+    } else if (measurementType === 'mixed') {
+        advice.push('Based on both body and garment measurements');
+    }
+    
+    return advice;
+}
+
+/**
+ * Extract review insights for fit advice
+ */
+function extractReviewInsights(socialReviews) {
+    const insights = [];
+    
+    if (!socialReviews || socialReviews.length === 0) {
+        return insights;
+    }
+    
+    // Look for sizing-related reviews
+    const sizingReviews = socialReviews.filter(review => 
+        review.tags && review.tags.some(tag => 
+            tag.toLowerCase().includes('size') || 
+            tag.toLowerCase().includes('fit') ||
+            tag.toLowerCase().includes('sizing')
+        )
+    );
+    
+    if (sizingReviews.length > 0) {
+        insights.push(`Based on ${sizingReviews.length} sizing reviews`);
+    }
+    
+    return insights;
 }
 
 // ========================================
@@ -5670,32 +5745,86 @@ function findBestSizeMatch(selectedSize, measurements, sizeChartMeasurements) {
 
 /**
  * Calculate how well user measurements match a size's measurements
+ * Updated to handle BODY vs GARMENT measurement structure
  */
 function calculateSizeMatchScore(userMeasurements, sizeMeasurements) {
     let totalScore = 0;
     let measurementCount = 0;
     
-    // Check each measurement type
-    const measurementTypes = ['bust', 'waist', 'hip', 'chest'];
+    console.log('[PointFour] Calculating size match score:', {
+        userMeasurements,
+        sizeMeasurements,
+        hasBodyMeasurements: sizeMeasurements.body ? true : false,
+        hasGarmentMeasurements: sizeMeasurements.garment ? true : false
+    });
     
-    for (const type of measurementTypes) {
-        const userValue = parseFloat(userMeasurements[type]);
-        const sizeValue = parseFloat(sizeMeasurements[type]);
+    // Handle new BODY vs GARMENT structure
+    if (sizeMeasurements.body || sizeMeasurements.garment) {
+        // New structured format with body/garment classification
         
-        if (!isNaN(userValue) && !isNaN(sizeValue)) {
-            const difference = Math.abs(userValue - sizeValue);
-            // Score based on difference (lower is better)
-            totalScore += difference;
-            measurementCount++;
+        // Check body measurements first (most important for sizing)
+        if (sizeMeasurements.body) {
+            const bodyTypes = ['bust', 'waist', 'hip', 'hips'];
+            
+            for (const type of bodyTypes) {
+                const userValue = parseFloat(userMeasurements[type]);
+                const sizeValue = parseFloat(sizeMeasurements.body[type]);
+                
+                if (!isNaN(userValue) && !isNaN(sizeValue)) {
+                    const difference = Math.abs(userValue - sizeValue);
+                    // Body measurements are weighted more heavily
+                    totalScore += difference * 1.5;
+                    measurementCount++;
+                    console.log(`[PointFour] Body measurement ${type}: user=${userValue}, size=${sizeValue}, diff=${difference}`);
+                }
+            }
+        }
+        
+        // Check garment measurements as secondary
+        if (sizeMeasurements.garment) {
+            const garmentTypes = ['chest', 'length', 'inseam', 'shoulder', 'sleeve'];
+            
+            for (const type of garmentTypes) {
+                const userValue = parseFloat(userMeasurements[type]);
+                const sizeValue = parseFloat(sizeMeasurements.garment[type]);
+                
+                if (!isNaN(userValue) && !isNaN(sizeValue)) {
+                    const difference = Math.abs(userValue - sizeValue);
+                    // Garment measurements are weighted less heavily
+                    totalScore += difference * 0.8;
+                    measurementCount++;
+                    console.log(`[PointFour] Garment measurement ${type}: user=${userValue}, size=${sizeValue}, diff=${difference}`);
+                }
+            }
+        }
+        
+    } else {
+        // Legacy flat structure - check each measurement type
+        const measurementTypes = ['bust', 'waist', 'hip', 'chest', 'length', 'inseam'];
+        
+        for (const type of measurementTypes) {
+            const userValue = parseFloat(userMeasurements[type]);
+            const sizeValue = parseFloat(sizeMeasurements[type]);
+            
+            if (!isNaN(userValue) && !isNaN(sizeValue)) {
+                const difference = Math.abs(userValue - sizeValue);
+                // Score based on difference (lower is better)
+                totalScore += difference;
+                measurementCount++;
+                console.log(`[PointFour] Legacy measurement ${type}: user=${userValue}, size=${sizeValue}, diff=${difference}`);
+            }
         }
     }
     
-    // Return average difference, or high score if no measurements match
-    return measurementCount > 0 ? totalScore / measurementCount : 10;
+    const finalScore = measurementCount > 0 ? totalScore / measurementCount : 10;
+    console.log(`[PointFour] Final size match score: ${finalScore} (${measurementCount} measurements)`);
+    
+    return finalScore;
 }
 
 /**
  * Generate fit notes based on measurement comparison
+ * Updated to handle BODY vs GARMENT measurement structure
  */
 function generateFitNotes(userMeasurements, sizeMeasurements, score) {
     const notes = [];
@@ -5708,20 +5837,68 @@ function generateFitNotes(userMeasurements, sizeMeasurements, score) {
         notes.push('Consider trying a different size');
     }
     
-    // Add specific measurement notes
-    const measurementTypes = ['bust', 'waist', 'hip', 'chest'];
-    
-    for (const type of measurementTypes) {
-        const userValue = parseFloat(userMeasurements[type]);
-        const sizeValue = parseFloat(sizeMeasurements[type]);
+    // Handle new BODY vs GARMENT structure
+    if (sizeMeasurements.body || sizeMeasurements.garment) {
+        // New structured format with body/garment classification
         
-        if (!isNaN(userValue) && !isNaN(sizeValue)) {
-            const difference = userValue - sizeValue;
-            if (Math.abs(difference) > 2) {
-                if (difference > 0) {
-                    notes.push(`${type} is ${difference.toFixed(1)}cm larger than size chart`);
-                } else {
-                    notes.push(`${type} is ${Math.abs(difference).toFixed(1)}cm smaller than size chart`);
+        // Check body measurements first (most important for sizing)
+        if (sizeMeasurements.body) {
+            const bodyTypes = ['bust', 'waist', 'hip', 'hips'];
+            
+            for (const type of bodyTypes) {
+                const userValue = parseFloat(userMeasurements[type]);
+                const sizeValue = parseFloat(sizeMeasurements.body[type]);
+                
+                if (!isNaN(userValue) && !isNaN(sizeValue)) {
+                    const difference = userValue - sizeValue;
+                    if (Math.abs(difference) > 2) {
+                        if (difference > 0) {
+                            notes.push(`${type} is ${difference.toFixed(1)}cm larger than size chart (body measurement)`);
+                        } else {
+                            notes.push(`${type} is ${Math.abs(difference).toFixed(1)}cm smaller than size chart (body measurement)`);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Check garment measurements as secondary
+        if (sizeMeasurements.garment) {
+            const garmentTypes = ['chest', 'length', 'inseam', 'shoulder', 'sleeve'];
+            
+            for (const type of garmentTypes) {
+                const userValue = parseFloat(userMeasurements[type]);
+                const sizeValue = parseFloat(sizeMeasurements.garment[type]);
+                
+                if (!isNaN(userValue) && !isNaN(sizeValue)) {
+                    const difference = userValue - sizeValue;
+                    if (Math.abs(difference) > 2) {
+                        if (difference > 0) {
+                            notes.push(`${type} is ${difference.toFixed(1)}cm larger than size chart (garment measurement)`);
+                        } else {
+                            notes.push(`${type} is ${Math.abs(difference).toFixed(1)}cm smaller than size chart (garment measurement)`);
+                        }
+                    }
+                }
+            }
+        }
+        
+    } else {
+        // Legacy flat structure - add specific measurement notes
+        const measurementTypes = ['bust', 'waist', 'hip', 'chest', 'length', 'inseam'];
+        
+        for (const type of measurementTypes) {
+            const userValue = parseFloat(userMeasurements[type]);
+            const sizeValue = parseFloat(sizeMeasurements[type]);
+            
+            if (!isNaN(userValue) && !isNaN(sizeValue)) {
+                const difference = userValue - sizeValue;
+                if (Math.abs(difference) > 2) {
+                    if (difference > 0) {
+                        notes.push(`${type} is ${difference.toFixed(1)}cm larger than size chart`);
+                    } else {
+                        notes.push(`${type} is ${Math.abs(difference).toFixed(1)}cm smaller than size chart`);
+                    }
                 }
             }
         }
