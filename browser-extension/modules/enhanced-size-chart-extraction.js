@@ -7,12 +7,28 @@
  * for tailored recommendations
  */
 
-// Enhanced size chart data model
+// Enhanced size chart data model with BODY vs GARMENT measurement detection
 export interface EnhancedSizeChart {
     brand: string;
     productType: 'tops' | 'bottoms' | 'dresses' | 'shoes' | 'accessories' | 'general';
     measurements: {
         [size: string]: {
+            body?: {
+                bust?: number;
+                waist?: number;
+                hips?: number;
+                hip?: number;
+            };
+            garment?: {
+                chest?: number;
+                length?: number;
+                inseam?: number;
+                shoulder?: number;
+                sleeve?: number;
+                width?: number;
+                rise?: number;
+            };
+            // Legacy support for mixed/unclassified measurements
             bust?: number;
             waist?: number;
             hips?: number;
@@ -24,6 +40,7 @@ export interface EnhancedSizeChart {
             hip?: number;
         };
     };
+    measurementType: 'body' | 'garment' | 'mixed' | 'unknown';
     sizeSystem: 'US' | 'UK' | 'EU' | 'JP' | 'custom';
     confidence: 'low' | 'medium' | 'high';
     source: string;
@@ -33,6 +50,7 @@ export interface EnhancedSizeChart {
         size?: string;
         measurements?: string;
     };
+    extractionNotes: string[];
 }
 
 /**
@@ -45,11 +63,13 @@ export function extractEnhancedSizeChart() {
         brand: extractBrandFromPage(),
         productType: detectProductType(),
         measurements: {},
+        measurementType: 'unknown' as const,
         sizeSystem: 'US', // Default to US
         confidence: 'low' as const,
         source: window.location.href,
         sizingAdvice: [],
-        modelInfo: {}
+        modelInfo: {},
+        extractionNotes: []
     };
 
     // Enhanced selectors for better coverage
@@ -139,6 +159,8 @@ export function extractEnhancedSizeChart() {
                         Object.assign(sizeChart.measurements, tableData.measurements);
                         sizeChart.confidence = 'high';
                         sizeChart.sizeSystem = tableData.sizeSystem || 'US';
+                        sizeChart.measurementType = tableData.measurementType || 'unknown';
+                        sizeChart.extractionNotes.push(...tableData.extractionNotes);
                     }
                 } else {
                     // Extract measurements from text
@@ -170,22 +192,26 @@ export function extractEnhancedSizeChart() {
 
     console.log('[PointFour] Enhanced size chart extraction complete:', {
         measurements: Object.keys(sizeChart.measurements).length,
+        measurementType: sizeChart.measurementType,
         confidence: sizeChart.confidence,
         sizeSystem: sizeChart.sizeSystem,
-        sizingAdvice: sizeChart.sizingAdvice.length
+        sizingAdvice: sizeChart.sizingAdvice.length,
+        extractionNotes: sizeChart.extractionNotes
     });
 
     return sizeChart;
 }
 
 /**
- * Enhanced table data extraction with better parsing
+ * Enhanced table data extraction with BODY vs GARMENT measurement detection
  */
 function extractEnhancedTableData(table) {
     const data = {
         measurements: {},
+        measurementType: 'unknown',
         sizeSystem: 'US',
-        confidence: 'low'
+        confidence: 'low',
+        extractionNotes: []
     };
 
     if (!table || table.tagName !== 'TABLE') return data;
@@ -240,6 +266,10 @@ function extractEnhancedTableData(table) {
             // Determine size system from headers
             data.sizeSystem = detectSizeSystemFromHeaders(headers);
             
+            // Detect measurement type from headers and context
+            data.measurementType = detectMeasurementType(headers, table);
+            data.extractionNotes.push(`Detected measurement type: ${data.measurementType}`);
+            
             // Extract measurements from data rows
             for (let i = headerRowIndex + 1; i < Math.min(rows.length, 15); i++) {
                 const cells = Array.from(rows[i].querySelectorAll('td, th')).map(cell => 
@@ -250,7 +280,7 @@ function extractEnhancedTableData(table) {
                     const sizeOrMeasurement = cells[0].toLowerCase().trim();
                     const measurements = {};
 
-                    // Parse each measurement column
+                    // Parse each measurement column with type classification
                     for (let j = 1; j < Math.min(cells.length, headers.length); j++) {
                         const header = headers[j] || `col_${j}`;
                         const value = cells[j];
@@ -259,7 +289,18 @@ function extractEnhancedTableData(table) {
                             // Extract numeric value
                             const numericValue = extractNumericValue(value);
                             if (numericValue !== null) {
-                                measurements[header] = numericValue;
+                                // Classify measurement type
+                                const measurementType = classifyMeasurementType(header, data.measurementType);
+                                if (measurementType === 'body') {
+                                    measurements.body = measurements.body || {};
+                                    measurements.body[header] = numericValue;
+                                } else if (measurementType === 'garment') {
+                                    measurements.garment = measurements.garment || {};
+                                    measurements.garment[header] = numericValue;
+                                } else {
+                                    // Legacy fallback for unclassified measurements
+                                    measurements[header] = numericValue;
+                                }
                             }
                         }
                     }
@@ -437,6 +478,113 @@ function detectProductType() {
     }
     
     return 'general';
+}
+
+/**
+ * Detect measurement type from table headers and context
+ */
+function detectMeasurementType(headers, table) {
+    const headerText = headers.join(' ').toLowerCase();
+    const tableText = table.textContent.toLowerCase();
+    
+    // Check for explicit measurement type indicators
+    const bodyIndicators = [
+        'body measurement', 'body size', 'body fit', 'body dimensions',
+        'measure your body', 'body chart', 'body guide',
+        'bust', 'waist', 'hip', 'hips'
+    ];
+    
+    const garmentIndicators = [
+        'garment measurement', 'garment size', 'garment fit', 'garment dimensions',
+        'measure the garment', 'garment chart', 'garment guide',
+        'chest', 'length', 'inseam', 'shoulder', 'sleeve', 'width', 'rise'
+    ];
+    
+    const mixedIndicators = [
+        'both', 'body and garment', 'measurements', 'size guide',
+        'fit guide', 'sizing chart'
+    ];
+    
+    // Check table context for measurement type
+    const hasBodyIndicators = bodyIndicators.some(indicator => 
+        headerText.includes(indicator) || tableText.includes(indicator)
+    );
+    
+    const hasGarmentIndicators = garmentIndicators.some(indicator => 
+        headerText.includes(indicator) || tableText.includes(indicator)
+    );
+    
+    const hasMixedIndicators = mixedIndicators.some(indicator => 
+        headerText.includes(indicator) || tableText.includes(indicator)
+    );
+    
+    // Determine measurement type based on indicators
+    if (hasBodyIndicators && hasGarmentIndicators) {
+        return 'mixed';
+    } else if (hasBodyIndicators) {
+        return 'body';
+    } else if (hasGarmentIndicators) {
+        return 'garment';
+    } else if (hasMixedIndicators) {
+        return 'mixed';
+    }
+    
+    // Fallback: analyze header content
+    const bodyHeaders = ['bust', 'waist', 'hip', 'hips'];
+    const garmentHeaders = ['chest', 'length', 'inseam', 'shoulder', 'sleeve', 'width', 'rise'];
+    
+    const bodyHeaderCount = headers.filter(header => 
+        bodyHeaders.some(bodyHeader => header.includes(bodyHeader))
+    ).length;
+    
+    const garmentHeaderCount = headers.filter(header => 
+        garmentHeaders.some(garmentHeader => header.includes(garmentHeader))
+    ).length;
+    
+    if (bodyHeaderCount > garmentHeaderCount) {
+        return 'body';
+    } else if (garmentHeaderCount > bodyHeaderCount) {
+        return 'garment';
+    } else if (bodyHeaderCount > 0 && garmentHeaderCount > 0) {
+        return 'mixed';
+    }
+    
+    return 'unknown';
+}
+
+/**
+ * Classify individual measurement type based on header and context
+ */
+function classifyMeasurementType(header, contextType) {
+    const headerLower = header.toLowerCase();
+    
+    // Body measurement indicators
+    const bodyMeasurements = [
+        'bust', 'waist', 'hip', 'hips', 'body', 'person'
+    ];
+    
+    // Garment measurement indicators
+    const garmentMeasurements = [
+        'chest', 'length', 'inseam', 'shoulder', 'sleeve', 'width', 'rise',
+        'garment', 'item', 'product', 'clothing'
+    ];
+    
+    // Check for body measurements
+    if (bodyMeasurements.some(measurement => headerLower.includes(measurement))) {
+        return 'body';
+    }
+    
+    // Check for garment measurements
+    if (garmentMeasurements.some(measurement => headerLower.includes(measurement))) {
+        return 'garment';
+    }
+    
+    // Use context type as fallback
+    if (contextType === 'body' || contextType === 'garment') {
+        return contextType;
+    }
+    
+    return 'unknown';
 }
 
 /**

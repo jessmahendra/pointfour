@@ -1114,12 +1114,14 @@ function handleSizeFormSubmission(form, sizeChart) {
     window.pointFourCloseSizeInput();
 }
 
-function generateTailoredRecommendations(selectedSize, measurements, sizeChart) {
-    console.log('[PointFour] Generating tailored recommendations:', {
+function generateTailoredRecommendations(selectedSize, measurements, sizeChart, socialReviews = [], productInfo = {}) {
+    console.log('[PointFour] Generating tailored recommendations with ease calculations:', {
         selectedSize,
         measurements,
         hasSizeChart: !!sizeChart,
-        sizeChartKeys: sizeChart ? Object.keys(sizeChart.measurements || {}) : []
+        sizeChartKeys: sizeChart ? Object.keys(sizeChart.measurements || {}) : [],
+        socialReviewCount: socialReviews.length,
+        productInfo
     });
     
     const recommendations = {
@@ -1128,21 +1130,28 @@ function generateTailoredRecommendations(selectedSize, measurements, sizeChart) 
         confidence: 'low',
         alternativeSizes: [],
         fitAnalysis: null,
-        reviewInsights: []
+        reviewInsights: [],
+        easeAnalysis: null,
+        garmentType: 'general'
     };
     
     if (sizeChart && sizeChart.measurements && Object.keys(sizeChart.measurements).length > 0) {
-        // Use sophisticated size matching algorithm
-        const bestMatch = findBestSizeMatch(selectedSize, measurements, sizeChart.measurements);
+        // Use enhanced size matching with ease calculations (PRIMARY)
+        const bestMatch = findBestSizeMatchWithEase(measurements, sizeChart, socialReviews, productInfo);
         
         recommendations.sizeMatch = bestMatch;
         recommendations.confidence = bestMatch.confidence;
-        recommendations.fitAdvice = generateSizeAdvice(bestMatch);
+        recommendations.fitAdvice = bestMatch.fitAdvice || [];
         recommendations.alternativeSizes = findAlternativeSizes(bestMatch, sizeChart.measurements);
-        recommendations.fitAnalysis = analyzeFitPatterns(bestMatch);
+        recommendations.fitAnalysis = bestMatch.fitAnalysis;
+        recommendations.easeAnalysis = bestMatch.easeAnalysis;
+        recommendations.garmentType = bestMatch.garmentType;
         
-        // TODO: Add review insights when we implement review filtering
-        // recommendations.reviewInsights = findSimilarReviewers(measurements, sizeChart);
+        // Add social review insights (ENHANCEMENT)
+        if (socialReviews && socialReviews.length > 0) {
+            recommendations.reviewInsights = extractReviewInsights(socialReviews);
+            recommendations.socialReviewCount = socialReviews.length;
+        }
         
     } else {
         recommendations.fitAdvice = [
@@ -1153,6 +1162,72 @@ function generateTailoredRecommendations(selectedSize, measurements, sizeChart) 
     }
     
     return recommendations;
+}
+
+// ========================================
+// ENHANCED SIZE MATCHING WITH EASE CALCULATIONS
+// ========================================
+
+/**
+ * Find the best size match using ease calculations (PRIMARY) and social reviews (ENHANCEMENT)
+ */
+function findBestSizeMatchWithEase(measurements, sizeChart, socialReviews = [], productInfo = {}) {
+    console.log('[PointFour] Finding best size match with ease calculations...');
+    
+    // Import ease calculation functions (these would be imported from the ease-calculation-engine module)
+    const garmentType = detectGarmentType(productInfo.name, productInfo.category);
+    const easeTargets = calculateEaseTargets(garmentType);
+    const idealMeasurements = calculateIdealGarmentMeasurements(measurements, easeTargets);
+    
+    const availableSizes = Object.keys(sizeChart.measurements || {});
+    let bestMatch = {
+        size: null,
+        score: Infinity,
+        confidence: 'low',
+        measurements: null,
+        fitNotes: [],
+        easeAnalysis: {},
+        garmentType: garmentType,
+        fitAdvice: []
+    };
+    
+    // Find best matching size using ease calculations
+    availableSizes.forEach(size => {
+        const sizeData = sizeChart.measurements[size];
+        if (!sizeData || typeof sizeData !== 'object') return;
+        
+        const matchScore = calculateEaseMatchScore(idealMeasurements, sizeData, easeTargets);
+        
+        if (matchScore.totalScore < bestMatch.score) {
+            bestMatch = {
+                size: size,
+                score: matchScore.totalScore,
+                confidence: matchScore.confidence,
+                measurements: sizeData,
+                fitNotes: matchScore.fitNotes,
+                easeAnalysis: matchScore.easeAnalysis,
+                garmentType: garmentType,
+                fitAdvice: generateEaseBasedFitAdvice(matchScore.easeAnalysis, garmentType)
+            };
+        }
+    });
+    
+    // Enhance with social review insights
+    if (socialReviews && socialReviews.length > 0) {
+        const reviewAnalysis = analyzeSocialReviewPatterns(socialReviews);
+        if (reviewAnalysis.pattern !== 'no_data' && reviewAnalysis.confidence > 0.3) {
+            bestMatch = applySocialReviewEnhancement(bestMatch, reviewAnalysis);
+        }
+    }
+    
+    console.log('[PointFour] Enhanced size match found:', {
+        size: bestMatch.size,
+        confidence: bestMatch.confidence,
+        garmentType: bestMatch.garmentType,
+        socialReviewCount: socialReviews.length
+    });
+    
+    return bestMatch;
 }
 
 // ========================================

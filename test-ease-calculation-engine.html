@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ease Calculation Engine Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; border: 1px solid #ccc; padding: 15px; }
+        .result { background: #f0f8ff; padding: 10px; margin: 10px 0; border-left: 4px solid #007acc; }
+        .measurement { font-weight: bold; color: #007acc; }
+        .ease-analysis { background: #f9f9f9; padding: 10px; margin: 5px 0; }
+        .fit-good { color: #28a745; }
+        .fit-tight { color: #dc3545; }
+        .fit-loose { color: #ffc107; }
+    </style>
+</head>
+<body>
+    <h1>Ease Calculation Engine Test</h1>
+    <p>This page demonstrates Phase 1.2: Basic Ease Calculation Engine with social review enhancement.</p>
+
+    <!-- Test 1: Tops -->
+    <div class="test-section">
+        <h3>Test 1: Tops (Shirt/Blouse)</h3>
+        <p>User measurements: Bust 36", Waist 28", Hip 36"</p>
+        <div id="tops-result" class="result">
+            <p>Calculating ease targets and size recommendation...</p>
+        </div>
+    </div>
+
+    <!-- Test 2: Bottoms -->
+    <div class="test-section">
+        <h3>Test 2: Bottoms (Jeans/Pants)</h3>
+        <p>User measurements: Waist 28", Hip 36", Inseam 30"</p>
+        <div id="bottoms-result" class="result">
+            <p>Calculating ease targets and size recommendation...</p>
+        </div>
+    </div>
+
+    <!-- Test 3: Dresses -->
+    <div class="test-section">
+        <h3>Test 3: Dresses</h3>
+        <p>User measurements: Bust 36", Waist 28", Hip 36"</p>
+        <div id="dresses-result" class="result">
+            <p>Calculating ease targets and size recommendation...</p>
+        </div>
+    </div>
+
+    <!-- Test 4: With Social Reviews -->
+    <div class="test-section">
+        <h3>Test 4: Enhanced with Social Reviews</h3>
+        <p>User measurements: Bust 36", Waist 28", Hip 36"</p>
+        <p>Social reviews: "This brand runs small", "Size up for best fit"</p>
+        <div id="enhanced-result" class="result">
+            <p>Calculating with social review enhancement...</p>
+        </div>
+    </div>
+
+    <script>
+        // Mock ease calculation engine functions
+        function calculateEaseTargets(garmentType) {
+            const targets = {
+                'tops': { bust: { min: 1.5, ideal: 2.5, max: 4.0 }, waist: { min: 1.0, ideal: 2.0, max: 3.5 } },
+                'bottoms': { waist: { min: 0.5, ideal: 1.0, max: 2.0 }, hip: { min: 1.0, ideal: 2.0, max: 3.0 } },
+                'dresses': { bust: { min: 1.0, ideal: 2.0, max: 3.5 }, waist: { min: 0.5, ideal: 1.0, max: 2.0 }, hip: { min: 1.0, ideal: 2.0, max: 3.0 } }
+            };
+            return targets[garmentType] || targets.tops;
+        }
+
+        function calculateIdealGarmentMeasurements(bodyMeasurements, easeTargets) {
+            const ideal = {};
+            Object.entries(easeTargets).forEach(([measurement, ease]) => {
+                const bodyValue = bodyMeasurements[measurement];
+                if (bodyValue) {
+                    ideal[measurement] = {
+                        body: bodyValue,
+                        ideal: bodyValue + ease.ideal,
+                        min: bodyValue + ease.min,
+                        max: bodyValue + ease.max,
+                        ease: ease.ideal
+                    };
+                }
+            });
+            return ideal;
+        }
+
+        function analyzeFit(actualEase, ideal, measurement) {
+            const easeDifference = actualEase - ideal.ease;
+            
+            if (actualEase < ideal.min) {
+                return { fit: 'tight', note: `${measurement} will be tight (${actualEase.toFixed(1)}" ease vs ${ideal.min.toFixed(1)}" minimum)` };
+            } else if (actualEase > ideal.max) {
+                return { fit: 'loose', note: `${measurement} will be loose (${actualEase.toFixed(1)}" ease vs ${ideal.max.toFixed(1)}" maximum)` };
+            } else if (Math.abs(easeDifference) <= 0.5) {
+                return { fit: 'ideal', note: `${measurement} will fit well (${actualEase.toFixed(1)}" ease)` };
+            } else if (easeDifference > 0) {
+                return { fit: 'slightly_loose', note: `${measurement} will be slightly loose (${actualEase.toFixed(1)}" ease)` };
+            } else {
+                return { fit: 'slightly_tight', note: `${measurement} will be slightly tight (${actualEase.toFixed(1)}" ease)` };
+            }
+        }
+
+        function generateEaseBasedFitAdvice(easeAnalysis, garmentType) {
+            const advice = [];
+            const fitIssues = [];
+            const goodFits = [];
+            
+            Object.entries(easeAnalysis).forEach(([measurement, analysis]) => {
+                if (analysis.fit === 'ideal' || analysis.fit === 'slightly_loose' || analysis.fit === 'slightly_tight') {
+                    goodFits.push(measurement);
+                } else {
+                    fitIssues.push(analysis);
+                }
+            });
+            
+            if (fitIssues.length === 0) {
+                advice.push('This size should provide a good fit across all measurements');
+            } else {
+                fitIssues.forEach(issue => {
+                    if (issue.fit === 'tight') {
+                        advice.push(`Consider sizing up for better ${issue.measurement} fit`);
+                    } else if (issue.fit === 'loose') {
+                        advice.push(`Consider sizing down for better ${issue.measurement} fit`);
+                    }
+                });
+            }
+            
+            if (garmentType === 'tops' && goodFits.includes('bust') && goodFits.includes('waist')) {
+                advice.push('Good fit for tops - bust and waist measurements align well');
+            } else if (garmentType === 'bottoms' && goodFits.includes('waist') && goodFits.includes('hip')) {
+                advice.push('Good fit for bottoms - waist and hip measurements align well');
+            }
+            
+            return advice;
+        }
+
+        function analyzeSocialReviewPatterns(reviews) {
+            if (!reviews || reviews.length === 0) {
+                return { pattern: 'no_data', confidence: 0, evidence: [], recommendation: 'use_measurements_only' };
+            }
+
+            const patternScores = { RUNS_SMALL: 0, RUNS_LARGE: 0, TRUE_TO_SIZE: 0, INCONSISTENT: 0 };
+            const evidence = [];
+            let totalWeight = 0;
+
+            reviews.forEach(review => {
+                const text = review.toLowerCase();
+                
+                if (text.includes('runs small') || text.includes('size up')) {
+                    patternScores.RUNS_SMALL += 1;
+                    evidence.push({ pattern: 'RUNS_SMALL', quote: review });
+                }
+                if (text.includes('runs large') || text.includes('size down')) {
+                    patternScores.RUNS_LARGE += 1;
+                    evidence.push({ pattern: 'RUNS_LARGE', quote: review });
+                }
+                if (text.includes('true to size') || text.includes('perfect fit')) {
+                    patternScores.TRUE_TO_SIZE += 1;
+                    evidence.push({ pattern: 'TRUE_TO_SIZE', quote: review });
+                }
+            });
+
+            const dominantPattern = Object.entries(patternScores).sort((a, b) => b[1] - a[1])[0];
+            const confidence = dominantPattern[1] / reviews.length;
+
+            return {
+                pattern: dominantPattern[0],
+                confidence: confidence,
+                evidence: evidence.slice(0, 3),
+                recommendation: dominantPattern[0] === 'RUNS_SMALL' ? 'size_up' : 
+                               dominantPattern[0] === 'RUNS_LARGE' ? 'size_down' : 'true_to_size'
+            };
+        }
+
+        // Test functions
+        function testTops() {
+            const userMeasurements = { bust: 36, waist: 28, hip: 36 };
+            const garmentType = 'tops';
+            const easeTargets = calculateEaseTargets(garmentType);
+            const idealMeasurements = calculateIdealGarmentMeasurements(userMeasurements, easeTargets);
+            
+            // Mock size chart data
+            const sizeChart = {
+                measurements: {
+                    'S': { bust: 36, waist: 28 },
+                    'M': { bust: 38, waist: 30 },
+                    'L': { bust: 40, waist: 32 }
+                }
+            };
+
+            let bestMatch = { size: null, score: Infinity };
+            
+            Object.entries(sizeChart.measurements).forEach(([size, measurements]) => {
+                let score = 0;
+                const easeAnalysis = {};
+                
+                Object.entries(idealMeasurements).forEach(([measurement, ideal]) => {
+                    const actualEase = measurements[measurement] - ideal.body;
+                    const easeDifference = Math.abs(actualEase - ideal.ease);
+                    score += easeDifference;
+                    
+                    easeAnalysis[measurement] = {
+                        body: ideal.body,
+                        garment: measurements[measurement],
+                        actualEase: actualEase,
+                        idealEase: ideal.ease,
+                        fit: analyzeFit(actualEase, ideal, measurement).fit
+                    };
+                });
+                
+                if (score < bestMatch.score) {
+                    bestMatch = {
+                        size: size,
+                        score: score,
+                        easeAnalysis: easeAnalysis,
+                        fitAdvice: generateEaseBasedFitAdvice(easeAnalysis, garmentType)
+                    };
+                }
+            });
+
+            const resultDiv = document.getElementById('tops-result');
+            resultDiv.innerHTML = `
+                <h4>Recommendation: Size ${bestMatch.size}</h4>
+                <p><strong>Ease Analysis:</strong></p>
+                <div class="ease-analysis">
+                    ${Object.entries(bestMatch.easeAnalysis).map(([measurement, analysis]) => 
+                        `<p><span class="measurement">${measurement}:</span> Body ${analysis.body}", Garment ${analysis.garment}", Ease ${analysis.actualEase.toFixed(1)}" (ideal: ${analysis.idealEase.toFixed(1)}")</p>`
+                    ).join('')}
+                </div>
+                <p><strong>Fit Advice:</strong></p>
+                <ul>${bestMatch.fitAdvice.map(advice => `<li>${advice}</li>`).join('')}</ul>
+            `;
+        }
+
+        function testBottoms() {
+            const userMeasurements = { waist: 28, hip: 36 };
+            const garmentType = 'bottoms';
+            const easeTargets = calculateEaseTargets(garmentType);
+            const idealMeasurements = calculateIdealGarmentMeasurements(userMeasurements, easeTargets);
+            
+            const sizeChart = {
+                measurements: {
+                    'S': { waist: 28, hip: 36 },
+                    'M': { waist: 30, hip: 38 },
+                    'L': { waist: 32, hip: 40 }
+                }
+            };
+
+            let bestMatch = { size: null, score: Infinity };
+            
+            Object.entries(sizeChart.measurements).forEach(([size, measurements]) => {
+                let score = 0;
+                const easeAnalysis = {};
+                
+                Object.entries(idealMeasurements).forEach(([measurement, ideal]) => {
+                    const actualEase = measurements[measurement] - ideal.body;
+                    const easeDifference = Math.abs(actualEase - ideal.ease);
+                    score += easeDifference;
+                    
+                    easeAnalysis[measurement] = {
+                        body: ideal.body,
+                        garment: measurements[measurement],
+                        actualEase: actualEase,
+                        idealEase: ideal.ease,
+                        fit: analyzeFit(actualEase, ideal, measurement).fit
+                    };
+                });
+                
+                if (score < bestMatch.score) {
+                    bestMatch = {
+                        size: size,
+                        score: score,
+                        easeAnalysis: easeAnalysis,
+                        fitAdvice: generateEaseBasedFitAdvice(easeAnalysis, garmentType)
+                    };
+                }
+            });
+
+            const resultDiv = document.getElementById('bottoms-result');
+            resultDiv.innerHTML = `
+                <h4>Recommendation: Size ${bestMatch.size}</h4>
+                <p><strong>Ease Analysis:</strong></p>
+                <div class="ease-analysis">
+                    ${Object.entries(bestMatch.easeAnalysis).map(([measurement, analysis]) => 
+                        `<p><span class="measurement">${measurement}:</span> Body ${analysis.body}", Garment ${analysis.garment}", Ease ${analysis.actualEase.toFixed(1)}" (ideal: ${analysis.idealEase.toFixed(1)}")</p>`
+                    ).join('')}
+                </div>
+                <p><strong>Fit Advice:</strong></p>
+                <ul>${bestMatch.fitAdvice.map(advice => `<li>${advice}</li>`).join('')}</ul>
+            `;
+        }
+
+        function testDresses() {
+            const userMeasurements = { bust: 36, waist: 28, hip: 36 };
+            const garmentType = 'dresses';
+            const easeTargets = calculateEaseTargets(garmentType);
+            const idealMeasurements = calculateIdealGarmentMeasurements(userMeasurements, easeTargets);
+            
+            const sizeChart = {
+                measurements: {
+                    'S': { bust: 36, waist: 28, hip: 36 },
+                    'M': { bust: 38, waist: 30, hip: 38 },
+                    'L': { bust: 40, waist: 32, hip: 40 }
+                }
+            };
+
+            let bestMatch = { size: null, score: Infinity };
+            
+            Object.entries(sizeChart.measurements).forEach(([size, measurements]) => {
+                let score = 0;
+                const easeAnalysis = {};
+                
+                Object.entries(idealMeasurements).forEach(([measurement, ideal]) => {
+                    const actualEase = measurements[measurement] - ideal.body;
+                    const easeDifference = Math.abs(actualEase - ideal.ease);
+                    score += easeDifference;
+                    
+                    easeAnalysis[measurement] = {
+                        body: ideal.body,
+                        garment: measurements[measurement],
+                        actualEase: actualEase,
+                        idealEase: ideal.ease,
+                        fit: analyzeFit(actualEase, ideal, measurement).fit
+                    };
+                });
+                
+                if (score < bestMatch.score) {
+                    bestMatch = {
+                        size: size,
+                        score: score,
+                        easeAnalysis: easeAnalysis,
+                        fitAdvice: generateEaseBasedFitAdvice(easeAnalysis, garmentType)
+                    };
+                }
+            });
+
+            const resultDiv = document.getElementById('dresses-result');
+            resultDiv.innerHTML = `
+                <h4>Recommendation: Size ${bestMatch.size}</h4>
+                <p><strong>Ease Analysis:</strong></p>
+                <div class="ease-analysis">
+                    ${Object.entries(bestMatch.easeAnalysis).map(([measurement, analysis]) => 
+                        `<p><span class="measurement">${measurement}:</span> Body ${analysis.body}", Garment ${analysis.garment}", Ease ${analysis.actualEase.toFixed(1)}" (ideal: ${analysis.idealEase.toFixed(1)}")</p>`
+                    ).join('')}
+                </div>
+                <p><strong>Fit Advice:</strong></p>
+                <ul>${bestMatch.fitAdvice.map(advice => `<li>${advice}</li>`).join('')}</ul>
+            `;
+        }
+
+        function testEnhanced() {
+            const userMeasurements = { bust: 36, waist: 28, hip: 36 };
+            const garmentType = 'tops';
+            const socialReviews = ['This brand runs small', 'Size up for best fit', 'I usually wear M but needed L'];
+            
+            const easeTargets = calculateEaseTargets(garmentType);
+            const idealMeasurements = calculateIdealGarmentMeasurements(userMeasurements, easeTargets);
+            const reviewAnalysis = analyzeSocialReviewPatterns(socialReviews);
+            
+            const sizeChart = {
+                measurements: {
+                    'S': { bust: 36, waist: 28 },
+                    'M': { bust: 38, waist: 30 },
+                    'L': { bust: 40, waist: 32 }
+                }
+            };
+
+            let bestMatch = { size: null, score: Infinity };
+            
+            Object.entries(sizeChart.measurements).forEach(([size, measurements]) => {
+                let score = 0;
+                const easeAnalysis = {};
+                
+                Object.entries(idealMeasurements).forEach(([measurement, ideal]) => {
+                    const actualEase = measurements[measurement] - ideal.body;
+                    const easeDifference = Math.abs(actualEase - ideal.ease);
+                    score += easeDifference;
+                    
+                    easeAnalysis[measurement] = {
+                        body: ideal.body,
+                        garment: measurements[measurement],
+                        actualEase: actualEase,
+                        idealEase: ideal.ease,
+                        fit: analyzeFit(actualEase, ideal, measurement).fit
+                    };
+                });
+                
+                if (score < bestMatch.score) {
+                    bestMatch = {
+                        size: size,
+                        score: score,
+                        easeAnalysis: easeAnalysis,
+                        fitAdvice: generateEaseBasedFitAdvice(easeAnalysis, garmentType)
+                    };
+                }
+            });
+
+            // Apply social review enhancement
+            if (reviewAnalysis.recommendation === 'size_up') {
+                bestMatch.fitAdvice.push('Customer reviews suggest sizing up - consider one size larger');
+                bestMatch.fitAdvice.push('Social reviews indicate this brand runs small');
+            }
+
+            const resultDiv = document.getElementById('enhanced-result');
+            resultDiv.innerHTML = `
+                <h4>Recommendation: Size ${bestMatch.size}</h4>
+                <p><strong>Ease Analysis:</strong></p>
+                <div class="ease-analysis">
+                    ${Object.entries(bestMatch.easeAnalysis).map(([measurement, analysis]) => 
+                        `<p><span class="measurement">${measurement}:</span> Body ${analysis.body}", Garment ${analysis.garment}", Ease ${analysis.actualEase.toFixed(1)}" (ideal: ${analysis.idealEase.toFixed(1)}")</p>`
+                    ).join('')}
+                </div>
+                <p><strong>Fit Advice:</strong></p>
+                <ul>${bestMatch.fitAdvice.map(advice => `<li>${advice}</li>`).join('')}</ul>
+                <p><strong>Social Review Enhancement:</strong></p>
+                <p>Pattern: ${reviewAnalysis.pattern} (Confidence: ${(reviewAnalysis.confidence * 100).toFixed(0)}%)</p>
+                <p>Evidence: ${reviewAnalysis.evidence.map(e => `"${e.quote}"`).join(', ')}</p>
+            `;
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testTops();
+                testBottoms();
+                testDresses();
+                testEnhanced();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

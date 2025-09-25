@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Size Chart Extraction Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .size-chart { margin: 20px 0; border: 1px solid #ccc; padding: 15px; }
+        table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .test-result { background: #f0f8ff; padding: 10px; margin: 10px 0; border-left: 4px solid #007acc; }
+        .measurement-type { font-weight: bold; color: #007acc; }
+    </style>
+</head>
+<body>
+    <h1>Enhanced Size Chart Extraction Test</h1>
+    <p>This page contains various size chart formats to test the enhanced extraction with BODY vs GARMENT measurement detection.</p>
+
+    <!-- Test 1: Body Measurements Only -->
+    <div class="size-chart">
+        <h3>Test 1: Body Measurements Only</h3>
+        <p>This chart shows body measurements (bust, waist, hip) for different sizes.</p>
+        <table id="body-measurements">
+            <thead>
+                <tr>
+                    <th>Size</th>
+                    <th>Bust (inches)</th>
+                    <th>Waist (inches)</th>
+                    <th>Hip (inches)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>XS</td><td>32</td><td>24</td><td>34</td></tr>
+                <tr><td>S</td><td>34</td><td>26</td><td>36</td></tr>
+                <tr><td>M</td><td>36</td><td>28</td><td>38</td></tr>
+                <tr><td>L</td><td>38</td><td>30</td><td>40</td></tr>
+                <tr><td>XL</td><td>40</td><td>32</td><td>42</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Test 2: Garment Measurements Only -->
+    <div class="size-chart">
+        <h3>Test 2: Garment Measurements Only</h3>
+        <p>This chart shows garment measurements (chest, length, shoulder) for different sizes.</p>
+        <table id="garment-measurements">
+            <thead>
+                <tr>
+                    <th>Size</th>
+                    <th>Chest (inches)</th>
+                    <th>Length (inches)</th>
+                    <th>Shoulder (inches)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>XS</td><td>34</td><td>26</td><td>14</td></tr>
+                <tr><td>S</td><td>36</td><td>27</td><td>14.5</td></tr>
+                <tr><td>M</td><td>38</td><td>28</td><td>15</td></tr>
+                <tr><td>L</td><td>40</td><td>29</td><td>15.5</td></tr>
+                <tr><td>XL</td><td>42</td><td>30</td><td>16</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Test 3: Mixed Measurements -->
+    <div class="size-chart">
+        <h3>Test 3: Mixed Measurements</h3>
+        <p>This chart shows both body measurements and garment measurements.</p>
+        <table id="mixed-measurements">
+            <thead>
+                <tr>
+                    <th>Size</th>
+                    <th>Body Bust</th>
+                    <th>Body Waist</th>
+                    <th>Garment Chest</th>
+                    <th>Garment Length</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>S</td><td>34</td><td>26</td><td>36</td><td>27</td></tr>
+                <tr><td>M</td><td>36</td><td>28</td><td>38</td><td>28</td></tr>
+                <tr><td>L</td><td>38</td><td>30</td><td>40</td><td>29</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Test 4: Context-Based Detection -->
+    <div class="size-chart">
+        <h3>Test 4: Context-Based Detection</h3>
+        <p>This chart uses context clues to determine measurement type.</p>
+        <div class="measurement-guide">
+            <h4>Body Measurement Guide</h4>
+            <p>Measure your body for the best fit. Use these measurements to find your size.</p>
+        </div>
+        <table id="context-measurements">
+            <thead>
+                <tr>
+                    <th>Size</th>
+                    <th>Bust</th>
+                    <th>Waist</th>
+                    <th>Hip</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>6</td><td>32</td><td>24</td><td>34</td></tr>
+                <tr><td>8</td><td>34</td><td>26</td><td>36</td></tr>
+                <tr><td>10</td><td>36</td><td>28</td><td>38</td></tr>
+                <tr><td>12</td><td>38</td><td>30</td><td>40</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Test Results Display -->
+    <div id="test-results">
+        <h3>Extraction Results</h3>
+        <p>Open browser console to see detailed extraction results.</p>
+        <div id="results-container"></div>
+    </div>
+
+    <script>
+        // Import the enhanced size chart extraction function
+        // This would normally be loaded from the browser extension
+        console.log('Enhanced Size Chart Extraction Test Page Loaded');
+        console.log('This page contains test cases for Phase 1.1 implementation');
+        
+        // Test function to demonstrate the enhanced extraction
+        function testEnhancedExtraction() {
+            console.log('=== Testing Enhanced Size Chart Extraction ===');
+            
+            // Test each table
+            const tables = document.querySelectorAll('table');
+            tables.forEach((table, index) => {
+                console.log(`\n--- Testing Table ${index + 1} ---`);
+                console.log('Table HTML:', table.outerHTML);
+                
+                // Simulate the enhanced extraction process
+                const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim().toLowerCase());
+                console.log('Headers:', headers);
+                
+                // Detect measurement type
+                const measurementType = detectMeasurementType(headers, table);
+                console.log('Detected measurement type:', measurementType);
+                
+                // Extract measurements
+                const measurements = extractMeasurementsFromTable(table);
+                console.log('Extracted measurements:', measurements);
+            });
+        }
+        
+        // Helper functions (simplified versions for testing)
+        function detectMeasurementType(headers, table) {
+            const headerText = headers.join(' ').toLowerCase();
+            const tableText = table.textContent.toLowerCase();
+            
+            const bodyIndicators = ['bust', 'waist', 'hip', 'hips', 'body'];
+            const garmentIndicators = ['chest', 'length', 'inseam', 'shoulder', 'sleeve', 'garment'];
+            
+            const hasBodyIndicators = bodyIndicators.some(indicator => 
+                headerText.includes(indicator) || tableText.includes(indicator)
+            );
+            
+            const hasGarmentIndicators = garmentIndicators.some(indicator => 
+                headerText.includes(indicator) || tableText.includes(indicator)
+            );
+            
+            if (hasBodyIndicators && hasGarmentIndicators) {
+                return 'mixed';
+            } else if (hasBodyIndicators) {
+                return 'body';
+            } else if (hasGarmentIndicators) {
+                return 'garment';
+            }
+            
+            return 'unknown';
+        }
+        
+        function extractMeasurementsFromTable(table) {
+            const measurements = {};
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const cells = Array.from(row.querySelectorAll('td'));
+                if (cells.length >= 2) {
+                    const size = cells[0].textContent.trim();
+                    const sizeData = {};
+                    
+                    // Extract measurements from remaining cells
+                    for (let i = 1; i < cells.length; i++) {
+                        const value = cells[i].textContent.trim();
+                        if (value && value !== '-') {
+                            sizeData[`measurement_${i}`] = parseFloat(value);
+                        }
+                    }
+                    
+                    measurements[size] = sizeData;
+                }
+            });
+            
+            return measurements;
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(testEnhancedExtraction, 1000);
+        });
+    </script>
+</body>
+</html>
