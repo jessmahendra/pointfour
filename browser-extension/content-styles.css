@@ -942,19 +942,20 @@
 
 /* Tailored Recommendations */
 .pointfour-tailored-recommendations {
-  margin-top: 16px;
+  margin-top: 12px;
+  margin-bottom: 8px;
   text-align: center;
 }
 
 .pointfour-tailored-btn {
   display: inline-block;
-  padding: 12px 20px;
-  background: #000000;
-  color: #FFFFFF !important;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: 8px 16px;
+  background: transparent;
+  color: #666666 !important;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
@@ -963,11 +964,14 @@
 }
 
 .pointfour-tailored-btn:hover {
-  background: #333333;
+  background: #f8f9fa;
+  border-color: #d0d0d0;
+  color: #333333 !important;
 }
 
 .pointfour-tailored-btn:active {
-  background: #000000;
+  background: #f0f0f0;
+  border-color: #c0c0c0;
 }
 
 /* Tailored Recommendations Results */

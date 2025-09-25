@@ -4954,33 +4954,7 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         contentHTML += renderEnhancedSizeChart(data.enhancedSizeChart);
     }
     
-    // Tailored recommendations section - show "Find my size" button if we have size chart data
-    console.log('[PointFour] Checking for size chart data:', {
-        hasSizeGuide: !!data.sizeGuide,
-        sizeGuideKeys: data.sizeGuide ? Object.keys(data.sizeGuide) : [],
-        hasMeasurements: data.sizeGuide && data.sizeGuide.measurements ? true : false,
-        measurementsCount: data.sizeGuide && data.sizeGuide.measurements ? Object.keys(data.sizeGuide.measurements).length : 0,
-        fullSizeGuide: data.sizeGuide
-    });
-    
-    // Check if we have any size data at all (even if not in measurements format)
-    const hasAnySizeData = data.sizeGuide && (
-        (data.sizeGuide.measurements && Object.keys(data.sizeGuide.measurements).length > 0) ||
-        (data.sizeGuide.body && Object.keys(data.sizeGuide.body).length > 0) ||
-        (data.sizeGuide.garment && Object.keys(data.sizeGuide.garment).length > 0) ||
-        (data.sizeGuide.sizes && Object.keys(data.sizeGuide.sizes).length > 0)
-    );
-    
-    // For now, always show the button to test functionality
-    // TODO: Make this conditional once we confirm the data structure
-    console.log('[PointFour] Adding tailored recommendations section - testing with button always visible');
-    contentHTML += `
-        <div class="pointfour-tailored-recommendations">
-            <button class="pointfour-tailored-btn" onclick="window.pointFourShowSizeInput()">
-                Find my size
-            </button>
-        </div>
-    `;
+    // Tailored recommendations section will be added just before the reviews button
     
     // Materials and Care - only show on product pages
     if (isProductPage()) {
@@ -5012,6 +4986,16 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         params.set('pageTitle', document.title);
         
         const analyzeUrl = `https://www.pointfour.in/extension-reviews?${params.toString()}`;
+        
+        // Add tailored recommendations section just before the reviews button
+        console.log('[PointFour] Adding tailored recommendations section - testing with button always visible');
+        contentHTML += `
+            <div class="pointfour-tailored-recommendations">
+                <button class="pointfour-tailored-btn" onclick="window.pointFourShowSizeInput()">
+                    Find my size
+                </button>
+            </div>
+        `;
         
         contentHTML += `
             <div class="pointfour-search-info">
