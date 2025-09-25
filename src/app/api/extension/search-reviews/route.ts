@@ -251,105 +251,134 @@ function getDisambiguatedBrand(brand: string, category: string = 'clothing'): st
   return `"${brand}" ${fashionContext} brand`;
 }
 
-function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general', itemName: string = '', isSpecificItem: boolean = false): string[] {
-  // Base queries for each category
-  const baseQueries = (() => {
+// Enhanced search query generation with intelligent fallback tiers
+function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 'shoes' | 'accessories' | 'general', itemName: string = ''): { queries: string[], tier: string, successCriteria: number }[] {
+  
+  const disambiguatedBrand = getDisambiguatedBrand(brand, category);
+  
+  // Tier 1: Item-Specific Search (Highest Priority)
+  const tier1Queries = (() => {
+    if (!itemName || itemName.length < 3) return [];
+    
+    const exactItemQueries = [
+      `"${brand} ${itemName}" review fit quality`,
+      `"${brand} ${itemName}" sizing "runs small" OR "runs large" OR "true to size"`,
+      `"${brand} ${itemName}" material fabric composition`,
+      `"${brand} ${itemName}" site:reddit.com review`,
+      `"${brand} ${itemName}" site:substack.com review`
+    ];
+    
+    // Add category-specific item queries
+    if (category === 'clothing') {
+      exactItemQueries.push(
+        `"${brand} ${itemName}" "shrinks" OR "shrink" OR "wash" OR "care"`,
+        `"${brand} ${itemName}" "cotton" OR "wool" OR "silk" OR "polyester"`
+      );
+    } else if (category === 'shoes') {
+      exactItemQueries.push(
+        `"${brand} ${itemName}" comfort "uncomfortable" OR "comfortable"`,
+        `"${brand} ${itemName}" durability "lasted" OR "wore out"`
+      );
+    } else if (category === 'bags') {
+      exactItemQueries.push(
+        `"${brand} ${itemName}" quality "well made" OR "poorly made"`,
+        `"${brand} ${itemName}" "holds up" OR "falling apart"`
+      );
+    }
+    
+    return exactItemQueries;
+  })();
+  
+  // Tier 2: Brand + Category Search (Fallback)
+  const tier2Queries = (() => {
     switch (category) {
       case 'bags':
-        const bagsBrand = getDisambiguatedBrand(brand);
         return [
-          `${bagsBrand} bag handbag review quality "well made" OR "poorly made" OR "durable"`,
-          `${bagsBrand} handbag quality leather material construction review`,
-          `${bagsBrand} bag "holds up" OR "falling apart" OR "worth it" review`
+          `${disambiguatedBrand} bag handbag review quality "well made" OR "poorly made" OR "durable"`,
+          `${disambiguatedBrand} handbag quality leather material construction review`,
+          `${disambiguatedBrand} bag "holds up" OR "falling apart" OR "worth it" review`,
+          `${disambiguatedBrand} bags site:reddit.com review quality`
         ];
       
       case 'shoes':
-        const shoesBrand = getDisambiguatedBrand(brand, 'shoes');
         return [
-          `${shoesBrand} shoes footwear fit review "runs small" OR "runs large" OR "true to size"`,
-          `${shoesBrand} shoe quality comfort "uncomfortable" OR "comfortable" review`,
-          `${shoesBrand} footwear durability "lasted" OR "wore out" review`
+          `${disambiguatedBrand} shoes footwear fit review "runs small" OR "runs large" OR "true to size"`,
+          `${disambiguatedBrand} shoe quality comfort "uncomfortable" OR "comfortable" review`,
+          `${disambiguatedBrand} footwear durability "lasted" OR "wore out" review`,
+          `${disambiguatedBrand} shoes site:reddit.com review`
         ];
       
       case 'accessories':
-        const accessoriesBrand = getDisambiguatedBrand(brand, 'accessories');
         return [
-          `${accessoriesBrand} accessory quality review "well made" OR "cheap" OR "durable"`,
-          `${accessoriesBrand} jewelry watch quality "tarnish" OR "scratches" OR "holds up"`,
-          `${accessoriesBrand} accessory "worth it" OR "overpriced" review`
+          `${disambiguatedBrand} accessory quality review "well made" OR "cheap" OR "durable"`,
+          `${disambiguatedBrand} jewelry watch quality "tarnish" OR "scratches" OR "holds up"`,
+          `${disambiguatedBrand} accessory "worth it" OR "overpriced" review`,
+          `${disambiguatedBrand} accessories site:reddit.com review`
         ];
       
       case 'clothing':
       default:
-        const clothingBrand = getDisambiguatedBrand(brand, 'clothing');
         return [
-          `${clothingBrand} "runs small" OR "runs large" OR "true to size" OR "size up" OR "size down"`,
-          `${clothingBrand} "fit" review "tight" OR "loose" OR "perfect" OR "weird" sizing`,
-          `${clothingBrand} "quality" "fabric" "material" "cotton" OR "wool" OR "polyester"`,
-          `${clothingBrand} "shrinks" OR "shrink" OR "wash" OR "care" OR "dry clean"`,
-          `${clothingBrand} site:reddit.com fit size review`,
-          `${clothingBrand} review "disappointed" OR "impressed" OR "worth it" OR "overpriced"`
+          `${disambiguatedBrand} "runs small" OR "runs large" OR "true to size" OR "size up" OR "size down"`,
+          `${disambiguatedBrand} "fit" review "tight" OR "loose" OR "perfect" OR "weird" sizing`,
+          `${disambiguatedBrand} "quality" "fabric" "material" "cotton" OR "wool" OR "polyester"`,
+          `${disambiguatedBrand} "shrinks" OR "shrink" OR "wash" OR "care" OR "dry clean"`,
+          `${disambiguatedBrand} site:reddit.com fit size review`,
+          `${disambiguatedBrand} review "disappointed" OR "impressed" OR "worth it" OR "overpriced"`
         ];
     }
   })();
-
-  // Add platform-specific queries to target high-quality fashion content across all categories
-  const platformBrand = getDisambiguatedBrand(brand, category);
-  const platformQueries = [
-    `${platformBrand} fashion site:substack.com review fit quality`,
-    `${platformBrand} clothing site:reddit.com "runs small" OR "runs large" OR "true to size"`,
-    `${platformBrand} fashion site:youtube.com review "fit" OR "size" OR "quality"`,
-    `${platformBrand} fashion blog review fit sizing quality`,
-    `${platformBrand} shoes footwear site:reddit.com review`,
-    `${platformBrand} bags handbag site:reddit.com review quality`,
-    `${platformBrand} accessories jewelry site:reddit.com review`,
-    `${platformBrand} fashion "wardrobe" OR "closet" review fit size`,
-    `${platformBrand} clothing brand site:youtube.com`,
-    `${platformBrand} fashion influencer review`
-  ];
-
-  // If this is a specific item search, add item-focused queries with exact matching
-  if (isSpecificItem && itemName) {
-    const specificItemQueries = [
-      `"${brand} ${itemName}" fashion review`,
-      `"${brand} ${itemName}" clothing fit "runs small" OR "runs large" OR "true to size"`,
-      `"${brand} ${itemName}" fashion quality "well made" OR "poorly made"`,
-      `"${brand} ${itemName}" clothing material fabric composition`,
-      `"${brand} ${itemName}" fashion "100%" OR "cotton" OR "wool" OR "silk" OR "polyester" OR "blend"`,
-      `"${brand} ${itemName}" fashion site:substack.com review`,
-      `"${brand} ${itemName}" clothing site:reddit.com review`
-    ];
-    
-    // For clothing items, add more specific material queries
-    if (category === 'clothing') {
-      specificItemQueries.push(
-        `"${brand} ${itemName}" "merino wool" OR "organic cotton" OR "cashmere" OR "linen"`,
-        `"${brand} ${itemName}" care instructions washing shrink`
-      );
-    }
-    
-    // Return ONLY specific item queries - don't include generic brand queries
-    return specificItemQueries;
-  }
   
-  // Add comprehensive fashion-focused fallback queries for lesser-known brands
-  const simpleFallbackQueries = [
+  // Tier 3: General Brand Search (Last Resort)
+  const tier3Queries = [
     `"${brand}" fashion review`,
     `"${brand}" clothing review`,
-    `"${brand}" shoes footwear review`,
-    `"${brand}" bags handbag review`,
-    `"${brand}" accessories jewelry review`,
-    `${brand} fashion brand quality`,
-    `${brand} clothing fit sizing`,
-    `${brand} fashion "runs small" OR "runs large" OR "true to size"`,
-    `${brand} fashion quality "well made" OR "poorly made"`,
-    `${brand} clothing brand fit size`
+    `"${brand}" quality "well made" OR "poorly made"`,
+    `"${brand}" fashion brand`,
+    `"${brand}" site:reddit.com review`
   ];
   
-  // For general brand searches, include base queries, platform queries, and simple fallbacks
-  // Limit to prevent timeout - prioritize most important queries
-  const allQueries = [...baseQueries, ...platformQueries.slice(0, 5), ...simpleFallbackQueries.slice(0, 5)];
-  return allQueries.slice(0, 10); // Limit to max 10 queries to prevent timeout
+  // Return tiered search strategy
+  const searchTiers = [];
+  
+  if (tier1Queries.length > 0) {
+    searchTiers.push({
+      queries: tier1Queries,
+      tier: 'item_specific',
+      successCriteria: 3 // Need at least 3 item-specific reviews
+    });
+  }
+  
+  searchTiers.push({
+    queries: tier2Queries,
+    tier: 'brand_category',
+    successCriteria: 5 // Need at least 5 brand+category reviews
+  });
+  
+  searchTiers.push({
+    queries: tier3Queries,
+    tier: 'brand_general',
+    successCriteria: 3 // Need at least 3 general brand reviews
+  });
+  
+  return searchTiers;
+}
+
+
+// Helper function to generate user-friendly data source descriptions
+function getDataSourceDescription(dataSource: string, successfulTier: string, itemName: string = ''): string {
+  switch (dataSource) {
+    case 'item_specific':
+      return `Based on reviews of this specific ${itemName ? `"${itemName}"` : 'item'}`;
+    case 'brand_category':
+      return `Based on reviews of ${successfulTier === 'brand_category' ? 'this brand\'s products in this category' : 'similar products from this brand'}`;
+    case 'brand_general':
+      return `Based on general reviews of this brand's products`;
+    case 'industry_knowledge':
+      return `Based on general fashion industry standards`;
+    default:
+      return `Based on available review data`;
+  }
 }
 
 // Helper function to create responses with CORS headers
@@ -400,13 +429,13 @@ interface ReviewWithScore extends Review {
   relevanceScore: number;
 }
 
-// Category filtering functions for Phase 2
+// Enhanced relevance filtering with category-specific exclusions
 function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams): ReviewWithScore[] {
   const { category, productType, productLine, brand, itemName } = filterParams;
   
   if (!reviews || !Array.isArray(reviews)) return [];
   
-  console.log('[API] Filtering reviews by enhanced relevance:', {
+  console.log('[API] Enhanced relevance filtering:', {
     totalReviews: reviews.length,
     category,
     productType,
@@ -425,25 +454,30 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams)
       ],
       exclude: [
         'shirt', 'top', 'blouse', 'sweater', 'dress', 'skirt', 'pants', 'jean',
-        'bag', 'purse', 'wallet', 'belt', 'jacket', 'coat'
+        'bag', 'purse', 'wallet', 'belt', 'jacket', 'coat', 'waist', 'tailoring',
+        'crewneck', 'fabric quality', 'turned clothes inside out'
       ]
     },
     bags: {
       include: [
         'bag', 'bags', 'handbag', 'purse', 'tote', 'clutch', 'backpack', 'wallet',
         'satchel', 'crossbody', 'shoulder bag', 'messenger', 'strap', 'handle',
-        'compartment', 'pocket', 'zipper', 'closure', 'capacity', 'carry'
+        'compartment', 'pocket', 'zipper', 'closure', 'capacity', 'carry',
+        'leather', 'canvas', 'nylon', 'durable', 'construction'
       ],
       exclude: [
         'shoe', 'boot', 'sneaker', 'heel', 'shirt', 'top', 'dress', 'pants',
-        'jewelry', 'watch', 'sunglasses'
+        'jewelry', 'watch', 'sunglasses', 'waist', 'tailoring', 'crewneck',
+        'fabric quality', 'turned clothes inside out', 'sizing', 'fit around',
+        'runs small', 'runs large', 'true to size'
       ]
     },
     clothing: {
       include: [
         'dress', 'shirt', 'top', 'blouse', 'sweater', 'pants', 'jeans', 'skirt',
         'jacket', 'coat', 'cardigan', 'hoodie', 'sleeve', 'collar', 'neckline',
-        'fit', 'length', 'waist', 'chest', 'shoulder', 'fabric', 'material'
+        'fit', 'length', 'waist', 'chest', 'shoulder', 'fabric', 'material',
+        'tailoring', 'crewneck', 'fabric quality'
       ],
       exclude: [
         'shoe', 'boot', 'sneaker', 'heel', 'bag', 'purse', 'wallet',
@@ -456,7 +490,8 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams)
         'belt', 'hat', 'sunglasses', 'gloves', 'accessory', 'chain', 'pendant'
       ],
       exclude: [
-        'shoe', 'boot', 'dress', 'shirt', 'pants', 'bag', 'purse'
+        'shoe', 'boot', 'dress', 'shirt', 'pants', 'bag', 'purse',
+        'waist', 'tailoring', 'crewneck', 'fabric quality'
       ]
     }
   };
@@ -525,9 +560,11 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams)
     };
   });
   
-  // Filter out reviews with negative scores and sort by relevance
+  // Filter out reviews with low relevance scores and sort by relevance
+  // Increased minimum threshold to be more strict about relevance
+  const minRelevanceScore = category === 'bags' || category === 'accessories' ? 3 : 2;
   const relevantReviews = scoredReviews
-    .filter((review: ReviewWithScore) => review.relevanceScore > 0)
+    .filter((review: ReviewWithScore) => review.relevanceScore >= minRelevanceScore)
     .sort((a: ReviewWithScore, b: ReviewWithScore) => b.relevanceScore - a.relevanceScore);
   
   console.log('[API] Relevance filtering results:', {
@@ -859,9 +896,9 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Search for reviews with category-appropriate queries using enhanced data
+    // Search for reviews with tiered approach using enhanced data
     const finalIsSpecificItem = isSpecificItemSearch || (urlExtraction && urlExtraction.itemName);
-    const searchQueries = generateSearchQueries(enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem);
+    const searchTiers = generateSearchQueries(enhancedBrand, productCategory, enhancedItemName);
     
     console.log('🔍 API: Enhanced search parameters:', {
       originalBrand: brand,
@@ -869,13 +906,16 @@ export async function POST(request: NextRequest) {
       originalItemName: itemName,
       enhancedItemName,
       isSpecificItem: finalIsSpecificItem,
-      extractionConfidence
+      extractionConfidence,
+      searchTiers: searchTiers.length
     });
     
     let allResults: SerperResult[] = [];
+    let successfulTier = '';
+    let dataSource = 'insufficient_data';
     
-    console.log('🔍 SERPER: Starting search for brand:', brand);
-    console.log('🔍 SERPER: Search queries:', searchQueries);
+    console.log('🔍 SERPER: Starting tiered search for brand:', brand);
+    console.log('🔍 SERPER: Search tiers:', searchTiers.map(tier => ({ tier: tier.tier, queries: tier.queries.length, criteria: tier.successCriteria })));
     
     // Helper function to execute a single search query with retry logic
     const executeSearchQuery = async (query: string, maxRetries: number = 2): Promise<SerperResult[]> => {
@@ -943,58 +983,46 @@ export async function POST(request: NextRequest) {
       return [];
     };
 
-    // Execute all search queries with retry logic
-    for (const query of searchQueries) {
-      const queryResults = await executeSearchQuery(query);
-      allResults = [...allResults, ...queryResults];
+    // Execute tiered search with fallback logic
+    for (const tier of searchTiers) {
+      console.log(`🔍 TIER ${tier.tier.toUpperCase()}: Starting search with ${tier.queries.length} queries`);
+      
+      let tierResults: SerperResult[] = [];
+      
+      // Execute queries for this tier
+      for (const query of tier.queries) {
+        const queryResults = await executeSearchQuery(query);
+        tierResults = [...tierResults, ...queryResults];
+      }
+      
+      console.log(`🔍 TIER ${tier.tier.toUpperCase()}: Collected ${tierResults.length} results`);
+      
+      // Check if this tier meets success criteria
+      if (tierResults.length >= tier.successCriteria) {
+        allResults = tierResults;
+        successfulTier = tier.tier;
+        dataSource = tier.tier;
+        console.log(`✅ TIER ${tier.tier.toUpperCase()}: SUCCESS - Found ${tierResults.length} results (needed ${tier.successCriteria})`);
+        break; // Stop at first successful tier
+      } else {
+        console.log(`⚠️ TIER ${tier.tier.toUpperCase()}: INSUFFICIENT - Found ${tierResults.length} results (needed ${tier.successCriteria})`);
+      }
     }
     
     console.log('📊 SERPER: Total results collected:', allResults.length);
+    console.log('📊 SERPER: Successful tier:', successfulTier);
+    console.log('📊 SERPER: Data source:', dataSource);
     
-    // If no results collected, try broader fallback search queries
+    // If no results collected from any tier, provide fallback data
     if (allResults.length === 0) {
-      console.warn('⚠️ SERPER: No search results from initial queries - trying fallback search...');
+      console.warn('⚠️ SERPER: No search results from any tier - providing fallback data');
       
-      // Generate comprehensive fashion-focused fallback queries for external search
-      const fallbackQueries = [
-        `"${enhancedBrand}" fashion review`,
-        `"${enhancedBrand}" clothing review`,
-        `"${enhancedBrand}" shoes review`,
-        `"${enhancedBrand}" bags handbag review`,
-        `"${enhancedBrand}" accessories review`,
-        `${enhancedBrand} fashion brand`,
-        `${enhancedBrand} clothing fit sizing`,
-        `${enhancedBrand} fashion quality`,
-        `${enhancedBrand} footwear shoes`,
-        `${enhancedBrand} fashion "runs small" OR "runs large"`
-      ];
+      // Provide basic fallback data with clear indication
+      const fallbackData = generateFallbackBrandData(brand, productCategory);
+      fallbackData.dataSource = 'industry_knowledge';
+      fallbackData.dataSourceDescription = 'Based on general fashion industry standards';
       
-      console.log('🔍 SERPER FALLBACK: Trying broader search queries:', fallbackQueries);
-      
-      // Execute fallback queries
-      for (const query of fallbackQueries) {
-        const queryResults = await executeSearchQuery(query);
-        allResults = [...allResults, ...queryResults];
-        
-        // Stop if we get enough results
-        if (allResults.length >= 10) {
-          console.log(`✅ SERPER FALLBACK: Found ${allResults.length} results, stopping early`);
-          break;
-        }
-      }
-      
-      // If still no results after fallback, provide basic fallback data
-      if (allResults.length === 0) {
-        console.warn('⚠️ SERPER: No search results collected even with fallback queries');
-        console.warn('⚠️ SERPER: This indicates a Serper API issue - check API key and connectivity');
-        
-        // Provide basic fallback data instead of empty response
-        const fallbackData = generateFallbackBrandData(brand, productCategory);
-        
-        return createCorsResponse(fallbackData);
-      } else {
-        console.log(`✅ SERPER FALLBACK: Successfully found ${allResults.length} results with fallback queries`);
-      }
+      return createCorsResponse(fallbackData);
     }
     
     // Limit results sent to GPT analysis to prevent rate limiting (max 30 results)
@@ -1730,6 +1758,8 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
       productLine: productLine || null,
       relevanceLevel,
       categorySpecific: useRelevantFiltering,
+      dataSource: dataSource, // Add data source information
+      dataSourceDescription: getDataSourceDescription(dataSource, successfulTier, enhancedItemName),
       externalSearchResults: {
         brandFitSummary: {
           summary,
@@ -1739,7 +1769,9 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
           totalResults: finalPrioritizedReviews.length,
           sources: topSources,
           hasMoreSources: hasMoreSources,
-          categorySpecific: useRelevantFiltering
+          categorySpecific: useRelevantFiltering,
+          dataSource: dataSource,
+          dataSourceDescription: getDataSourceDescription(dataSource, successfulTier, enhancedItemName)
         },
         reviews: finalPrioritizedReviews.slice(0, 20),
         totalResults: finalPrioritizedReviews.length
@@ -2165,6 +2197,7 @@ async function analyzeResultsWithGPT4o(results: SerperResult[], brand: string, c
   const getFitSection = () => {
     if (category === 'bags' || category === 'accessories') {
       // For bags/accessories, fit doesn't make sense - skip it entirely
+      console.log(`🚫 SKIPPING FIT SECTION: Category is ${category}, fit analysis not applicable`);
       return '';
     }
     return `  "fit": {
@@ -2207,6 +2240,10 @@ async function analyzeResultsWithGPT4o(results: SerperResult[], brand: string, c
 
 Brand: ${brand}
 Category: ${category}${itemContext}${categoryContext}${directFitContext}
+
+CRITICAL: This is a ${category} product. ${category === 'bags' || category === 'accessories' ? 
+    'DO NOT include fit/sizing analysis as it does not apply to bags/accessories. Focus on quality, materials, and functionality instead.' : 
+    'Include fit analysis as it applies to clothing/footwear.'}
 
 Reviews to analyze:
 ${reviewTexts}
@@ -3470,6 +3507,8 @@ function generateFallbackBrandData(brand: string, category: string = 'general'):
     hasData: boolean;
     totalResults: number;
     sources: string[];
+    dataSource?: string;
+    dataSourceDescription?: string;
   };
   reviews: SerperResult[];
   groupedReviews: {
@@ -3484,6 +3523,8 @@ function generateFallbackBrandData(brand: string, category: string = 'general'):
   totalResults: number;
   fallbackMode: boolean;
   serperApiIssue: boolean;
+  dataSource?: string;
+  dataSourceDescription?: string;
 } {
   console.log(`🔄 FALLBACK: Generating basic data for ${brand} (category: ${category})`);
   

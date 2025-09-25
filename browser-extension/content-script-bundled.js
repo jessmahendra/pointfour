@@ -31,7 +31,14 @@ const CONFIG = {
             'jacket', 'coat', 'sweater', 'blazer', 'suit', 'skirt',
             'handbag', 'footwear', 'sneakers', 'boots', 'heels',
             'athleisure', 'activewear', 'sportswear', 'streetwear',
-            'luxury', 'premium', 'couture', 'ready-to-wear', 'rtw', 'rohe'
+            'luxury', 'premium', 'couture', 'ready-to-wear', 'rtw', 'rohe',
+            // Modern fashion terms
+            'sustainable', 'eco-friendly', 'ethical', 'conscious', 'organic',
+            'minimalist', 'contemporary', 'modern', 'trendy', 'chic',
+            'capsule', 'wardrobe', 'styling', 'lookbook', 'editorial',
+            'collaboration', 'limited edition', 'exclusive', 'drop',
+            'season', 'spring', 'summer', 'fall', 'winter', 'autumn',
+            'new arrivals', 'bestsellers', 'trending', 'featured'
         ],
         
         // Shopping cart indicators
@@ -70,7 +77,14 @@ const CONFIG = {
             'mens', 'womens', 'kids', 'boys', 'girls',
             'shoes', 'accessories', 'bags', 'jewelry',
             'dress', 'shirt', 'pants', 'jacket', 'coat',
-            'collection', 'category', 'products', 'shop'
+            'collection', 'category', 'products', 'shop',
+            // Modern fashion URL patterns
+            'sustainable', 'eco', 'ethical', 'conscious',
+            'minimalist', 'contemporary', 'modern', 'chic',
+            'capsule', 'wardrobe', 'styling', 'lookbook',
+            'collaboration', 'exclusive', 'limited',
+            'season', 'spring', 'summer', 'fall', 'winter',
+            'new-arrivals', 'bestsellers', 'trending', 'featured'
         ]
     },
     
@@ -222,13 +236,16 @@ function detectFashionSite() {
     const signals = [];
     let fashionSpecificScore = 0; // Track fashion-specific signals separately
     
-    // Check 1: Meta tags analysis
+    // Check 1: Enhanced meta tags analysis
     const metaTags = {
         keywords: document.querySelector('meta[name="keywords"]')?.content?.toLowerCase() || '',
         description: document.querySelector('meta[name="description"]')?.content?.toLowerCase() || '',
         ogType: document.querySelector('meta[property="og:type"]')?.content?.toLowerCase() || '',
         ogSiteName: document.querySelector('meta[property="og:site_name"]')?.content?.toLowerCase() || '',
-        ogTitle: document.querySelector('meta[property="og:title"]')?.content?.toLowerCase() || ''
+        ogTitle: document.querySelector('meta[property="og:title"]')?.content?.toLowerCase() || '',
+        ogDescription: document.querySelector('meta[property="og:description"]')?.content?.toLowerCase() || '',
+        twitterTitle: document.querySelector('meta[name="twitter:title"]')?.content?.toLowerCase() || '',
+        twitterDescription: document.querySelector('meta[name="twitter:description"]')?.content?.toLowerCase() || ''
     };
     
     // Score meta tags
@@ -243,12 +260,32 @@ function detectFashionSite() {
         signals.push(`Meta tags contain fashion keywords: ${fashionKeywordsFound.slice(0, 3).join(', ')}`);
     }
     
+    // Check 1.1: Enhanced page title analysis (often more reliable than meta tags)
+    const pageTitle = document.title.toLowerCase();
+    const titleFashionKeywords = CONFIG.FASHION_SIGNALS.META_KEYWORDS.filter(keyword => 
+        pageTitle.includes(keyword)
+    );
+    
+    if (titleFashionKeywords.length > 0) {
+        score += Math.min(titleFashionKeywords.length, 2); // Cap at 2 points
+        fashionSpecificScore += Math.min(titleFashionKeywords.length, 2);
+        signals.push(`Page title contains fashion keywords: ${titleFashionKeywords.slice(0, 2).join(', ')}`);
+    }
+    
     // Check 1.5: NEGATIVE SIGNALS - Detect non-fashion categories and penalize heavily
     const negativeSignals = detectNegativeSignals(metaContent, document.title.toLowerCase(), document.body?.innerText?.toLowerCase() || '');
     if (negativeSignals.score < 0) {
         score += negativeSignals.score; // Apply penalty
         signals.push(`Negative signals detected: ${negativeSignals.reasons.join(', ')}`);
         console.log('[PointFour] Heavy penalty applied for non-fashion signals:', negativeSignals);
+    }
+    
+    // Check 1.6: Modern fashion website patterns (CSS classes, IDs, data attributes)
+    const modernFashionPatterns = detectModernFashionPatterns();
+    if (modernFashionPatterns.score > 0) {
+        score += modernFashionPatterns.score;
+        fashionSpecificScore += modernFashionPatterns.fashionScore;
+        signals.push(`Modern fashion patterns: ${modernFashionPatterns.signals.join(', ')}`);
     }
     
     // Check 2: Structured data (Schema.org)
@@ -272,7 +309,7 @@ function detectFashionSite() {
                     signals.push('Product schema with clothing category');
                 }
             }
-        } catch (e) {
+        } catch {
             // Ignore parsing errors
         }
     }
@@ -281,7 +318,7 @@ function detectFashionSite() {
     const cartElements = CONFIG.FASHION_SIGNALS.CART_SELECTORS.filter(selector => {
         try {
             return document.querySelector(selector) !== null;
-        } catch (e) {
+        } catch {
             return false;
         }
     });
@@ -291,23 +328,46 @@ function detectFashionSite() {
         signals.push(`Found shopping cart elements (${cartElements.length})`);
     }
     
-    // Check 4: Product page indicators (REQUIRED for fashion sites)
+    // Check 4: Enhanced product page indicators (REQUIRED for fashion sites)
     const productElements = CONFIG.FASHION_SIGNALS.PRODUCT_INDICATORS.filter(selector => {
         try {
             return document.querySelector(selector) !== null;
-        } catch (e) {
+        } catch {
             return false;
         }
     });
     const productElementsCount = productElements.length;
     
-    if (productElementsCount >= 3) {
+    // Additional STRICT fashion-specific product indicators only
+    const fashionSpecificProductIndicators = [
+        '[data-testid*="size"]', '[data-testid*="color"]', '[data-testid*="variant"]',
+        '[class*="Size"]', '[class*="Color"]', '[class*="Variant"]',
+        '[class*="SizeChart"]', '[class*="FitGuide"]', '[class*="Measurements"]',
+        'button[aria-label*="size"]', 'button[aria-label*="color"]',
+        'select[name*="size"]', 'select[name*="color"]', 'select[name*="variant"]'
+    ];
+    
+    const fashionSpecificProductElements = fashionSpecificProductIndicators.filter(selector => {
+        try {
+            return document.querySelector(selector) !== null;
+        } catch {
+            return false;
+        }
+    });
+    
+    const totalProductElements = productElementsCount + fashionSpecificProductElements.length;
+    
+    if (totalProductElements >= 3) {
         score += CONFIG.DETECTION_THRESHOLDS.PRODUCT_PAGE_BONUS;
-        signals.push(`Found product page elements (${productElementsCount})`);
-    } else if (productElementsCount === 0) {
+        signals.push(`Found product page elements (${totalProductElements})`);
+    } else if (totalProductElements === 0) {
         // Lightly penalize sites with no product indicators
         score -= 1;
         signals.push('No product page indicators found');
+    } else {
+        // Partial credit for some product indicators
+        score += 1;
+        signals.push(`Found some product indicators (${totalProductElements})`);
     }
     
     // Check 5: URL analysis
@@ -322,7 +382,7 @@ function detectFashionSite() {
         signals.push(`URL contains fashion terms: ${urlMatches.join(', ')}`);
     }
     
-    // Check 6: Page content analysis (visible text)
+    // Check 6: Enhanced page content analysis (visible text)
     const pageText = document.body?.innerText?.toLowerCase() || '';
     const pageTextSample = pageText.substring(0, 5000); // Check first 5000 chars for performance
     
@@ -331,17 +391,38 @@ function detectFashionSite() {
         'size guide', 'size chart', 'fit guide', 'measurements',
         'true to size', 'runs small', 'runs large', 'model wears',
         'model is wearing', 'length:', 'bust:', 'waist:', 'hip:',
-        'small', 'medium', 'large', 'xl', 'xxl', 'xs'
+        'small', 'medium', 'large', 'xl', 'xxl', 'xs', 'xxxs', 'xxxl',
+        'petite', 'tall', 'regular', 'slim', 'relaxed', 'oversized',
+        'chest', 'shoulder', 'sleeve', 'inseam', 'rise'
     ];
     
     const sizeMatches = sizeIndicators.filter(indicator => 
         pageTextSample.includes(indicator)
     );
     
-    if (sizeMatches.length >= 2) {
+    if (sizeMatches.length >= 3) { // Increased from 2 to 3 for strictness
         score += 2;
         fashionSpecificScore += 2; // Count as fashion-specific
         signals.push('Found size-related content');
+    }
+    
+    // Look for fashion-specific terminology (STRICT - require multiple matches)
+    const fashionTerms = [
+        'collection', 'season', 'spring', 'summer', 'fall', 'winter', 'autumn',
+        'new arrivals', 'bestsellers', 'trending', 'featured', 'editorial',
+        'styling', 'outfit', 'look', 'ensemble', 'wardrobe', 'capsule',
+        'sustainable', 'eco-friendly', 'organic', 'ethical', 'conscious',
+        'limited edition', 'exclusive', 'collaboration', 'designer'
+    ];
+    
+    const fashionTermMatches = fashionTerms.filter(term => 
+        pageTextSample.includes(term)
+    );
+    
+    if (fashionTermMatches.length >= 3) { // Increased from 2 to 3 for strictness
+        score += 1;
+        fashionSpecificScore += 1;
+        signals.push('Found fashion terminology');
     }
     
     // Check 7: Look for "Add to Cart" or similar buttons
@@ -387,17 +468,21 @@ function detectFashionSite() {
         signals.push('Found fashion-related images');
     }
     
-    // Enhanced detection logic: Require fashion-specific signals for ambiguous sites
-    const isClearFashionSite = score >= CONFIG.DETECTION_THRESHOLDS.HIGH_CONFIDENCE && fashionSpecificScore >= 3;
+    // Enhanced detection logic: Strict but dynamic fashion site detection
+    const isClearFashionSite = score >= CONFIG.DETECTION_THRESHOLDS.HIGH_CONFIDENCE && fashionSpecificScore >= 3; // Back to 3 for strictness
     const isAmbiguousSite = score >= CONFIG.DETECTION_THRESHOLDS.MIN_SCORE && score < CONFIG.DETECTION_THRESHOLDS.HIGH_CONFIDENCE;
-    const hasStrongFashionSignals = fashionSpecificScore >= 2;
+    const hasStrongFashionSignals = fashionSpecificScore >= 2; // Back to 2 for strictness
+    const hasVeryStrongFashionSignals = fashionSpecificScore >= 4; // Back to 4 for strictness
     
-    // Special case: If we have very strong fashion signals, ignore penalties
-    const hasVeryStrongFashionSignals = fashionSpecificScore >= 4;
+    // Additional check: Only for sites with strong fashion signals AND good product indicators
+    const hasGoodProductIndicators = totalProductElements >= 3; // Increased threshold
+    const hasModerateFashionSignals = fashionSpecificScore >= 2; // Increased threshold
+    const isLikelyFashionWithProducts = hasGoodProductIndicators && hasModerateFashionSignals && score >= 6; // Increased score requirement
     
     // For ambiguous sites, require strong fashion-specific signals
     // But if we have very strong fashion signals, always show widget regardless of penalties
-    const isFashionSite = isClearFashionSite || (isAmbiguousSite && hasStrongFashionSignals) || hasVeryStrongFashionSignals;
+    // Only show widget if we have good product indicators with strong fashion signals
+    const isFashionSite = isClearFashionSite || (isAmbiguousSite && hasStrongFashionSignals) || hasVeryStrongFashionSignals || isLikelyFashionWithProducts;
     
     // Log detection results
     console.log('[PointFour] Detection Score:', score);
@@ -408,6 +493,9 @@ function detectFashionSite() {
         isAmbiguousSite,
         hasStrongFashionSignals,
         hasVeryStrongFashionSignals,
+        hasGoodProductIndicators,
+        hasModerateFashionSignals,
+        isLikelyFashionWithProducts,
         finalDecision: isFashionSite
     });
     
@@ -611,13 +699,14 @@ function shouldRunOnThisPage() {
     const url = window.location.href.toLowerCase();
     const hostname = window.location.hostname.toLowerCase();
     
-    // Skip common non-fashion domains
+    // Skip common non-fashion domains (including PointFour itself)
     const skipDomains = [
         'google.com', 'youtube.com', 'facebook.com', 'twitter.com', 'instagram.com',
         'amazon.com', 'ebay.com', // E-commerce but too generic
         'github.com', 'stackoverflow.com', 'reddit.com', 'wikipedia.org',
         'news.ycombinator.com', 'medium.com', 'linkedin.com',
         'paypal.com', 'stripe.com', 'checkout.com',
+        'pointfour.in', 'pointfour.com', 'www.pointfour.in', 'www.pointfour.com', // PointFour domains
         'localhost:3000', 'localhost:3001', 'localhost:8080' // Development
     ];
     
@@ -703,6 +792,97 @@ function detectNegativeSignals(metaContent, pageTitle, pageText) {
         categories: detectedCategories
     };
 }
+
+// ========================================
+// MODERN FASHION PATTERN DETECTION
+// ========================================
+
+function detectModernFashionPatterns() {
+    let score = 0;
+    let fashionScore = 0;
+    const signals = [];
+    
+    // Check for STRICT fashion-specific CSS class patterns (not generic e-commerce)
+    const fashionSpecificClassPatterns = [
+        // Fashion-specific classes only
+        '[class*="fashion"]', '[class*="style"]', '[class*="outfit"]',
+        '[class*="wardrobe"]', '[class*="closet"]', '[class*="lookbook"]',
+        '[class*="collection"]', '[class*="catalog"]', '[class*="catalogue"]',
+        
+        // Size and variant patterns (fashion-specific)
+        '[class*="SizeSelector"]', '[class*="VariantSelector"]', '[class*="ColorSwatch"]',
+        '[class*="SizeChart"]', '[class*="FitGuide"]', '[class*="Measurements"]',
+        '[class*="SizeGuide"]', '[class*="FitChart"]', '[class*="SizeTable"]'
+    ];
+    
+    const foundFashionClassPatterns = fashionSpecificClassPatterns.filter(selector => {
+        try {
+            return document.querySelector(selector) !== null;
+        } catch {
+            return false;
+        }
+    });
+    
+    if (foundFashionClassPatterns.length > 0) {
+        score += Math.min(foundFashionClassPatterns.length, 2); // Reduced from 3
+        fashionScore += Math.min(foundFashionClassPatterns.length, 2);
+        signals.push(`Fashion-specific CSS patterns (${foundFashionClassPatterns.length})`);
+    }
+    
+    // Check for STRICT fashion-specific data attributes only
+    const fashionSpecificDataPatterns = [
+        '[data-testid*="size"]', '[data-testid*="color"]', '[data-testid*="variant"]',
+        '[data-size]', '[data-color]', '[data-variant]',
+        '[data-fit]', '[data-measurement]', '[data-size-chart]'
+    ];
+    
+    const foundFashionDataPatterns = fashionSpecificDataPatterns.filter(selector => {
+        try {
+            return document.querySelector(selector) !== null;
+        } catch {
+            return false;
+        }
+    });
+    
+    if (foundFashionDataPatterns.length > 0) {
+        score += Math.min(foundFashionDataPatterns.length, 1); // Reduced scoring
+        fashionScore += Math.min(foundFashionDataPatterns.length, 1);
+        signals.push(`Fashion-specific data attributes (${foundFashionDataPatterns.length})`);
+    }
+    
+    // Check for STRICT fashion-specific ARIA patterns only
+    const fashionSpecificAriaPatterns = [
+        '[aria-label*="size"]', '[aria-label*="color"]', '[aria-label*="variant"]',
+        '[aria-label*="fit"]', '[aria-label*="measurement"]', '[aria-label*="size chart"]',
+        '[role="button"][aria-label*="size"]', '[role="button"][aria-label*="color"]'
+    ];
+    
+    const foundFashionAriaPatterns = fashionSpecificAriaPatterns.filter(selector => {
+        try {
+            return document.querySelector(selector) !== null;
+        } catch {
+            return false;
+        }
+    });
+    
+    if (foundFashionAriaPatterns.length > 0) {
+        score += Math.min(foundFashionAriaPatterns.length, 1); // Reduced scoring
+        fashionScore += Math.min(foundFashionAriaPatterns.length, 1);
+        signals.push(`Fashion-specific ARIA patterns (${foundFashionAriaPatterns.length})`);
+    }
+    
+    return {
+        score,
+        fashionScore,
+        signals
+    };
+}
+
+const siteDetectionModule = {
+    detectFashionSite,
+    detectPageType,
+    shouldRunOnThisPage
+};
 
 
 
@@ -2157,53 +2337,416 @@ function extractSizeGuideFromPage() {
 // TABLE DATA EXTRACTION
 // ========================================
 
-function extractTableData(table) {
+/**
+ * Enhanced table data extraction with BODY vs GARMENT measurement detection
+ */
+function extractEnhancedTableData(table) {
     const data = {
         measurements: {},
-        confidence: 'low'
+        measurementType: 'unknown',
+        sizeSystem: 'US',
+        confidence: 'low',
+        extractionNotes: []
     };
-    
+
     if (!table || table.tagName !== 'TABLE') return data;
-    
+
     try {
         const rows = table.querySelectorAll('tr');
-        if (rows.length < 2) return data; // Need at least header + 1 data row
+        if (rows.length < 2) return data;
+
+        // Find header row (usually first row, but check for common patterns)
+        let headerRowIndex = 0;
+        const firstRow = rows[0];
+        const firstRowCells = Array.from(firstRow.querySelectorAll('th, td'));
         
-        // Try to identify header row and data structure
-        const headerRow = rows[0];
+        // Check if first row looks like headers
+        const firstRowText = firstRowCells.map(cell => cell.textContent.trim().toLowerCase()).join(' ');
+        const hasSizeKeywords = ['size', 'bust', 'waist', 'hip', 'chest', 'shoulder'].some(keyword => 
+            firstRowText.includes(keyword)
+        );
+
+        if (!hasSizeKeywords && rows.length > 1) {
+            // Check second row
+            const secondRow = rows[1];
+            const secondRowCells = Array.from(secondRow.querySelectorAll('th, td'));
+            const secondRowText = secondRowCells.map(cell => cell.textContent.trim().toLowerCase()).join(' ');
+            const secondRowHasKeywords = ['size', 'bust', 'waist', 'hip', 'chest', 'shoulder'].some(keyword => 
+                secondRowText.includes(keyword)
+            );
+            
+            if (secondRowHasKeywords) {
+                headerRowIndex = 1;
+            }
+        }
+
+        const headerRow = rows[headerRowIndex];
         const headers = Array.from(headerRow.querySelectorAll('th, td')).map(cell => 
             cell.textContent.trim().toLowerCase()
         );
-        
-        // Check if this looks like a size chart
-        const sizeIndicators = ['size', 'bust', 'waist', 'hip', 'chest', 'shoulder', 'length', 'xs', 'sm', 'md', 'lg', 'xl'];
+
+        // Enhanced size indicators
+        const sizeIndicators = [
+            'size', 'bust', 'waist', 'hip', 'chest', 'shoulder', 'length', 'inseam',
+            'xs', 'sm', 'md', 'lg', 'xl', 'xxl', 'xxxl', 'petite', 'regular', 'tall'
+        ];
+
         const isSizeChart = headers.some(header => 
             sizeIndicators.some(indicator => header.includes(indicator))
         );
-        
+
         if (isSizeChart) {
+            console.log('[PointFour] Processing size chart table with headers:', headers);
+            
+            // Determine size system from headers
+            data.sizeSystem = detectSizeSystemFromHeaders(headers);
+            
+            // Detect measurement type from headers and context
+            data.measurementType = detectMeasurementType(headers, table);
+            data.extractionNotes.push(`Detected measurement type: ${data.measurementType}`);
+            
             // Extract measurements from data rows
-            for (let i = 1; i < Math.min(rows.length, 10); i++) { // Limit to first 10 rows
+            for (let i = headerRowIndex + 1; i < Math.min(rows.length, 15); i++) {
                 const cells = Array.from(rows[i].querySelectorAll('td, th')).map(cell => 
                     cell.textContent.trim()
                 );
-                
+
                 if (cells.length >= 2) {
-                    const sizeOrMeasurement = cells[0];
-                    const value = cells[1];
-                    
-                    if (sizeOrMeasurement && value) {
-                        data.measurements[sizeOrMeasurement] = value;
-                        data.confidence = 'medium';
+                    const sizeOrMeasurement = cells[0].toLowerCase().trim();
+                    const measurements = {};
+
+                    // Parse each measurement column with type classification
+                    for (let j = 1; j < Math.min(cells.length, headers.length); j++) {
+                        const header = headers[j] || `col_${j}`;
+                        const value = cells[j];
+                        
+                        if (value && value !== '-') {
+                            // Extract numeric value
+                            const numericValue = extractNumericValue(value);
+                            if (numericValue !== null) {
+                                // Classify measurement type
+                                const measurementType = classifyMeasurementType(header, data.measurementType);
+                                if (measurementType === 'body') {
+                                    measurements.body = measurements.body || {};
+                                    measurements.body[header] = numericValue;
+                                } else if (measurementType === 'garment') {
+                                    measurements.garment = measurements.garment || {};
+                                    measurements.garment[header] = numericValue;
+                                } else {
+                                    // Legacy fallback for unclassified measurements
+                                    measurements[header] = numericValue;
+                                }
+                            }
+                        }
+                    }
+
+                    if (Object.keys(measurements).length > 0) {
+                        data.measurements[sizeOrMeasurement] = measurements;
+                        data.confidence = 'high';
                     }
                 }
             }
         }
     } catch (error) {
-        console.log('[PointFour] Error extracting table data:', error);
+        console.log('[PointFour] Error extracting enhanced table data:', error);
+    }
+
+    return data;
+}
+
+/**
+ * Extract measurements from text using patterns
+ */
+function extractMeasurementsFromText(text, patterns) {
+    const data = {
+        measurements: {},
+        confidence: 'low'
+    };
+
+    for (const pattern of patterns) {
+        const matches = [...text.matchAll(pattern)];
+        for (const match of matches) {
+            if (match[1] && match[2]) {
+                const key = match[1].toLowerCase().trim();
+                const value = extractNumericValue(match[2]);
+                if (value !== null) {
+                    data.measurements[key] = value;
+                    data.confidence = 'medium';
+                }
+            }
+        }
+    }
+
+    return data;
+}
+
+/**
+ * Extract sizing advice from text
+ */
+function extractSizingAdvice(text) {
+    const advice = [];
+    
+    const advicePatterns = [
+        /runs?\s+(small|large|true\s+to\s+size)/gi,
+        /model\s+(?:is\s+)?wearing\s+size\s+(\w+)/gi,
+        /model\s+(?:is\s+)?(\d+(?:'\s*\d+")?\s*tall)/gi,
+        /recommend\s+sizing\s+(up|down)/gi,
+        /suggest\s+sizing\s+(up|down)/gi,
+        /we\s+recommend\s+sizing\s+(up|down)/gi,
+        /consider\s+sizing\s+(up|down)/gi,
+        /size\s+(up|down)\s+for\s+(.+)fit/gi,
+        /runs?\s+(tight|loose|narrow|wide)/gi
+    ];
+
+    for (const pattern of advicePatterns) {
+        const matches = text.match(pattern);
+        if (matches) {
+            advice.push(...matches);
+        }
+    }
+
+    return advice;
+}
+
+/**
+ * Extract model information
+ */
+function extractModelInfo(text) {
+    const modelInfo = {};
+
+    const modelPatterns = [
+        /model\s+(?:is\s+)?wearing\s+size\s+(\w+)/gi,
+        /model\s+(?:is\s+)?(\d+(?:'\s*\d+")?\s*tall)/gi,
+        /model\s+(?:is\s+)?(\d+(?:'\s*\d+")?\s*and\s+\d+\s*lbs)/gi,
+        /model\s+(?:is\s+)?(\d+(?:'\s*\d+")?\s*and\s+\d+\s*kg)/gi
+    ];
+
+    for (const pattern of modelPatterns) {
+        const match = text.match(pattern);
+        if (match) {
+            if (pattern.source.includes('size')) {
+                modelInfo.size = match[1];
+            } else if (pattern.source.includes('tall')) {
+                modelInfo.height = match[1];
+            } else if (pattern.source.includes('lbs') || pattern.source.includes('kg')) {
+                modelInfo.measurements = match[1];
+            }
+        }
+    }
+
+    return modelInfo;
+}
+
+/**
+ * Extract numeric value from text
+ */
+function extractNumericValue(text) {
+    // Remove common non-numeric characters
+    const cleaned = text.replace(/[^\d.-]/g, '');
+    const match = cleaned.match(/(\d+(?:\.\d+)?)/);
+    return match ? parseFloat(match[1]) : null;
+}
+
+/**
+ * Detect size system from measurements
+ */
+function detectSizeSystem(measurements) {
+    const sizeKeys = Object.keys(measurements);
+    
+    // Check for common size patterns
+    if (sizeKeys.some(key => ['xs', 'sm', 'md', 'lg', 'xl'].includes(key.toLowerCase()))) {
+        return 'US';
     }
     
-    return data;
+    if (sizeKeys.some(key => ['32', '34', '36', '38', '40', '42'].includes(key))) {
+        return 'EU';
+    }
+    
+    if (sizeKeys.some(key => ['6', '8', '10', '12', '14', '16'].includes(key))) {
+        return 'UK';
+    }
+    
+    return 'US'; // Default
+}
+
+/**
+ * Detect size system from table headers
+ */
+function detectSizeSystemFromHeaders(headers) {
+    const headerText = headers.join(' ').toLowerCase();
+    
+    if (headerText.includes('eu') || headerText.includes('european')) {
+        return 'EU';
+    }
+    
+    if (headerText.includes('uk') || headerText.includes('british')) {
+        return 'UK';
+    }
+    
+    if (headerText.includes('jp') || headerText.includes('japanese')) {
+        return 'JP';
+    }
+    
+    return 'US'; // Default
+}
+
+/**
+ * Detect product type from page content
+ */
+function detectProductType() {
+    const text = document.body.innerText.toLowerCase();
+    
+    if (text.includes('jeans') || text.includes('pants') || text.includes('trousers') || text.includes('shorts')) {
+        return 'bottoms';
+    }
+    
+    if (text.includes('shirt') || text.includes('blouse') || text.includes('top') || text.includes('sweater')) {
+        return 'tops';
+    }
+    
+    if (text.includes('dress') || text.includes('gown')) {
+        return 'dresses';
+    }
+    
+    if (text.includes('shoe') || text.includes('boot') || text.includes('sneaker')) {
+        return 'shoes';
+    }
+    
+    return 'general';
+}
+
+/**
+ * Detect measurement type from table headers and context
+ */
+function detectMeasurementType(headers, table) {
+    const headerText = headers.join(' ').toLowerCase();
+    const tableText = table.textContent.toLowerCase();
+    
+    // Check for explicit measurement type indicators
+    const bodyIndicators = [
+        'body measurement', 'body size', 'body fit', 'body dimensions',
+        'measure your body', 'body chart', 'body guide',
+        'bust', 'waist', 'hip', 'hips'
+    ];
+    
+    const garmentIndicators = [
+        'garment measurement', 'garment size', 'garment fit', 'garment dimensions',
+        'measure the garment', 'garment chart', 'garment guide',
+        'chest', 'length', 'inseam', 'shoulder', 'sleeve', 'width', 'rise'
+    ];
+    
+    const mixedIndicators = [
+        'both', 'body and garment', 'measurements', 'size guide',
+        'fit guide', 'sizing chart'
+    ];
+    
+    // Check table context for measurement type
+    const hasBodyIndicators = bodyIndicators.some(indicator => 
+        headerText.includes(indicator) || tableText.includes(indicator)
+    );
+    
+    const hasGarmentIndicators = garmentIndicators.some(indicator => 
+        headerText.includes(indicator) || tableText.includes(indicator)
+    );
+    
+    const hasMixedIndicators = mixedIndicators.some(indicator => 
+        headerText.includes(indicator) || tableText.includes(indicator)
+    );
+    
+    // Determine measurement type based on indicators
+    if (hasBodyIndicators && hasGarmentIndicators) {
+        return 'mixed';
+    } else if (hasBodyIndicators) {
+        return 'body';
+    } else if (hasGarmentIndicators) {
+        return 'garment';
+    } else if (hasMixedIndicators) {
+        return 'mixed';
+    }
+    
+    // Fallback: analyze header content
+    const bodyHeaders = ['bust', 'waist', 'hip', 'hips'];
+    const garmentHeaders = ['chest', 'length', 'inseam', 'shoulder', 'sleeve', 'width', 'rise'];
+    
+    const bodyHeaderCount = headers.filter(header => 
+        bodyHeaders.some(bodyHeader => header.includes(bodyHeader))
+    ).length;
+    
+    const garmentHeaderCount = headers.filter(header => 
+        garmentHeaders.some(garmentHeader => header.includes(garmentHeader))
+    ).length;
+    
+    if (bodyHeaderCount > garmentHeaderCount) {
+        return 'body';
+    } else if (garmentHeaderCount > bodyHeaderCount) {
+        return 'garment';
+    } else if (bodyHeaderCount > 0 && garmentHeaderCount > 0) {
+        return 'mixed';
+    }
+    
+    return 'unknown';
+}
+
+/**
+ * Classify individual measurement type based on header and context
+ */
+function classifyMeasurementType(header, contextType) {
+    const headerLower = header.toLowerCase();
+    
+    // Body measurement indicators
+    const bodyMeasurements = [
+        'bust', 'waist', 'hip', 'hips', 'body', 'person'
+    ];
+    
+    // Garment measurement indicators
+    const garmentMeasurements = [
+        'chest', 'length', 'inseam', 'shoulder', 'sleeve', 'width', 'rise',
+        'garment', 'item', 'product', 'clothing'
+    ];
+    
+    // Check for body measurements
+    if (bodyMeasurements.some(measurement => headerLower.includes(measurement))) {
+        return 'body';
+    }
+    
+    // Check for garment measurements
+    if (garmentMeasurements.some(measurement => headerLower.includes(measurement))) {
+        return 'garment';
+    }
+    
+    // Use context type as fallback
+    if (contextType === 'body' || contextType === 'garment') {
+        return contextType;
+    }
+    
+    return 'unknown';
+}
+
+/**
+ * Extract brand from page
+ */
+function extractBrandFromPage() {
+    // Try to extract brand from common locations
+    const brandSelectors = [
+        'h1',
+        '.brand',
+        '.product-brand',
+        '[data-testid="brand"]',
+        '.product-title',
+        '.product-name'
+    ];
+    
+    for (const selector of brandSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+            const text = element.textContent.trim();
+            if (text && text.length < 50) { // Reasonable brand name length
+                return text;
+            }
+        }
+    }
+    
+    return 'Unknown';
 }
 
 // ========================================
@@ -2839,10 +3382,9 @@ function extractAllProductData() {
         
         // Detailed product information
         materials: extractMaterialsFromPage(),
-        sizeGuide: extractSizeGuideFromPage(),
         
         // Enhanced size chart extraction for tailored recommendations
-        enhancedSizeChart: extractEnhancedSizeChart(),
+        sizeGuide: extractEnhancedSizeChart(),
         
         // Enhanced category detection
         categoryDetection: detectProductCategory(),
@@ -2894,38 +3436,86 @@ function generateProductFingerprint(productData) {
 }
 
 /**
- * Enhanced size chart extraction with improved accuracy
+ * Enhanced size chart extraction with improved accuracy and BODY vs GARMENT measurement classification
  */
 function extractEnhancedSizeChart() {
     console.log('[PointFour] Starting enhanced size chart extraction...');
+    console.log('[PointFour] Current URL:', window.location.href);
     
     const sizeChart = {
-        brand: 'Unknown',
-        productType: 'general',
+        brand: extractBrandFromPage(),
+        productType: detectProductType(),
         measurements: {},
-        sizeSystem: 'US',
+        measurementType: 'unknown',
+        sizeSystem: 'US', // Default to US
         confidence: 'low',
         source: window.location.href,
         sizingAdvice: [],
-        modelInfo: {}
+        modelInfo: {},
+        extractionNotes: []
     };
+    
+    console.log('[PointFour] Initial size chart data:', {
+        brand: sizeChart.brand,
+        productType: sizeChart.productType,
+        url: sizeChart.source
+    });
 
     // Enhanced selectors for better coverage
     const sizeChartSelectors = [
-        '.size-guide', '.size-chart', '.sizing-info', '.fit-guide',
-        '[data-tab="sizing"]', '[data-tab="size-guide"]',
-        'table[class*="size"]', 'table[id*="size"]',
-        'a[href*="size-guide"]', 'button[class*="size-guide"]',
-        // Popup/modal selectors
-        '.modal', '.popup', '.overlay', '.lightbox',
-        '[class*="modal"]', '[class*="popup"]', '[class*="overlay"]',
-        '[class*="lightbox"]', '[class*="drawer"]',
-        // Size guide specific popup selectors
-        '.size-guide-modal', '.size-chart-popup', '.sizing-modal',
-        '[data-modal="size-guide"]', '[data-popup="size-guide"]',
-        // Details and size guide links
-        'a[href*="details"]', 'a[href*="size"]', 'button[class*="details"]',
-        'a[class*="details"]', 'button[class*="size"]',
+        // Primary size chart containers
+        '.size-guide',
+        '.size-chart',
+        '.sizing-info',
+        '.fit-guide',
+        '.measurement-guide',
+        '.size-table',
+        '.sizing-table',
+        '.measurement-table',
+        
+        // Shopify-specific selectors
+        '.product-single__description',
+        '.product-description',
+        '.product-content',
+        '.product-details',
+        '.product-info',
+        '.product-tabs',
+        '.tab-content',
+        '.product-tab',
+        
+        // Modal and popup selectors
+        '[data-tab="sizing"]',
+        '[data-tab="size-guide"]',
+        '[data-tab="measurements"]',
+        '[data-tab="details"]',
+        '.modal-size-guide',
+        '.popup-size-guide',
+        '[class*="modal"] [class*="size"]',
+        '[class*="popup"] [class*="size"]',
+        
+        // Table-based selectors
+        'table[class*="size"]',
+        'table[id*="size"]',
+        'table[class*="measurement"]',
+        'table[class*="chart"]',
+        'table[class*="guide"]',
+        '.size-table table',
+        '.sizing-chart table',
+        '.measurement-table table',
+        
+        // Link and button selectors
+        'a[href*="size-guide"]',
+        'a[href*="sizing"]',
+        'a[href*="measurements"]',
+        'button[class*="size-guide"]',
+        'button[class*="sizing"]',
+        'button[class*="measurements"]',
+        
+        // Text-based selectors for size information
+        '[class*="size"]',
+        '[class*="measurement"]',
+        '[class*="fit"]',
+        
         // Generic table selector (fallback)
         'table'
     ];
@@ -2934,155 +3524,50 @@ function extractEnhancedSizeChart() {
     const sizeKeywords = [
         'xs', 'small', 'medium', 'large', 'xl', 'xxl', 'xxxl',
         'bust', 'waist', 'hip', 'chest', 'shoulder', 'length', 'inseam',
-        'size', 'measurement', 'fit', 'sizing', 'chart', 'guide'
+        'size', 'measurement', 'fit', 'sizing', 'chart', 'guide',
+        'petite', 'regular', 'tall', 'plus', 'curve',
+        // Numeric sizes
+        '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
+        // Common size terms
+        'inches', 'cm', 'centimeters', 'measurements', 'dimensions',
+        // FRAME-specific terms
+        'palazzo', 'jeans', 'denim', 'waist', 'rise', 'inseam'
     ];
 
-    // First, try to extract size guide data from DOM inspection (including hidden content)
-    console.log('[PointFour] Looking for size guide content in DOM (including hidden elements)...');
-    
-    // Look for ALL tables in the DOM, including hidden ones
+    // Enhanced measurement patterns
+    const measurementPatterns = [
+        // Standard measurements with units
+        /(\d+(?:\.\d+)?)\s*(?:cm|inch|inches|in|")/gi,
+        /(\d+(?:\.\d+)?)\s*(?:cm|inch|inches|in|")\s*-\s*(\d+(?:\.\d+)?)\s*(?:cm|inch|inches|in|")/gi,
+        
+        // Size-specific patterns
+        /size\s+(\w+):\s*([\d\-\s]+)/gi,
+        /(\w+):\s*(\d+(?:\.\d+)?)\s*(?:cm|inch|inches|in|")?/gi,
+        
+        // Range patterns
+        /(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*(?:cm|inch|inches|in|")/gi,
+        
+        // Model info patterns
+        /model\s+(?:is\s+)?wearing\s+size\s+(\w+)/gi,
+        /model\s+(?:is\s+)?(\d+(?:'\s*\d+")?\s*tall)/gi,
+        /model\s+(?:is\s+)?(\d+(?:'\s*\d+")?\s*and\s+\d+\s*lbs)/gi
+    ];
+
+    // First, let's check what tables exist on the page
     const allTables = document.querySelectorAll('table');
-    console.log(`[PointFour] Found ${allTables.length} tables in DOM`);
+    console.log(`[PointFour] Found ${allTables.length} total tables on page`);
     
-    for (const table of allTables) {
+    for (let i = 0; i < Math.min(allTables.length, 5); i++) {
+        const table = allTables[i];
         const tableText = (table.innerText || table.textContent || '').toLowerCase();
-        const sizeKeywords = ['size', 'bust', 'waist', 'hip', 'chest', 'shoulder', 'length', 'xs', 'sm', 'md', 'lg', 'xl', 'measurement'];
-        
-        if (sizeKeywords.some(keyword => tableText.includes(keyword))) {
-            console.log(`[PointFour] ✅ Found size chart table in DOM`);
-            console.log(`[PointFour] Table content preview:`, tableText.substring(0, 200));
-            
-            const tableData = extractTableData(table);
-            if (tableData.measurements && Object.keys(tableData.measurements).length > 0) {
-                Object.assign(sizeChart.measurements, tableData.measurements);
-                sizeChart.confidence = 'high';
-                console.log(`[PointFour] ✅ Added ${Object.keys(tableData.measurements).length} measurements from DOM table`);
-            }
-        }
-    }
-    
-    // Look for size guide containers (including hidden ones)
-    const sizeGuideContainers = document.querySelectorAll('.size-guide, .size-chart, .sizing-info, .fit-guide, [data-tab="sizing"], [data-tab="size-guide"], .modal-size-guide, .sizing-table, .measurement-table, [class*="size-guide"], [class*="size-chart"]');
-    console.log(`[PointFour] Found ${sizeGuideContainers.length} size guide containers in DOM`);
-    
-    for (const container of sizeGuideContainers) {
-        const containerText = (container.innerText || container.textContent || '').toLowerCase();
-        if (containerText.includes('size') || containerText.includes('measurement') || containerText.includes('waist') || containerText.includes('hip')) {
-            console.log(`[PointFour] ✅ Found size guide container in DOM`);
-            console.log(`[PointFour] Container content preview:`, containerText.substring(0, 200));
-            
-            const containerData = extractSizeDataFromElement(container);
-            if (containerData.measurements && Object.keys(containerData.measurements).length > 0) {
-                Object.assign(sizeChart.measurements, containerData.measurements);
-                sizeChart.confidence = 'high';
-                console.log(`[PointFour] ✅ Added ${Object.keys(containerData.measurements).length} measurements from DOM container`);
-            }
-            if (containerData.sizingAdvice && containerData.sizingAdvice.length > 0) {
-                sizeChart.sizingAdvice.push(...containerData.sizingAdvice);
-                console.log(`[PointFour] ✅ Added ${containerData.sizingAdvice.length} sizing advice items from DOM container`);
-            }
-        }
-    }
-    
-    // Only perform flash extraction if DOM inspection didn't find any size data
-    const hasSizeData = Object.keys(sizeChart.measurements).length > 0;
-    console.log(`[PointFour] DOM inspection found ${Object.keys(sizeChart.measurements).length} measurements`);
-    
-    if (!hasSizeData) {
-        console.log(`[PointFour] No size data found in DOM, trying flash extraction...`);
-        
-        // Look for size guide buttons and perform flash extraction
-        const sizeGuideButtons = document.querySelectorAll('button[class*="size-guide"], button[class*="details"], a[class*="details"], a[class*="size"], button[class*="size"], [data-tab="sizing"], [data-tab="size-guide"]');
-        
-        console.log(`[PointFour] Found ${sizeGuideButtons.length} potential size guide buttons`);
-        
-        for (const button of sizeGuideButtons) {
-            const buttonText = (button.innerText || button.textContent || '').toLowerCase();
-            console.log(`[PointFour] Checking button: "${buttonText}"`);
-            
-            if (buttonText.includes('size') || buttonText.includes('guide') || buttonText.includes('details')) {
-                console.log(`[PointFour] ✅ Found size guide button: "${buttonText}"`);
-                
-                try {
-                    // Perform invisible extraction: hide popup, extract, restore
-                    console.log(`[PointFour] Performing invisible extraction...`);
-                    
-                    // Click the button to open the size guide
-                    button.click();
-                    console.log(`[PointFour] Clicked size guide button`);
-                    
-                    // Wait a very short time for the popup to load
-                    setTimeout(() => {
-                        console.log(`[PointFour] Looking for size guide popup...`);
-                        
-                        // Look for the size guide popup
-                        const sizeGuidePopups = document.querySelectorAll('.modal, .popup, .overlay, .lightbox, [class*="modal"], [class*="popup"], [class*="overlay"], [class*="lightbox"], [class*="drawer"], [class*="dialog"], [role="dialog"], [aria-modal="true"]');
-                        
-                        for (const popup of sizeGuidePopups) {
-                            const isVisible = popup.offsetParent !== null && 
-                                            popup.style.display !== 'none' && 
-                                            popup.style.visibility !== 'hidden' &&
-                                            popup.offsetWidth > 0 && 
-                                            popup.offsetHeight > 0;
-                            
-                            if (isVisible) {
-                                const popupText = (popup.innerText || popup.textContent || '').toLowerCase();
-                                if (popupText.includes('size') || popupText.includes('measurement') || popupText.includes('waist') || popupText.includes('hip')) {
-                                    console.log(`[PointFour] ✅ Found size guide popup with measurements`);
-                                    console.log(`[PointFour] Popup content preview:`, popup.innerText.substring(0, 500));
-                                    
-                                    // Hide the popup immediately to prevent user disruption
-                                    const originalDisplay = popup.style.display;
-                                    const originalVisibility = popup.style.visibility;
-                                    const originalOpacity = popup.style.opacity;
-                                    
-                                    popup.style.display = 'none';
-                                    popup.style.visibility = 'hidden';
-                                    popup.style.opacity = '0';
-                                    
-                                    console.log(`[PointFour] Hidden popup to prevent user disruption`);
-                                    
-                                    // Extract data from the hidden popup
-                                    const popupData = extractSizeDataFromElement(popup);
-                                    if (popupData.measurements && Object.keys(popupData.measurements).length > 0) {
-                                        Object.assign(sizeChart.measurements, popupData.measurements);
-                                        sizeChart.confidence = 'high';
-                                        console.log(`[PointFour] ✅ Added ${Object.keys(popupData.measurements).length} measurements from popup`);
-                                    }
-                                    if (popupData.sizingAdvice && popupData.sizingAdvice.length > 0) {
-                                        sizeChart.sizingAdvice.push(...popupData.sizingAdvice);
-                                        console.log(`[PointFour] ✅ Added ${popupData.sizingAdvice.length} sizing advice items from popup`);
-                                    }
-                                    
-                                    // Close the popup completely to restore original state
-                                    const closeButton = popup.querySelector('button[aria-label="Close"], .close, [class*="close"], [class*="dismiss"], [aria-label="close"]');
-                                    if (closeButton) {
-                                        closeButton.click();
-                                        console.log(`[PointFour] Closed size guide popup via close button`);
-                                    } else {
-                                        // Try pressing Escape key
-                                        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-                                        console.log(`[PointFour] Attempted to close popup with Escape key`);
-                                    }
-                                    
-                                    break;
-                                }
-                            }
-                        }
-                    }, 50); // Even shorter delay - 50ms for popup to load
-                    
-                } catch (error) {
-                    console.log('[PointFour] Error during invisible extraction:', error);
-                }
-            }
-        }
-    } else {
-        console.log(`[PointFour] Size data already found in DOM, skipping flash extraction`);
+        console.log(`[PointFour] Table ${i + 1} preview:`, tableText.substring(0, 100));
     }
 
-    // Process each selector for existing content
+    // Process each selector
+    console.log('[PointFour] Processing size chart selectors...');
     for (const selector of sizeChartSelectors) {
         const elements = document.querySelectorAll(selector);
+        console.log(`[PointFour] Selector "${selector}" found ${elements.length} elements`);
         
         for (const element of elements) {
             const text = (element.innerText || element.textContent || '').toLowerCase();
@@ -3092,33 +3577,63 @@ function extractEnhancedSizeChart() {
             
             if (containsSizeInfo) {
                 console.log(`[PointFour] Found size chart candidate: ${selector}`);
+                console.log(`[PointFour] Element text preview:`, text.substring(0, 200));
                 
-                const elementData = extractSizeDataFromElement(element);
-                if (elementData.measurements && Object.keys(elementData.measurements).length > 0) {
-                    Object.assign(sizeChart.measurements, elementData.measurements);
-                    sizeChart.confidence = 'high';
+                // If it's a table, extract structured data
+                if (element.tagName === 'TABLE') {
+                    console.log('[PointFour] Processing table element...');
+                    const tableData = extractEnhancedTableData(element);
+                    if (tableData.measurements && Object.keys(tableData.measurements).length > 0) {
+                        Object.assign(sizeChart.measurements, tableData.measurements);
+                        sizeChart.confidence = 'high';
+                        sizeChart.sizeSystem = tableData.sizeSystem || 'US';
+                        sizeChart.measurementType = tableData.measurementType || 'unknown';
+                        sizeChart.extractionNotes.push(...tableData.extractionNotes);
+                        console.log('[PointFour] ✅ Added table measurements:', Object.keys(tableData.measurements));
+                    }
+                } else {
+                    // Extract measurements from text
+                    const textData = extractMeasurementsFromText(text, measurementPatterns);
+                    if (textData.measurements && Object.keys(textData.measurements).length > 0) {
+                        Object.assign(sizeChart.measurements, textData.measurements);
+                        sizeChart.confidence = 'medium';
+                        console.log('[PointFour] ✅ Added text measurements:', Object.keys(textData.measurements));
+                    }
                 }
-                if (elementData.sizingAdvice && elementData.sizingAdvice.length > 0) {
-                    sizeChart.sizingAdvice.push(...elementData.sizingAdvice);
-                }
+                
+                // Extract sizing advice
+                const advice = extractSizingAdvice(text);
+                sizeChart.sizingAdvice.push(...advice);
+                
+                // Extract model info
+                const modelInfo = extractModelInfo(text);
+                Object.assign(sizeChart.modelInfo, modelInfo);
             }
         }
     }
 
     // Remove duplicates from sizing advice
     sizeChart.sizingAdvice = [...new Set(sizeChart.sizingAdvice)];
+    
+    // Determine size system if not already set
+    if (sizeChart.sizeSystem === 'US') {
+        sizeChart.sizeSystem = detectSizeSystem(sizeChart.measurements);
+    }
 
     console.log('[PointFour] Enhanced size chart extraction complete:', {
         measurements: Object.keys(sizeChart.measurements).length,
+        measurementType: sizeChart.measurementType,
         confidence: sizeChart.confidence,
-        sizingAdvice: sizeChart.sizingAdvice.length
+        sizeSystem: sizeChart.sizeSystem,
+        sizingAdvice: sizeChart.sizingAdvice.length,
+        extractionNotes: sizeChart.extractionNotes
     });
 
     return sizeChart;
 }
 
 /**
- * Extract size data from any element (table or text)
+ * Extract size data from any element (table or text) - Enhanced version
  */
 function extractSizeDataFromElement(element) {
     const data = {
@@ -3128,10 +3643,10 @@ function extractSizeDataFromElement(element) {
 
     console.log(`[PointFour] Extracting size data from element: ${element.tagName}`);
 
-    // If it's a table, extract structured data
+    // If it's a table, extract structured data using enhanced extraction
     if (element.tagName === 'TABLE') {
-        console.log('[PointFour] Processing table element');
-        const tableData = extractTableData(element);
+        console.log('[PointFour] Processing table element with enhanced extraction');
+        const tableData = extractEnhancedTableData(element);
         if (tableData.measurements && Object.keys(tableData.measurements).length > 0) {
             Object.assign(data.measurements, tableData.measurements);
             console.log(`[PointFour] Found ${Object.keys(tableData.measurements).length} measurements in table`);
@@ -3143,7 +3658,7 @@ function extractSizeDataFromElement(element) {
     console.log(`[PointFour] Found ${tables.length} tables within element`);
     
     for (const table of tables) {
-        const tableData = extractTableData(table);
+        const tableData = extractEnhancedTableData(table);
         if (tableData.measurements && Object.keys(tableData.measurements).length > 0) {
             Object.assign(data.measurements, tableData.measurements);
             console.log(`[PointFour] Found ${Object.keys(tableData.measurements).length} measurements in nested table`);
@@ -4391,15 +4906,15 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         
         for (const sectionKey of sortedSections.slice(0, 3)) {
             const section = sections[sectionKey];
-            console.log(`🔍 [PointFour] Processing section ${sectionKey}:`, {
-                hasSection: !!section,
-                hasRecommendation: !!(section && section.recommendation),
-                recommendation: section?.recommendation?.substring(0, 100),
-                isUseful: section && section.recommendation ? isUsefulRecommendation(section.recommendation) : false,
-                hasEvidence: !!(section && section.evidence && section.evidence.length > 0),
-                evidenceCount: section?.evidence?.length || 0,
-                evidencePreview: section?.evidence?.slice(0, 2) || [] // Show first 2 evidence items
-            });
+        console.log(`🔍 [PointFour] Processing section ${sectionKey}:`, {
+            hasSection: !!section,
+            hasRecommendation: !!(section && section.recommendation),
+            recommendation: section?.recommendation?.substring(0, 100),
+            isUseful: section && section.recommendation ? isUsefulRecommendation(section.recommendation) : false,
+            hasEvidence: !!(section && section.evidence && section.evidence.length > 0),
+            evidenceCount: section?.evidence?.length || 0,
+            evidencePreview: section?.evidence?.slice(0, 2) || [] // Show first 2 evidence items
+        });
             
             if (section && section.recommendation && isUsefulRecommendation(section.recommendation)) {
                 const renderedSection = renderSectionWithQuotes(sectionKey, section);
@@ -4978,12 +5493,14 @@ function handleSizeFormSubmission(form, sizeChart) {
     window.pointFourCloseSizeInput();
 }
 
-function generateTailoredRecommendations(selectedSize, measurements, sizeChart) {
-    console.log('[PointFour] Generating tailored recommendations:', {
+function generateTailoredRecommendations(selectedSize, measurements, sizeChart, socialReviews = [], productInfo = {}) {
+    console.log('[PointFour] Generating tailored recommendations with ease calculations:', {
         selectedSize,
         measurements,
         hasSizeChart: !!sizeChart,
-        sizeChartKeys: sizeChart ? Object.keys(sizeChart.measurements || {}) : []
+        sizeChartKeys: sizeChart ? Object.keys(sizeChart.measurements || {}) : [],
+        socialReviewCount: socialReviews.length,
+        productInfo
     });
     
     const recommendations = {
@@ -4992,21 +5509,28 @@ function generateTailoredRecommendations(selectedSize, measurements, sizeChart) 
         confidence: 'low',
         alternativeSizes: [],
         fitAnalysis: null,
-        reviewInsights: []
+        reviewInsights: [],
+        easeAnalysis: null,
+        garmentType: 'general'
     };
     
     if (sizeChart && sizeChart.measurements && Object.keys(sizeChart.measurements).length > 0) {
-        // Use sophisticated size matching algorithm
-        const bestMatch = findBestSizeMatch(selectedSize, measurements, sizeChart.measurements);
+        // Use enhanced size matching with ease calculations (PRIMARY)
+        const bestMatch = findBestSizeMatchWithEase(measurements, sizeChart, socialReviews, productInfo);
         
         recommendations.sizeMatch = bestMatch;
         recommendations.confidence = bestMatch.confidence;
-        recommendations.fitAdvice = generateSizeAdvice(bestMatch);
+        recommendations.fitAdvice = bestMatch.fitAdvice || [];
         recommendations.alternativeSizes = findAlternativeSizes(bestMatch, sizeChart.measurements);
-        recommendations.fitAnalysis = analyzeFitPatterns(bestMatch);
+        recommendations.fitAnalysis = bestMatch.fitAnalysis;
+        recommendations.easeAnalysis = bestMatch.easeAnalysis;
+        recommendations.garmentType = bestMatch.garmentType;
         
-        // TODO: Add review insights when we implement review filtering
-        // recommendations.reviewInsights = findSimilarReviewers(measurements, sizeChart);
+        // Add social review insights (ENHANCEMENT)
+        if (socialReviews && socialReviews.length > 0) {
+            recommendations.reviewInsights = extractReviewInsights(socialReviews);
+            recommendations.socialReviewCount = socialReviews.length;
+        }
         
     } else {
         recommendations.fitAdvice = [
@@ -5017,6 +5541,72 @@ function generateTailoredRecommendations(selectedSize, measurements, sizeChart) 
     }
     
     return recommendations;
+}
+
+// ========================================
+// ENHANCED SIZE MATCHING WITH EASE CALCULATIONS
+// ========================================
+
+/**
+ * Find the best size match using ease calculations (PRIMARY) and social reviews (ENHANCEMENT)
+ */
+function findBestSizeMatchWithEase(measurements, sizeChart, socialReviews = [], productInfo = {}) {
+    console.log('[PointFour] Finding best size match with ease calculations...');
+    
+    // Import ease calculation functions (these would be imported from the ease-calculation-engine module)
+    const garmentType = detectGarmentType(productInfo.name, productInfo.category);
+    const easeTargets = calculateEaseTargets(garmentType);
+    const idealMeasurements = calculateIdealGarmentMeasurements(measurements, easeTargets);
+    
+    const availableSizes = Object.keys(sizeChart.measurements || {});
+    let bestMatch = {
+        size: null,
+        score: Infinity,
+        confidence: 'low',
+        measurements: null,
+        fitNotes: [],
+        easeAnalysis: {},
+        garmentType: garmentType,
+        fitAdvice: []
+    };
+    
+    // Find best matching size using ease calculations
+    availableSizes.forEach(size => {
+        const sizeData = sizeChart.measurements[size];
+        if (!sizeData || typeof sizeData !== 'object') return;
+        
+        const matchScore = calculateEaseMatchScore(idealMeasurements, sizeData, easeTargets);
+        
+        if (matchScore.totalScore < bestMatch.score) {
+            bestMatch = {
+                size: size,
+                score: matchScore.totalScore,
+                confidence: matchScore.confidence,
+                measurements: sizeData,
+                fitNotes: matchScore.fitNotes,
+                easeAnalysis: matchScore.easeAnalysis,
+                garmentType: garmentType,
+                fitAdvice: generateEaseBasedFitAdvice(matchScore.easeAnalysis, garmentType)
+            };
+        }
+    });
+    
+    // Enhance with social review insights
+    if (socialReviews && socialReviews.length > 0) {
+        const reviewAnalysis = analyzeSocialReviewPatterns(socialReviews);
+        if (reviewAnalysis.pattern !== 'no_data' && reviewAnalysis.confidence > 0.3) {
+            bestMatch = applySocialReviewEnhancement(bestMatch, reviewAnalysis);
+        }
+    }
+    
+    console.log('[PointFour] Enhanced size match found:', {
+        size: bestMatch.size,
+        confidence: bestMatch.confidence,
+        garmentType: bestMatch.garmentType,
+        socialReviewCount: socialReviews.length
+    });
+    
+    return bestMatch;
 }
 
 // ========================================
@@ -5551,7 +6141,6 @@ function calculateFitRelevance(text) {
     return score;
 }
 
-
 // ========================================
 // PUBLIC API
 // ========================================
@@ -5727,7 +6316,7 @@ const widgetManagement = {
             params.set('pageTitle', document.title);
 
             // Make API call
-            const apiUrl = `http://localhost:3000/api/extension/search-reviews?${params.toString()}`;
+            const apiUrl = `https://www.pointfour.in/api/extension/search-reviews?${params.toString()}`;
             console.log('[PointFour] API Request:', apiUrl);
 
             const response = await fetch(apiUrl, {

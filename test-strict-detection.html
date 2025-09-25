@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Strict Fashion Detection</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .fashion { background-color: #e8f5e8; border-color: #4caf50; }
+        .non-fashion { background-color: #ffe8e8; border-color: #f44336; }
+        .result { margin-top: 10px; font-weight: bold; }
+        .details { font-size: 0.9em; color: #666; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Strict Fashion Site Detection Test</h1>
+    <p>This page tests the stricter detection logic to ensure it doesn't trigger on non-fashion sites.</p>
+
+    <div class="test-case non-fashion">
+        <h3>❌ PointFour (Should NOT detect)</h3>
+        <div class="details">
+            <strong>Domain:</strong> pointfour.in<br>
+            <strong>Meta:</strong> "PointFour - Fashion recommendations and sizing"<br>
+            <strong>Content:</strong> "API endpoints, recommendations, reviews, sizing analysis"<br>
+            <strong>Expected:</strong> Should NOT show widget (excluded domain)
+        </div>
+        <div class="result" id="pointfour-result">Loading...</div>
+    </div>
+
+    <div class="test-case non-fashion">
+        <h3>❌ Generic E-commerce (Should NOT detect)</h3>
+        <div class="details">
+            <strong>Meta:</strong> "Online Store - Products, shopping, buy now"<br>
+            <strong>Content:</strong> "Add to cart, price, product details, specifications"<br>
+            <strong>Expected:</strong> Should NOT show widget (insufficient fashion-specific signals)
+        </div>
+        <div class="result" id="generic-result">Loading...</div>
+    </div>
+
+    <div class="test-case fashion">
+        <h3>✅ Fashion Site (Should detect)</h3>
+        <div class="details">
+            <strong>Meta:</strong> "Arket - Contemporary fashion, sustainable clothing, style"<br>
+            <strong>Content:</strong> "Size guide, measurements, bust, waist, hip, small medium large XL, collection, season"<br>
+            <strong>Expected:</strong> Should show widget (strong fashion-specific signals)
+        </div>
+        <div class="result" id="fashion-result">Loading...</div>
+    </div>
+
+    <script>
+        // Simulate the stricter detection logic
+        function simulateStrictDetection(metaContent, pageTitle, pageText, hostname) {
+            let score = 0;
+            let fashionSpecificScore = 0;
+            const signals = [];
+
+            // Check if domain should be skipped
+            const skipDomains = [
+                'pointfour.in', 'pointfour.com', 'www.pointfour.in', 'www.pointfour.com',
+                'google.com', 'youtube.com', 'facebook.com', 'twitter.com', 'instagram.com',
+                'amazon.com', 'ebay.com', 'github.com', 'stackoverflow.com'
+            ];
+            
+            if (skipDomains.some(domain => hostname.includes(domain))) {
+                return {
+                    score: 0,
+                    fashionSpecificScore: 0,
+                    isFashionSite: false,
+                    signals: ['Domain excluded'],
+                    reason: 'Domain in skip list'
+                };
+            }
+
+            // Fashion keywords in meta and title
+            const fashionKeywords = ['fashion', 'clothing', 'apparel', 'style', 'wear', 'dress', 'shirt', 'collection', 'sustainable'];
+            const allContent = metaContent + ' ' + pageTitle + ' ' + pageText;
+            const fashionFound = fashionKeywords.filter(keyword => allContent.includes(keyword));
+            if (fashionFound.length > 0) {
+                score += Math.min(fashionFound.length, 3);
+                fashionSpecificScore += Math.min(fashionFound.length, 3);
+                signals.push(`Fashion keywords: ${fashionFound.slice(0, 3).join(', ')}`);
+            }
+
+            // Size-related content (STRICT - require 3+ matches)
+            const sizeIndicators = ['size guide', 'measurements', 'bust', 'waist', 'hip', 'small', 'medium', 'large', 'xl', 'petite', 'tall'];
+            const sizeMatches = sizeIndicators.filter(indicator => pageText.includes(indicator));
+            if (sizeMatches.length >= 3) {
+                score += 2;
+                fashionSpecificScore += 2;
+                signals.push('Size-related content');
+            }
+
+            // Fashion terminology (STRICT - require 3+ matches)
+            const fashionTerms = ['collection', 'season', 'spring', 'summer', 'fall', 'winter', 'styling', 'outfit', 'wardrobe', 'sustainable', 'designer'];
+            const fashionTermMatches = fashionTerms.filter(term => pageText.includes(term));
+            if (fashionTermMatches.length >= 3) {
+                score += 1;
+                fashionSpecificScore += 1;
+                signals.push('Fashion terminology');
+            }
+
+            // Generic e-commerce signals (reduced scoring)
+            if (pageText.includes('add to cart') || pageText.includes('price')) {
+                score += 1; // Reduced from 2
+                signals.push('E-commerce signals');
+            }
+
+            // Stricter detection logic
+            const isClearFashionSite = score >= 8 && fashionSpecificScore >= 3;
+            const isAmbiguousSite = score >= 4 && score < 8;
+            const hasStrongFashionSignals = fashionSpecificScore >= 2;
+            const hasVeryStrongFashionSignals = fashionSpecificScore >= 4;
+            const isFashionSite = isClearFashionSite || (isAmbiguousSite && hasStrongFashionSignals) || hasVeryStrongFashionSignals;
+
+            return {
+                score,
+                fashionSpecificScore,
+                isFashionSite,
+                signals,
+                isClearFashionSite,
+                isAmbiguousSite,
+                hasStrongFashionSignals,
+                hasVeryStrongFashionSignals
+            };
+        }
+
+        // Test cases
+        const testCases = [
+            {
+                id: 'pointfour-result',
+                meta: 'PointFour - Fashion recommendations and sizing analysis',
+                title: 'PointFour - Fashion Recommendations',
+                content: 'API endpoints, recommendations, reviews, sizing analysis, add to cart, price: $29.99',
+                hostname: 'pointfour.in'
+            },
+            {
+                id: 'generic-result',
+                meta: 'Online Store - Products, shopping, buy now',
+                title: 'Generic Online Store',
+                content: 'Product specifications available. Add to cart. Price: $49.99. Product details and features.',
+                hostname: 'genericstore.com'
+            },
+            {
+                id: 'fashion-result',
+                meta: 'Arket - Contemporary fashion, sustainable clothing, style',
+                title: 'Arket Fashion Collection',
+                content: 'Size guide available. Measurements: bust, waist, hip. Available in small, medium, large, XL. Collection features sustainable materials. Spring season styling. Add to cart. Price: $89.99'
+            }
+        ];
+
+        // Run tests
+        testCases.forEach(testCase => {
+            const result = simulateStrictDetection(
+                testCase.meta, 
+                testCase.title, 
+                testCase.content, 
+                testCase.hostname || 'example.com'
+            );
+            const element = document.getElementById(testCase.id);
+            
+            let status = result.isFashionSite ? '✅ SHOW WIDGET' : '❌ HIDE WIDGET';
+            let color = result.isFashionSite ? 'green' : 'red';
+            
+            if (result.reason) {
+                status = `❌ HIDE WIDGET (${result.reason})`;
+                color = 'red';
+            }
+            
+            element.innerHTML = `
+                <span style="color: ${color}">${status}</span><br>
+                <small>
+                    Score: ${result.score} | Fashion-Specific: ${result.fashionSpecificScore}<br>
+                    Signals: ${result.signals.join(', ')}<br>
+                    ${result.isClearFashionSite ? 'Clear fashion site' : ''}
+                    ${result.isAmbiguousSite ? 'Ambiguous site' : ''}
+                    ${result.hasStrongFashionSignals ? 'Strong fashion signals' : ''}
+                </small>
+            `;
+        });
+    </script>
+</body>
+</html>

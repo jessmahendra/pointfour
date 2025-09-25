@@ -15,13 +15,16 @@ export function detectFashionSite() {
     const signals = [];
     let fashionSpecificScore = 0; // Track fashion-specific signals separately
     
-    // Check 1: Meta tags analysis
+    // Check 1: Enhanced meta tags analysis
     const metaTags = {
         keywords: document.querySelector('meta[name="keywords"]')?.content?.toLowerCase() || '',
         description: document.querySelector('meta[name="description"]')?.content?.toLowerCase() || '',
         ogType: document.querySelector('meta[property="og:type"]')?.content?.toLowerCase() || '',
         ogSiteName: document.querySelector('meta[property="og:site_name"]')?.content?.toLowerCase() || '',
-        ogTitle: document.querySelector('meta[property="og:title"]')?.content?.toLowerCase() || ''
+        ogTitle: document.querySelector('meta[property="og:title"]')?.content?.toLowerCase() || '',
+        ogDescription: document.querySelector('meta[property="og:description"]')?.content?.toLowerCase() || '',
+        twitterTitle: document.querySelector('meta[name="twitter:title"]')?.content?.toLowerCase() || '',
+        twitterDescription: document.querySelector('meta[name="twitter:description"]')?.content?.toLowerCase() || ''
     };
     
     // Score meta tags
@@ -36,12 +39,32 @@ export function detectFashionSite() {
         signals.push(`Meta tags contain fashion keywords: ${fashionKeywordsFound.slice(0, 3).join(', ')}`);
     }
     
+    // Check 1.1: Enhanced page title analysis (often more reliable than meta tags)
+    const pageTitle = document.title.toLowerCase();
+    const titleFashionKeywords = CONFIG.FASHION_SIGNALS.META_KEYWORDS.filter(keyword => 
+        pageTitle.includes(keyword)
+    );
+    
+    if (titleFashionKeywords.length > 0) {
+        score += Math.min(titleFashionKeywords.length, 2); // Cap at 2 points
+        fashionSpecificScore += Math.min(titleFashionKeywords.length, 2);
+        signals.push(`Page title contains fashion keywords: ${titleFashionKeywords.slice(0, 2).join(', ')}`);
+    }
+    
     // Check 1.5: NEGATIVE SIGNALS - Detect non-fashion categories and penalize heavily
     const negativeSignals = detectNegativeSignals(metaContent, document.title.toLowerCase(), document.body?.innerText?.toLowerCase() || '');
     if (negativeSignals.score < 0) {
         score += negativeSignals.score; // Apply penalty
         signals.push(`Negative signals detected: ${negativeSignals.reasons.join(', ')}`);
         console.log('[PointFour] Heavy penalty applied for non-fashion signals:', negativeSignals);
+    }
+    
+    // Check 1.6: Modern fashion website patterns (CSS classes, IDs, data attributes)
+    const modernFashionPatterns = detectModernFashionPatterns();
+    if (modernFashionPatterns.score > 0) {
+        score += modernFashionPatterns.score;
+        fashionSpecificScore += modernFashionPatterns.fashionScore;
+        signals.push(`Modern fashion patterns: ${modernFashionPatterns.signals.join(', ')}`);
     }
     
     // Check 2: Structured data (Schema.org)
@@ -65,7 +88,7 @@ export function detectFashionSite() {
                     signals.push('Product schema with clothing category');
                 }
             }
-        } catch (e) {
+        } catch {
             // Ignore parsing errors
         }
     }
@@ -74,7 +97,7 @@ export function detectFashionSite() {
     const cartElements = CONFIG.FASHION_SIGNALS.CART_SELECTORS.filter(selector => {
         try {
             return document.querySelector(selector) !== null;
-        } catch (e) {
+        } catch {
             return false;
         }
     });
@@ -84,23 +107,46 @@ export function detectFashionSite() {
         signals.push(`Found shopping cart elements (${cartElements.length})`);
     }
     
-    // Check 4: Product page indicators (REQUIRED for fashion sites)
+    // Check 4: Enhanced product page indicators (REQUIRED for fashion sites)
     const productElements = CONFIG.FASHION_SIGNALS.PRODUCT_INDICATORS.filter(selector => {
         try {
             return document.querySelector(selector) !== null;
-        } catch (e) {
+        } catch {
             return false;
         }
     });
     const productElementsCount = productElements.length;
     
-    if (productElementsCount >= 3) {
+    // Additional STRICT fashion-specific product indicators only
+    const fashionSpecificProductIndicators = [
+        '[data-testid*="size"]', '[data-testid*="color"]', '[data-testid*="variant"]',
+        '[class*="Size"]', '[class*="Color"]', '[class*="Variant"]',
+        '[class*="SizeChart"]', '[class*="FitGuide"]', '[class*="Measurements"]',
+        'button[aria-label*="size"]', 'button[aria-label*="color"]',
+        'select[name*="size"]', 'select[name*="color"]', 'select[name*="variant"]'
+    ];
+    
+    const fashionSpecificProductElements = fashionSpecificProductIndicators.filter(selector => {
+        try {
+            return document.querySelector(selector) !== null;
+        } catch {
+            return false;
+        }
+    });
+    
+    const totalProductElements = productElementsCount + fashionSpecificProductElements.length;
+    
+    if (totalProductElements >= 3) {
         score += CONFIG.DETECTION_THRESHOLDS.PRODUCT_PAGE_BONUS;
-        signals.push(`Found product page elements (${productElementsCount})`);
-    } else if (productElementsCount === 0) {
+        signals.push(`Found product page elements (${totalProductElements})`);
+    } else if (totalProductElements === 0) {
         // Lightly penalize sites with no product indicators
         score -= 1;
         signals.push('No product page indicators found');
+    } else {
+        // Partial credit for some product indicators
+        score += 1;
+        signals.push(`Found some product indicators (${totalProductElements})`);
     }
     
     // Check 5: URL analysis
@@ -115,7 +161,7 @@ export function detectFashionSite() {
         signals.push(`URL contains fashion terms: ${urlMatches.join(', ')}`);
     }
     
-    // Check 6: Page content analysis (visible text)
+    // Check 6: Enhanced page content analysis (visible text)
     const pageText = document.body?.innerText?.toLowerCase() || '';
     const pageTextSample = pageText.substring(0, 5000); // Check first 5000 chars for performance
     
@@ -124,17 +170,38 @@ export function detectFashionSite() {
         'size guide', 'size chart', 'fit guide', 'measurements',
         'true to size', 'runs small', 'runs large', 'model wears',
         'model is wearing', 'length:', 'bust:', 'waist:', 'hip:',
-        'small', 'medium', 'large', 'xl', 'xxl', 'xs'
+        'small', 'medium', 'large', 'xl', 'xxl', 'xs', 'xxxs', 'xxxl',
+        'petite', 'tall', 'regular', 'slim', 'relaxed', 'oversized',
+        'chest', 'shoulder', 'sleeve', 'inseam', 'rise'
     ];
     
     const sizeMatches = sizeIndicators.filter(indicator => 
         pageTextSample.includes(indicator)
     );
     
-    if (sizeMatches.length >= 2) {
+    if (sizeMatches.length >= 3) { // Increased from 2 to 3 for strictness
         score += 2;
         fashionSpecificScore += 2; // Count as fashion-specific
         signals.push('Found size-related content');
+    }
+    
+    // Look for fashion-specific terminology (STRICT - require multiple matches)
+    const fashionTerms = [
+        'collection', 'season', 'spring', 'summer', 'fall', 'winter', 'autumn',
+        'new arrivals', 'bestsellers', 'trending', 'featured', 'editorial',
+        'styling', 'outfit', 'look', 'ensemble', 'wardrobe', 'capsule',
+        'sustainable', 'eco-friendly', 'organic', 'ethical', 'conscious',
+        'limited edition', 'exclusive', 'collaboration', 'designer'
+    ];
+    
+    const fashionTermMatches = fashionTerms.filter(term => 
+        pageTextSample.includes(term)
+    );
+    
+    if (fashionTermMatches.length >= 3) { // Increased from 2 to 3 for strictness
+        score += 1;
+        fashionSpecificScore += 1;
+        signals.push('Found fashion terminology');
     }
     
     // Check 7: Look for "Add to Cart" or similar buttons
@@ -180,17 +247,21 @@ export function detectFashionSite() {
         signals.push('Found fashion-related images');
     }
     
-    // Enhanced detection logic: Require fashion-specific signals for ambiguous sites
-    const isClearFashionSite = score >= CONFIG.DETECTION_THRESHOLDS.HIGH_CONFIDENCE && fashionSpecificScore >= 3;
+    // Enhanced detection logic: Strict but dynamic fashion site detection
+    const isClearFashionSite = score >= CONFIG.DETECTION_THRESHOLDS.HIGH_CONFIDENCE && fashionSpecificScore >= 3; // Back to 3 for strictness
     const isAmbiguousSite = score >= CONFIG.DETECTION_THRESHOLDS.MIN_SCORE && score < CONFIG.DETECTION_THRESHOLDS.HIGH_CONFIDENCE;
-    const hasStrongFashionSignals = fashionSpecificScore >= 2;
+    const hasStrongFashionSignals = fashionSpecificScore >= 2; // Back to 2 for strictness
+    const hasVeryStrongFashionSignals = fashionSpecificScore >= 4; // Back to 4 for strictness
     
-    // Special case: If we have very strong fashion signals, ignore penalties
-    const hasVeryStrongFashionSignals = fashionSpecificScore >= 4;
+    // Additional check: Only for sites with strong fashion signals AND good product indicators
+    const hasGoodProductIndicators = totalProductElements >= 3; // Increased threshold
+    const hasModerateFashionSignals = fashionSpecificScore >= 2; // Increased threshold
+    const isLikelyFashionWithProducts = hasGoodProductIndicators && hasModerateFashionSignals && score >= 6; // Increased score requirement
     
     // For ambiguous sites, require strong fashion-specific signals
     // But if we have very strong fashion signals, always show widget regardless of penalties
-    const isFashionSite = isClearFashionSite || (isAmbiguousSite && hasStrongFashionSignals) || hasVeryStrongFashionSignals;
+    // Only show widget if we have good product indicators with strong fashion signals
+    const isFashionSite = isClearFashionSite || (isAmbiguousSite && hasStrongFashionSignals) || hasVeryStrongFashionSignals || isLikelyFashionWithProducts;
     
     // Log detection results
     console.log('[PointFour] Detection Score:', score);
@@ -201,6 +272,9 @@ export function detectFashionSite() {
         isAmbiguousSite,
         hasStrongFashionSignals,
         hasVeryStrongFashionSignals,
+        hasGoodProductIndicators,
+        hasModerateFashionSignals,
+        isLikelyFashionWithProducts,
         finalDecision: isFashionSite
     });
     
@@ -404,13 +478,14 @@ export function shouldRunOnThisPage() {
     const url = window.location.href.toLowerCase();
     const hostname = window.location.hostname.toLowerCase();
     
-    // Skip common non-fashion domains
+    // Skip common non-fashion domains (including PointFour itself)
     const skipDomains = [
         'google.com', 'youtube.com', 'facebook.com', 'twitter.com', 'instagram.com',
         'amazon.com', 'ebay.com', // E-commerce but too generic
         'github.com', 'stackoverflow.com', 'reddit.com', 'wikipedia.org',
         'news.ycombinator.com', 'medium.com', 'linkedin.com',
         'paypal.com', 'stripe.com', 'checkout.com',
+        'pointfour.in', 'pointfour.com', 'www.pointfour.in', 'www.pointfour.com', // PointFour domains
         'localhost:3000', 'localhost:3001', 'localhost:8080' // Development
     ];
     
@@ -497,8 +572,95 @@ function detectNegativeSignals(metaContent, pageTitle, pageText) {
     };
 }
 
-export default {
+// ========================================
+// MODERN FASHION PATTERN DETECTION
+// ========================================
+
+function detectModernFashionPatterns() {
+    let score = 0;
+    let fashionScore = 0;
+    const signals = [];
+    
+    // Check for STRICT fashion-specific CSS class patterns (not generic e-commerce)
+    const fashionSpecificClassPatterns = [
+        // Fashion-specific classes only
+        '[class*="fashion"]', '[class*="style"]', '[class*="outfit"]',
+        '[class*="wardrobe"]', '[class*="closet"]', '[class*="lookbook"]',
+        '[class*="collection"]', '[class*="catalog"]', '[class*="catalogue"]',
+        
+        // Size and variant patterns (fashion-specific)
+        '[class*="SizeSelector"]', '[class*="VariantSelector"]', '[class*="ColorSwatch"]',
+        '[class*="SizeChart"]', '[class*="FitGuide"]', '[class*="Measurements"]',
+        '[class*="SizeGuide"]', '[class*="FitChart"]', '[class*="SizeTable"]'
+    ];
+    
+    const foundFashionClassPatterns = fashionSpecificClassPatterns.filter(selector => {
+        try {
+            return document.querySelector(selector) !== null;
+        } catch {
+            return false;
+        }
+    });
+    
+    if (foundFashionClassPatterns.length > 0) {
+        score += Math.min(foundFashionClassPatterns.length, 2); // Reduced from 3
+        fashionScore += Math.min(foundFashionClassPatterns.length, 2);
+        signals.push(`Fashion-specific CSS patterns (${foundFashionClassPatterns.length})`);
+    }
+    
+    // Check for STRICT fashion-specific data attributes only
+    const fashionSpecificDataPatterns = [
+        '[data-testid*="size"]', '[data-testid*="color"]', '[data-testid*="variant"]',
+        '[data-size]', '[data-color]', '[data-variant]',
+        '[data-fit]', '[data-measurement]', '[data-size-chart]'
+    ];
+    
+    const foundFashionDataPatterns = fashionSpecificDataPatterns.filter(selector => {
+        try {
+            return document.querySelector(selector) !== null;
+        } catch {
+            return false;
+        }
+    });
+    
+    if (foundFashionDataPatterns.length > 0) {
+        score += Math.min(foundFashionDataPatterns.length, 1); // Reduced scoring
+        fashionScore += Math.min(foundFashionDataPatterns.length, 1);
+        signals.push(`Fashion-specific data attributes (${foundFashionDataPatterns.length})`);
+    }
+    
+    // Check for STRICT fashion-specific ARIA patterns only
+    const fashionSpecificAriaPatterns = [
+        '[aria-label*="size"]', '[aria-label*="color"]', '[aria-label*="variant"]',
+        '[aria-label*="fit"]', '[aria-label*="measurement"]', '[aria-label*="size chart"]',
+        '[role="button"][aria-label*="size"]', '[role="button"][aria-label*="color"]'
+    ];
+    
+    const foundFashionAriaPatterns = fashionSpecificAriaPatterns.filter(selector => {
+        try {
+            return document.querySelector(selector) !== null;
+        } catch {
+            return false;
+        }
+    });
+    
+    if (foundFashionAriaPatterns.length > 0) {
+        score += Math.min(foundFashionAriaPatterns.length, 1); // Reduced scoring
+        fashionScore += Math.min(foundFashionAriaPatterns.length, 1);
+        signals.push(`Fashion-specific ARIA patterns (${foundFashionAriaPatterns.length})`);
+    }
+    
+    return {
+        score,
+        fashionScore,
+        signals
+    };
+}
+
+const siteDetectionModule = {
     detectFashionSite,
     detectPageType,
     shouldRunOnThisPage
 };
+
+export default siteDetectionModule;

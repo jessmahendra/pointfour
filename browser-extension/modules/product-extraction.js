@@ -426,6 +426,13 @@ export function extractMaterialsFromPage() {
         '.product-details-accordion',
         '.details-content',
         '.product-info-details',
+        // Arket specific selectors
+        '.product-details-section',
+        '.product-description-section',
+        '.materials-section',
+        '.composition-section',
+        '.product-specs',
+        '.specifications',
         // Generic details sections
         '.details',
         '[class*="detail"]',
@@ -435,12 +442,14 @@ export function extractMaterialsFromPage() {
         // List items that might contain details
         '.product-details ul li',
         '.product-info ul li',
-        '.details ul li'
+        '.details ul li',
+        // Text content that might contain materials
+        'p', 'div', 'span'
     ];
     
     const materialPatterns = [
         // Flexible patterns for percentage + material (handles complex names)
-        /(\d+%\s+[^,\.\n]+?(?:cotton|wool|silk|linen|cashmere|polyester|viscose|lyocell|tencel|modal|spandex|elastane|nylon|rayon|bamboo|hemp)(?:[^,\.\n]*?))/gi,
+        /(\d+%\s+[^,\.\n]+?(?:cotton|wool|silk|linen|cashmere|polyester|viscose|lyocell|tencel|modal|spandex|elastane|nylon|rayon|bamboo|hemp|leather|suede|canvas|denim)(?:[^,\.\n]*?))/gi,
         
         // Specific patterns for common materials with modifiers
         /(\d+%\s+(?:regeneratively\s+grown\s+|organic\s+|recycled\s+|merino\s+|pima\s+)*cotton[^,\.\n]*)/gi,
@@ -456,6 +465,13 @@ export function extractMaterialsFromPage() {
         /(\d+%\s+(?:recycled\s+)*nylon[^,\.\n]*)/gi,
         /(\d+%\s+spandex[^,\.\n]*)/gi,
         /(\d+%\s+elastane[^,\.\n]*)/gi,
+        
+        // Leather and bag-specific materials
+        /(\d+%\s+(?:genuine\s+|real\s+|full\s+|top\s+|premium\s+|vegetable\s+tanned\s+|chrome\s+tanned\s+)*leather[^,\.\n]*)/gi,
+        /(\d+%\s+(?:genuine\s+|real\s+|full\s+|top\s+|premium\s+)*suede[^,\.\n]*)/gi,
+        /(\d+%\s+(?:ballistic\s+|ripstop\s+|cordura\s+|canvas\s+|waxed\s+)*nylon[^,\.\n]*)/gi,
+        /(\d+%\s+(?:waxed\s+|cotton\s+|canvas\s+)*canvas[^,\.\n]*)/gi,
+        /(\d+%\s+(?:raw\s+|selvedge\s+|stretch\s+)*denim[^,\.\n]*)/gi,
         
         // Handle "100% Material" patterns
         /(100%\s+[^,\.\n]+)/gi,

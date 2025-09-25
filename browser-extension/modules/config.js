@@ -21,7 +21,14 @@ export const CONFIG = {
             'jacket', 'coat', 'sweater', 'blazer', 'suit', 'skirt',
             'handbag', 'footwear', 'sneakers', 'boots', 'heels',
             'athleisure', 'activewear', 'sportswear', 'streetwear',
-            'luxury', 'premium', 'couture', 'ready-to-wear', 'rtw', 'rohe'
+            'luxury', 'premium', 'couture', 'ready-to-wear', 'rtw', 'rohe',
+            // Modern fashion terms
+            'sustainable', 'eco-friendly', 'ethical', 'conscious', 'organic',
+            'minimalist', 'contemporary', 'modern', 'trendy', 'chic',
+            'capsule', 'wardrobe', 'styling', 'lookbook', 'editorial',
+            'collaboration', 'limited edition', 'exclusive', 'drop',
+            'season', 'spring', 'summer', 'fall', 'winter', 'autumn',
+            'new arrivals', 'bestsellers', 'trending', 'featured'
         ],
         
         // Shopping cart indicators
@@ -60,7 +67,14 @@ export const CONFIG = {
             'mens', 'womens', 'kids', 'boys', 'girls',
             'shoes', 'accessories', 'bags', 'jewelry',
             'dress', 'shirt', 'pants', 'jacket', 'coat',
-            'collection', 'category', 'products', 'shop'
+            'collection', 'category', 'products', 'shop',
+            // Modern fashion URL patterns
+            'sustainable', 'eco', 'ethical', 'conscious',
+            'minimalist', 'contemporary', 'modern', 'chic',
+            'capsule', 'wardrobe', 'styling', 'lookbook',
+            'collaboration', 'exclusive', 'limited',
+            'season', 'spring', 'summer', 'fall', 'winter',
+            'new-arrivals', 'bestsellers', 'trending', 'featured'
         ]
     },
     
