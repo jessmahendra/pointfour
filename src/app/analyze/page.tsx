@@ -607,75 +607,87 @@ Please provide a specific answer to this follow-up question.`;
       // Skip empty lines but don't return - we might need to continue with current section
       if (!trimmedLine) return;
 
-      // Detect section headers (handle both **Header:** and ### Header formats)
+      // Detect section headers (handle plain text, **Header:** and ### Header formats)
       if (
         trimmedLine.match(
-          /^(###\s*(Summary|Recommendation)|^\*\*(Recommendation|Summary)\*\*:?\s*)/i
+          /^(###\s*(Summary|Recommendation)|^\*\*(Recommendation|Summary)\*\*:?\s*|^(Summary|Recommendation):?\s*$)/i
         )
       ) {
         currentSection = "summary";
         const content = trimmedLine.replace(
-          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*|^(Summary|Recommendation):?\s*)/i,
           ""
         );
         if (content.trim()) sections.summary += content + "\n";
       } else if (
-        trimmedLine.match(/^(###\s*Fit\s+summary|^\*\*Fit\s+summary\*\*:?\s*)/i)
+        trimmedLine.match(
+          /^(###\s*Fit\s+summary|^\*\*Fit\s+summary\*\*:?\s*|^Fit\s+summary:?\s*$)/i
+        )
       ) {
         currentSection = "summary"; // Add fit summary to the main summary section
         const content = trimmedLine.replace(
-          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*|^Fit\s+summary:?\s*)/i,
           ""
         );
         if (content.trim()) sections.summary += content + "\n";
-      } else if (trimmedLine.match(/^(###\s*Quality|^\*\*Quality\*\*:?\s*)/i)) {
+      } else if (
+        trimmedLine.match(
+          /^(###\s*Quality|^\*\*Quality\*\*:?\s*|^Quality:?\s*$)/i
+        )
+      ) {
         currentSection = "summary"; // Add quality info to the main summary section
         const content = trimmedLine.replace(
-          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*|^Quality:?\s*)/i,
           ""
         );
         if (content.trim()) sections.summary += content + "\n";
-      } else if (trimmedLine.match(/^(###\s*Sizing|^\*\*Sizing\*\*:?\s*)/i)) {
+      } else if (
+        trimmedLine.match(/^(###\s*Sizing|^\*\*Sizing\*\*:?\s*|^Sizing:?\s*$)/i)
+      ) {
         currentSection = "sizing";
         const content = trimmedLine.replace(
-          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*|^Sizing:?\s*)/i,
           ""
         );
         if (content.trim()) sections.sizing += content + "\n";
       } else if (
         trimmedLine.match(
-          /^(###\s*(Warning|⚠️?\s*Warning)|^\*\*(⚠️?\s*Warning|Warning)\*\*:?)/i
+          /^(###\s*(Warning|⚠️?\s*Warning)|^\*\*(⚠️?\s*Warning|Warning)\*\*:?|^Warning[s]?:?\s*$)/i
         )
       ) {
         currentSection = "warnings";
         const content = trimmedLine.replace(
-          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*|^Warning[s]?:?\s*)/i,
           ""
         );
         if (content.trim()) sections.warnings.push(content);
-      } else if (trimmedLine.match(/^(###\s*Price|^\*\*Price\*\*:?)/i)) {
+      } else if (
+        trimmedLine.match(/^(###\s*Price|^\*\*Price\*\*:?|^Price:?\s*$)/i)
+      ) {
         currentSection = "price";
         const content = trimmedLine.replace(
-          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*|^Price:?\s*)/i,
           ""
         );
         if (content.trim()) sections.priceRange += content + " ";
       } else if (
         trimmedLine.match(
-          /^(###\s*Customer Reviews?|^\*\*Customer Reviews?\*\*:?)/i
+          /^(###\s*Customer Reviews?|^\*\*Customer Reviews?\*\*:?|^Customer Reviews?:?\s*$)/i
         )
       ) {
         currentSection = "reviews";
-      } else if (trimmedLine.match(/^(###\s*Shop|^\*\*Shop\*\*:?)/i)) {
+      } else if (
+        trimmedLine.match(/^(###\s*Shop|^\*\*Shop\*\*:?|^Shop:?\s*$)/i)
+      ) {
         currentSection = "shop";
       } else if (
         trimmedLine.match(
-          /^(###\s*Recommendation[s]?|^\*\*Recommendation[s]?\*\*:?)/i
+          /^(###\s*Recommendation[s]?|^\*\*Recommendation[s]?\*\*:?|^Recommendation[s]?:?\s*$)/i
         )
       ) {
         currentSection = "recommendations";
         const content = trimmedLine.replace(
-          /^(###\s*.*|^\*\*.*?\*\*:?\s*)/,
+          /^(###\s*.*|^\*\*.*?\*\*:?\s*|^Recommendation[s]?:?\s*)/i,
           ""
         );
         if (content.trim()) sections.recommendations.push(content);
@@ -719,9 +731,9 @@ Please provide a specific answer to this follow-up question.`;
 
     // Extract recommendations (look for bullet points or numbered items in the text)
     const recMatches = text.match(/[-•]\s*([^\n]+)/g) || [];
-    sections.recommendations = recMatches
-      .map((match) => match.replace(/^[-•]\s*/, "").trim())
-      .slice(0, 3);
+    sections.recommendations = recMatches.map((match) =>
+      match.replace(/^[-•]\s*/, "").trim()
+    );
 
     if (sections.recommendations.length === 0) {
       // Fallback recommendations

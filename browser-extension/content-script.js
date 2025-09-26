@@ -28,7 +28,8 @@ import {
     createWidget,
     showWidget,
     hideWidget,
-    updateWidgetContent
+    updateWidgetContent,
+    showSizeInputModal
 } from './modules/widget-management.js';
 
 (function() {
@@ -40,6 +41,49 @@ import {
     
     // Initialize API security measures
     initializeAPISecurity();
+    
+    // Inject page-world script to handle button clicks
+    const script = document.createElement('script');
+    script.textContent = `
+        window.pointFourShowSizeInput = function () {
+            window.dispatchEvent(new CustomEvent('PF_FIND_MY_SIZE'));
+        };
+        window.pointFourCloseSizeInput = function () {
+            window.dispatchEvent(new CustomEvent('PF_CLOSE_SIZE_INPUT'));
+        };
+        window.pointFourResetSizeInput = function () {
+            window.dispatchEvent(new CustomEvent('PF_RESET_SIZE_INPUT'));
+        };
+    `;
+    (document.documentElement || document.head).appendChild(script);
+    script.remove();
+
+    // Listen for custom events from page context
+    window.addEventListener('PF_FIND_MY_SIZE', () => {
+        showSizeInputModal();
+    });
+
+    window.addEventListener('PF_CLOSE_SIZE_INPUT', () => {
+        const tailoredSection = document.querySelector('.pointfour-tailored-recommendations');
+        if (tailoredSection) {
+            tailoredSection.innerHTML = `
+                <button class="pointfour-tailored-btn" onclick="window.pointFourShowSizeInput()">
+                    Find my size
+                </button>
+            `;
+        }
+    });
+
+    window.addEventListener('PF_RESET_SIZE_INPUT', () => {
+        const tailoredSection = document.querySelector('.pointfour-tailored-recommendations');
+        if (tailoredSection) {
+            tailoredSection.innerHTML = `
+                <button class="pointfour-tailored-btn" onclick="window.pointFourShowSizeInput()">
+                    Find my size
+                </button>
+            `;
+        }
+    });
 
     // ========================================
     // MAIN EXECUTION FLOW

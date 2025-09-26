@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
+import { airtableService } from '@/lib/airtable';
 
 // Types for shared analysis data
 interface SharedAnalysisData {
@@ -7,26 +8,25 @@ interface SharedAnalysisData {
   userProfile: unknown;
   brandQuery: string;
   sharedAt: string;
-  createdAt: string;
-  viewCount: number;
 }
-
-// In-memory storage for shared analysis results
-// In production, you'd want to use a database or persistent storage
-const sharedAnalysis = new Map<string, SharedAnalysisData>();
 
 export async function POST(request: NextRequest) {
   try {
-    const analysisData = await request.json();
+    const analysisData: SharedAnalysisData = await request.json();
     
     // Generate a unique share ID
     const shareId = uuidv4();
+    const now = new Date().toISOString();
     
-    // Store the analysis data with timestamp
-    sharedAnalysis.set(shareId, {
-      ...analysisData,
-      createdAt: new Date().toISOString(),
-      viewCount: 0
+    // Store the analysis data in Airtable
+    await airtableService.createSharedAnalysis({
+      shareId,
+      analysisResult: JSON.stringify(analysisData.analysisResult),
+      userProfile: JSON.stringify(analysisData.userProfile),
+      brandQuery: analysisData.brandQuery,
+      createdAt: now,
+      viewCount: 0,
+      sharedAt: analysisData.sharedAt || now
     });
     
     // Return the share ID and URL
@@ -59,7 +59,8 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const analysisData = sharedAnalysis.get(shareId);
+    // Retrieve the analysis data from Airtable
+    const analysisData = await airtableService.getSharedAnalysis(shareId);
     
     if (!analysisData) {
       return NextResponse.json(
@@ -69,12 +70,21 @@ export async function GET(request: NextRequest) {
     }
     
     // Increment view count
-    analysisData.viewCount = (analysisData.viewCount || 0) + 1;
-    sharedAnalysis.set(shareId, analysisData);
+    await airtableService.incrementViewCount(shareId);
+    
+    // Parse the JSON strings back to objects
+    const parsedData = {
+      analysisResult: JSON.parse(analysisData.analysisResult),
+      userProfile: JSON.parse(analysisData.userProfile),
+      brandQuery: analysisData.brandQuery,
+      createdAt: analysisData.createdAt,
+      viewCount: analysisData.viewCount + 1, // Incremented count
+      sharedAt: analysisData.sharedAt
+    };
     
     return NextResponse.json({
       success: true,
-      data: analysisData
+      data: parsedData
     });
     
   } catch (error) {

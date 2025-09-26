@@ -188,6 +188,71 @@ export function toggleMinimize() {
 // WIDGET CONTENT MANAGEMENT
 // ========================================
 
+export function showSizeInputModal() {
+    console.log('[PointFour] Showing size input in widget...');
+    
+    // Get the current size chart data
+    const currentData = getState('currentData');
+    const sizeChart = currentData?.enhancedSizeChart;
+    
+    // Find the tailored recommendations section
+    const tailoredSection = document.querySelector('.pointfour-tailored-recommendations');
+    if (!tailoredSection) {
+        console.log('[PointFour] Tailored recommendations section not found');
+        return;
+    }
+    
+    // Create size input form
+    const sizeOptions = sizeChart && sizeChart.measurements ? 
+        Object.keys(sizeChart.measurements).map(size => 
+            `<option value="${size}">${size.toUpperCase()}</option>`
+        ).join('') : 
+        '<option value="xs">XS</option><option value="s">S</option><option value="m">M</option><option value="l">L</option><option value="xl">XL</option>';
+    
+    tailoredSection.innerHTML = `
+        <div class="pointfour-size-input-form">
+            <h4>Get Tailored Recommendations</h4>
+            <p class="pointfour-form-description">Share your size for personalized fit advice</p>
+            <form id="pointfour-size-form" class="pointfour-size-form">
+                <div class="pointfour-form-group">
+                    <label for="pointfour-size-select">Your Size</label>
+                    <select id="pointfour-size-select" name="size">
+                        <option value="">Select your size</option>
+                        ${sizeOptions}
+                    </select>
+                </div>
+                <div class="pointfour-form-group">
+                    <label for="pointfour-measurements">Measurements (optional)</label>
+                    <div class="pointfour-measurements-grid">
+                        <input type="number" id="pointfour-bust" placeholder="Bust (cm)" min="0" max="200">
+                        <input type="number" id="pointfour-waist" placeholder="Waist (cm)" min="0" max="200">
+                        <input type="number" id="pointfour-hips" placeholder="Hips (cm)" min="0" max="200">
+                    </div>
+                </div>
+                <div class="pointfour-form-actions">
+                    <button type="button" class="pointfour-btn-secondary" onclick="window.pointFourResetSizeInput()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="pointfour-btn-primary">
+                        Get Recommendations
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    // Handle form submission
+    const form = document.getElementById('pointfour-size-form');
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleSizeFormSubmission(form, sizeChart);
+    });
+    
+    // Reset function will be handled via CustomEvent
+}
+
+// Global functions are now handled via CustomEvent in content-script.js
+
 export function updateWidgetContent(data) {
     const widgetContainer = getState('widgetContainer');
     if (!widgetContainer) return;
@@ -574,7 +639,14 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         contentHTML += renderEnhancedSizeChart(data.enhancedSizeChart);
     }
     
-    // Tailored recommendations section removed - no longer showing "Find my size" button
+    // Tailored Recommendations - show "Find my size" button
+    contentHTML += `
+        <div class="pointfour-tailored-recommendations">
+            <button class="pointfour-tailored-btn" onclick="window.pointFourShowSizeInput()">
+                Find my size
+            </button>
+        </div>
+    `;
     
     // Materials and Care - only show on product pages
     if (isProductPage()) {
@@ -636,6 +708,11 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
 function renderSectionWithQuotes(sectionKey, section) {
     const sectionTitle = getSectionTitle(sectionKey);
     
+    // For recommendations section, focus on concise sizing insights
+    if (sectionKey === 'recommendations') {
+        return renderConciseRecommendations(section);
+    }
+    
     // Extract the main insight from recommendation (before the quotes)
     let mainInsight = section.recommendation;
     if (mainInsight.length > 100) {
@@ -695,6 +772,104 @@ function renderSectionWithQuotes(sectionKey, section) {
     `;
     
     return html;
+}
+
+/**
+ * Render concise recommendations focused on key sizing insights
+ */
+function renderConciseRecommendations(section) {
+    const recommendation = section.recommendation || '';
+    const evidence = section.evidence || [];
+    
+    // Extract key sizing insights from the recommendation
+    const sizingInsights = extractSizingInsights(recommendation, evidence);
+    
+    let html = `
+        <div class="pointfour-section">
+            <div class="pointfour-section-header">
+                <span>Recommendations</span>
+            </div>
+            <div class="pointfour-section-content">
+    `;
+    
+    // Show key sizing insights
+    if (sizingInsights.sizeConsensus) {
+        html += `<div class="pointfour-sizing-consensus">
+            <strong>Size Consensus:</strong> ${sizingInsights.sizeConsensus}
+        </div>`;
+    }
+    
+    if (sizingInsights.fitNotes.length > 0) {
+        html += `<div class="pointfour-fit-notes">
+            <strong>Fit Notes:</strong>
+            <ul>`;
+        sizingInsights.fitNotes.forEach(note => {
+            html += `<li>${note}</li>`;
+        });
+        html += `</ul></div>`;
+    }
+    
+    if (sizingInsights.lengthInfo) {
+        html += `<div class="pointfour-length-info">
+            <strong>Length:</strong> ${sizingInsights.lengthInfo}
+        </div>`;
+    }
+    
+    // Show confidence warning only if confidence is low
+    if (section.confidence === 'low') {
+        html += '<div class="pointfour-source">Limited data available - based on fewer reviews</div>';
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    return html;
+}
+
+/**
+ * Extract key sizing insights from recommendation text and evidence
+ */
+function extractSizingInsights(recommendation, evidence) {
+    const insights = {
+        sizeConsensus: null,
+        fitNotes: [],
+        lengthInfo: null
+    };
+    
+    const text = (recommendation + ' ' + evidence.join(' ')).toLowerCase();
+    
+    // Extract size consensus
+    if (text.includes('runs small') || text.includes('run small')) {
+        insights.sizeConsensus = 'Runs small - consider sizing up';
+    } else if (text.includes('runs large') || text.includes('run large')) {
+        insights.sizeConsensus = 'Runs large - consider sizing down';
+    } else if (text.includes('true to size') || text.includes('tts')) {
+        insights.sizeConsensus = 'True to size';
+    }
+    
+    // Extract fit notes
+    if (text.includes('waist') && (text.includes('tight') || text.includes('snug'))) {
+        insights.fitNotes.push('Waist runs tight/snug');
+    }
+    if (text.includes('minimal stretch') || text.includes('no stretch')) {
+        insights.fitNotes.push('Minimal fabric stretch');
+    }
+    if (text.includes('elastic waistband')) {
+        insights.fitNotes.push('Elastic waistband for comfort');
+    }
+    
+    // Extract length information for pants
+    if (text.includes('cropped') || text.includes('ankle') || text.includes('length')) {
+        if (text.includes('cropped')) {
+            insights.lengthInfo = 'Cropped/ankle length';
+        } else if (text.includes('regular length')) {
+            insights.lengthInfo = 'Regular length';
+        }
+    }
+    
+    return insights;
 }
 
 function filterQuotesForSection(quotes, sectionKey) {
@@ -1021,79 +1196,6 @@ function renderEnhancedSizeChart(sizeChart) {
 // TAILORED RECOMMENDATIONS - SIZE INPUT MODAL
 // ========================================
 
-function showSizeInputModal() {
-    console.log('[PointFour] Showing size input in widget...');
-    
-    // Get the current size chart data
-    const currentData = getState('currentData');
-    const sizeChart = currentData?.enhancedSizeChart;
-    
-    // Find the tailored recommendations section
-    const tailoredSection = document.querySelector('.pointfour-tailored-recommendations');
-    if (!tailoredSection) {
-        console.log('[PointFour] Tailored recommendations section not found');
-        return;
-    }
-    
-    // Create size input form
-    const sizeOptions = sizeChart && sizeChart.measurements ? 
-        Object.keys(sizeChart.measurements).map(size => 
-            `<option value="${size}">${size.toUpperCase()}</option>`
-        ).join('') : 
-        '<option value="xs">XS</option><option value="s">S</option><option value="m">M</option><option value="l">L</option><option value="xl">XL</option>';
-    
-    tailoredSection.innerHTML = `
-        <div class="pointfour-size-input-form">
-            <h4>Get Tailored Recommendations</h4>
-            <p class="pointfour-form-description">Share your size for personalized fit advice</p>
-            <form id="pointfour-size-form" class="pointfour-size-form">
-                <div class="pointfour-form-group">
-                    <label for="pointfour-size-select">Your Size</label>
-                    <select id="pointfour-size-select" name="size">
-                        <option value="">Select your size</option>
-                        ${sizeOptions}
-                    </select>
-                </div>
-                <div class="pointfour-form-group">
-                    <label for="pointfour-measurements">Measurements (optional)</label>
-                    <div class="pointfour-measurements-grid">
-                        <input type="number" id="pointfour-bust" placeholder="Bust (cm)" min="0" max="200">
-                        <input type="number" id="pointfour-waist" placeholder="Waist (cm)" min="0" max="200">
-                        <input type="number" id="pointfour-hips" placeholder="Hips (cm)" min="0" max="200">
-                    </div>
-                </div>
-                <div class="pointfour-form-actions">
-                    <button type="button" class="pointfour-btn-secondary" onclick="window.pointFourResetSizeInput()">
-                        Cancel
-                    </button>
-                    <button type="submit" class="pointfour-btn-primary">
-                        Get Recommendations
-                    </button>
-                </div>
-            </form>
-        </div>
-    `;
-    
-    // Handle form submission
-    const form = document.getElementById('pointfour-size-form');
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        handleSizeFormSubmission(form, sizeChart);
-    });
-    
-    // Make reset function globally available
-    window.pointFourResetSizeInput = () => {
-        tailoredSection.innerHTML = `
-            <button class="pointfour-tailored-btn" onclick="window.pointFourShowSizeInput()">
-                Find my size
-            </button>
-        `;
-    };
-    
-}
-
-// Make the size input function globally available immediately
-window.pointFourShowSizeInput = showSizeInputModal;
 
 function handleSizeFormSubmission(form, sizeChart) {
     const formData = new FormData(form);

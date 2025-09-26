@@ -25,6 +25,13 @@ type CacheEntry<T> = { data: T; timestamp: number; hits: number };
 const serperCache = new Map<string, CacheEntry<unknown>>();
 const aiResponseCache = new Map<string, CacheEntry<string>>();
 const brandDataCache = new Map<string, CacheEntry<unknown>>();
+const fullResponseCache = new Map<string, CacheEntry<{
+  recommendation: string;
+  externalSearchResults: unknown; // Use unknown to avoid complex type issues
+  hasExternalData: boolean;
+  searchType: string;
+  dataSource: string;
+}>>();
 
 // Cache management functions
 function getCachedData<T>(cache: Map<string, CacheEntry<T>>, key: string, timeout: number): T | null {
@@ -93,6 +100,15 @@ export async function GET(request: NextRequest) {
             age: Date.now() - entry.timestamp
           }))
         },
+        fullResponseCache: {
+          size: fullResponseCache.size,
+          entries: Array.from(fullResponseCache.entries()).map(([key, entry]) => ({
+            key: key.substring(0, 50) + '...',
+            timestamp: entry.timestamp,
+            hits: entry.hits,
+            age: Date.now() - entry.timestamp
+          }))
+        },
         brandDataCache: {
           size: brandDataCache.size,
           entries: Array.from(brandDataCache.entries()).map(([key, entry]) => ({
@@ -117,6 +133,10 @@ export async function GET(request: NextRequest) {
       serperCache.clear();
       console.log('🧹 CLEARED: Serper Cache');
     }
+    if (cacheType === 'all' || cacheType === 'full') {
+      fullResponseCache.clear();
+      console.log('🧹 CLEARED: Full Response Cache');
+    }
     if (cacheType === 'all' || cacheType === 'brand') {
       brandDataCache.clear();
       console.log('🧹 CLEARED: Brand Data Cache');
@@ -127,7 +147,8 @@ export async function GET(request: NextRequest) {
       cacheStats: {
         aiResponseCacheSize: aiResponseCache.size,
         serperCacheSize: serperCache.size,
-        brandDataCacheSize: brandDataCache.size
+        brandDataCacheSize: brandDataCache.size,
+        fullResponseCacheSize: fullResponseCache.size
       }
     });
   }
@@ -152,19 +173,23 @@ export async function POST(request: NextRequest) {
     const brandItemText = brandMatch ? brandMatch[1].trim() : '';
     const cacheKey = generateCacheKey(brandItemText, '', query);
     
-    // Check AI response cache first (most expensive operation)
-    const cachedAIResponse = getCachedData(aiResponseCache, cacheKey, CACHE_CONFIG.aiResponseCacheTimeout);
-    if (cachedAIResponse) {
-      console.log('🎯 CACHE HIT: Returning cached AI response');
+    // Check full response cache first (includes external search results)
+    const cachedFullResponse = getCachedData(fullResponseCache, cacheKey, CACHE_CONFIG.aiResponseCacheTimeout);
+    if (cachedFullResponse) {
+      console.log('🎯 CACHE HIT: Returning cached full response with external search results');
       return NextResponse.json({
-        recommendation: cachedAIResponse,
+        ...cachedFullResponse,
         query: query,
         totalBrands: 0,
         hasDatabaseData: false,
-        hasExternalData: false,
-        searchType: 'cached',
-        dataSource: 'cache',
-        cacheHit: true
+        cacheHit: true,
+        cacheStats: {
+          aiResponseCacheSize: aiResponseCache.size,
+          serperCacheSize: serperCache.size,
+          brandDataCacheSize: brandDataCache.size,
+          fullResponseCacheSize: fullResponseCache.size,
+          cacheHit: true
+        }
       });
     }
     
@@ -744,9 +769,22 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
         aiResponseCacheSize: aiResponseCache.size,
         serperCacheSize: serperCache.size,
         brandDataCacheSize: brandDataCache.size,
+        fullResponseCacheSize: fullResponseCache.size,
         cacheHit: false // This was a cache miss since we generated new response
       }
     };
+
+    // Cache the full response (including external search results) for future identical queries
+    if (externalSearchResults) {
+      setCachedData(fullResponseCache, cacheKey, {
+        recommendation: aiResponse,
+        externalSearchResults: externalSearchResults, // Store the full external search results
+        hasExternalData: true,
+        searchType: 'external',
+        dataSource: 'web_search'
+      });
+      console.log(`💾 CACHED: Full response with external search results for query: ${query.substring(0, 50)}...`);
+    }
     
     console.log('=== DEBUG: Final result created ===');
     console.log('Result type:', enhancedResult.searchType);

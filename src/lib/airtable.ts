@@ -48,6 +48,17 @@ interface Review {
   submissionDate: string;
 }
 
+interface SharedAnalysis {
+  id?: string;
+  shareId: string;
+  analysisResult: string;
+  userProfile: string;
+  brandQuery: string;
+  createdAt: string;
+  viewCount: number;
+  sharedAt: string;
+}
+
 // Initialize Airtable connection
 function initializeAirtable() {
   const base = new Airtable({
@@ -319,6 +330,115 @@ export const airtableService = {
     } catch (error) {
       console.error('Error fetching price ranges:', error);
       return [];
+    }
+  },
+
+  // Shared Analysis methods
+  async createSharedAnalysis(sharedData: Omit<SharedAnalysis, 'id'>): Promise<SharedAnalysis> {
+    try {
+      console.log('📊 Creating shared analysis in Airtable...');
+      const base = initializeAirtable();
+      
+      const tableName = process.env.AIRTABLE_SHARED_ANALYSIS_TABLE || 'Shared Analysis';
+      console.log('📋 Using table:', tableName);
+      
+      const record = await base(tableName).create({
+        shareId: sharedData.shareId,
+        analysisResult: sharedData.analysisResult,
+        userProfile: sharedData.userProfile,
+        brandQuery: sharedData.brandQuery,
+        createdAt: sharedData.createdAt,
+        viewCount: sharedData.viewCount,
+        sharedAt: sharedData.sharedAt
+      });
+
+      console.log(`📦 Created shared analysis record with ID: ${record.id}`);
+      
+      return {
+        id: record.id,
+        shareId: record.get('shareId') as string,
+        analysisResult: record.get('analysisResult') as string,
+        userProfile: record.get('userProfile') as string,
+        brandQuery: record.get('brandQuery') as string,
+        createdAt: record.get('createdAt') as string,
+        viewCount: record.get('viewCount') as number,
+        sharedAt: record.get('sharedAt') as string
+      };
+    } catch (error) {
+      console.error('Error creating shared analysis:', error);
+      throw error;
+    }
+  },
+
+  async getSharedAnalysis(shareId: string): Promise<SharedAnalysis | null> {
+    try {
+      console.log('📊 Retrieving shared analysis from Airtable...');
+      const base = initializeAirtable();
+      
+      const tableName = process.env.AIRTABLE_SHARED_ANALYSIS_TABLE || 'Shared Analysis';
+      console.log('📋 Using table:', tableName);
+      
+      const records = await base(tableName)
+        .select({
+          filterByFormula: `{shareId} = '${shareId}'`,
+          maxRecords: 1
+        })
+        .all();
+
+      if (records.length === 0) {
+        console.log('📦 No shared analysis found for shareId:', shareId);
+        return null;
+      }
+
+      const record = records[0];
+      console.log(`📦 Retrieved shared analysis record with ID: ${record.id}`);
+      
+      return {
+        id: record.id,
+        shareId: record.get('shareId') as string,
+        analysisResult: record.get('analysisResult') as string,
+        userProfile: record.get('userProfile') as string,
+        brandQuery: record.get('brandQuery') as string,
+        createdAt: record.get('createdAt') as string,
+        viewCount: record.get('viewCount') as number,
+        sharedAt: record.get('sharedAt') as string
+      };
+    } catch (error) {
+      console.error('Error retrieving shared analysis:', error);
+      throw error;
+    }
+  },
+
+  async incrementViewCount(shareId: string): Promise<void> {
+    try {
+      console.log('📊 Incrementing view count for shared analysis...');
+      const base = initializeAirtable();
+      
+      const tableName = process.env.AIRTABLE_SHARED_ANALYSIS_TABLE || 'Shared Analysis';
+      
+      const records = await base(tableName)
+        .select({
+          filterByFormula: `{shareId} = '${shareId}'`,
+          maxRecords: 1
+        })
+        .all();
+
+      if (records.length === 0) {
+        console.log('📦 No shared analysis found to increment view count for shareId:', shareId);
+        return;
+      }
+
+      const record = records[0];
+      const currentViewCount = (record.get('viewCount') as number) || 0;
+      
+      await base(tableName).update(record.id, {
+        viewCount: currentViewCount + 1
+      });
+
+      console.log(`📦 Incremented view count to ${currentViewCount + 1} for shareId: ${shareId}`);
+    } catch (error) {
+      console.error('Error incrementing view count:', error);
+      throw error;
     }
   }
 };

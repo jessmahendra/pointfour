@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test CustomEvent Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .pointfour-tailored-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .pointfour-tailored-btn:hover {
+            background-color: #0056b3;
+        }
+        .console-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test CustomEvent Fix for PointFour Extension</h1>
+    
+    <div class="test-section">
+        <h2>Test Button</h2>
+        <p>This button should work without throwing the "pointFourShowSizeInput is not a function" error:</p>
+        <button class="pointfour-tailored-btn" onclick="window.pointFourShowSizeInput()">
+            Find my size
+        </button>
+    </div>
+
+    <div class="test-section">
+        <h2>Console Output</h2>
+        <p>Check the browser console for any errors. You should see:</p>
+        <ul>
+            <li>No "Uncaught TypeError: window.pointFourShowSizeInput is not a function" error</li>
+            <li>CustomEvent 'PF_FIND_MY_SIZE' being dispatched when button is clicked</li>
+            <li>Content script listening for and handling the event</li>
+        </ul>
+        <div class="console-output" id="console-output">
+            Click the button above and check the browser console...
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Manual Test</h2>
+        <p>You can also test manually in the browser console:</p>
+        <div class="console-output">
+// Test if the function exists
+console.log(typeof window.pointFourShowSizeInput);
+
+// Test dispatching the event manually
+window.dispatchEvent(new CustomEvent('PF_FIND_MY_SIZE'));
+
+// Check if event listeners are set up
+console.log('Event listeners:', window.addEventListener.toString());
+        </div>
+    </div>
+
+    <script>
+        // Simulate the content script environment
+        console.log('Test page loaded');
+        
+        // Override console.log to show output in the page
+        const originalLog = console.log;
+        const consoleOutput = document.getElementById('console-output');
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            consoleOutput.textContent += args.join(' ') + '\n';
+        };
+        
+        // Test the function immediately
+        console.log('Testing window.pointFourShowSizeInput...');
+        console.log('Function type:', typeof window.pointFourShowSizeInput);
+        
+        if (typeof window.pointFourShowSizeInput === 'function') {
+            console.log('✅ Function exists and is callable');
+        } else {
+            console.log('❌ Function does not exist or is not callable');
+        }
+    </script>
+</body>
+</html>
