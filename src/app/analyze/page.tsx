@@ -1856,43 +1856,48 @@ Please provide a specific answer to this follow-up question.`;
               🔍 Browse directory
             </a>
 
-            {/* Share Button - Only show in analysis results */}
+            {/* New Search Button - Only show in analysis results */}
             {currentStep === "analysis" && analysisResult && (
               <button
-                onClick={handleShare}
-                disabled={shareLoading || isSharedView}
+                onClick={() => {
+                  setCurrentStep("form");
+                  setAnalysisResult(null);
+                  setBrandQuery("");
+                  setUserProfile({
+                    ukClothingSize: "",
+                    ukShoeSize: "",
+                    bodyShape: "",
+                    height: "",
+                    fitPreference: "",
+                    footType: "",
+                    category: "",
+                  });
+                  setMessages([]);
+                  setCurrentInput("");
+                }}
                 style={{
-                  backgroundColor: isSharedView ? "#D1D5DB" : "#4F46E5",
+                  backgroundColor: "#6C6A68",
                   color: "white",
                   padding: "8px 16px",
                   borderRadius: "8px",
                   border: "none",
                   fontSize: "12px",
                   fontWeight: "500",
-                  cursor: isSharedView ? "not-allowed" : "pointer",
+                  cursor: "pointer",
                   transition: "all 0.2s ease",
                   marginTop: "8px",
                   width: "100%",
-                  opacity: shareLoading ? 0.7 : 1,
                 }}
                 onMouseOver={(e) => {
-                  if (!isSharedView && !shareLoading) {
-                    (e.target as HTMLButtonElement).style.backgroundColor =
-                      "#4338CA";
-                  }
+                  (e.target as HTMLButtonElement).style.backgroundColor =
+                    "#5A5856";
                 }}
                 onMouseOut={(e) => {
-                  if (!isSharedView && !shareLoading) {
-                    (e.target as HTMLButtonElement).style.backgroundColor =
-                      "#4F46E5";
-                  }
+                  (e.target as HTMLButtonElement).style.backgroundColor =
+                    "#6C6A68";
                 }}
               >
-                {shareLoading
-                  ? "Creating share link..."
-                  : isSharedView
-                  ? "🔗 Shared View"
-                  : "📤 Share Analysis"}
+                🔍 New Search
               </button>
             )}
           </div>
@@ -1925,10 +1930,11 @@ Please provide a specific answer to this follow-up question.`;
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "space-between",
             padding: "16px 24px",
           }}
         >
+          <div style={{ flex: 1 }}></div>
           <Link href="/">
             <svg
               width="93"
@@ -1945,6 +1951,45 @@ Please provide a specific answer to this follow-up question.`;
               />
             </svg>
           </Link>
+          <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
+            {/* Share Button - Only show in analysis results */}
+            {currentStep === "analysis" && analysisResult && (
+              <button
+                onClick={handleShare}
+                disabled={shareLoading || isSharedView}
+                style={{
+                  backgroundColor: isSharedView ? "#D1D5DB" : "#4F46E5",
+                  color: "white",
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: "500",
+                  cursor: isSharedView ? "not-allowed" : "pointer",
+                  transition: "all 0.2s ease",
+                  opacity: shareLoading ? 0.7 : 1,
+                }}
+                onMouseOver={(e) => {
+                  if (!isSharedView && !shareLoading) {
+                    (e.target as HTMLButtonElement).style.backgroundColor =
+                      "#4338CA";
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!isSharedView && !shareLoading) {
+                    (e.target as HTMLButtonElement).style.backgroundColor =
+                      "#4F46E5";
+                  }
+                }}
+              >
+                {shareLoading
+                  ? "Creating share link..."
+                  : isSharedView
+                  ? "🔗 Shared View"
+                  : "📤 Share Analysis"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -2322,31 +2367,48 @@ Please provide a specific answer to this follow-up question.`;
             🔍 Browse directory
           </a>
 
-          {/* Share Button - Only show in analysis results */}
+          {/* New Search Button - Only show in analysis results */}
           {currentStep === "analysis" && analysisResult && (
             <button
-              onClick={handleShare}
-              disabled={shareLoading || isSharedView}
+              onClick={() => {
+                setCurrentStep("form");
+                setAnalysisResult(null);
+                setBrandQuery("");
+                setUserProfile({
+                  ukClothingSize: "",
+                  ukShoeSize: "",
+                  bodyShape: "",
+                  height: "",
+                  fitPreference: "",
+                  footType: "",
+                  category: "",
+                });
+                setMessages([]);
+                setCurrentInput("");
+              }}
               style={{
-                backgroundColor: isSharedView ? "#D1D5DB" : "#4F46E5",
+                backgroundColor: "#6C6A68",
                 color: "white",
                 padding: "8px 16px",
                 borderRadius: "8px",
                 border: "none",
                 fontSize: "12px",
                 fontWeight: "500",
-                cursor: isSharedView ? "not-allowed" : "pointer",
+                cursor: "pointer",
                 transition: "all 0.2s ease",
                 marginTop: "8px",
                 width: "100%",
-                opacity: shareLoading ? 0.7 : 1,
+              }}
+              onMouseOver={(e) => {
+                (e.target as HTMLButtonElement).style.backgroundColor =
+                  "#5A5856";
+              }}
+              onMouseOut={(e) => {
+                (e.target as HTMLButtonElement).style.backgroundColor =
+                  "#6C6A68";
               }}
             >
-              {shareLoading
-                ? "Creating share link..."
-                : isSharedView
-                ? "🔗 Shared View"
-                : "📤 Share Analysis"}
+              🔍 New Search
             </button>
           )}
         </div>
