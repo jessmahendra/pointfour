@@ -6,6 +6,7 @@ import { CONFIG } from './config.js';
 import { getState, setState } from './state.js';
 import { extractQualityInsights } from './review-analysis.js';
 import { extractMaterialsFromPage } from './product-extraction.js';
+import { generateIntelligentSizeRecommendation } from './size-conversion-system.js';
 
 // ========================================
 // WIDGET CREATION AND LIFECYCLE
@@ -583,34 +584,57 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         
         contentHTML += '<div class="pointfour-sections">';
         
-        // Prioritize sections: fit > quality > washCare
-        const sectionPriority = ['fit', 'quality', 'washCare'];
+        // Prioritize sections: personalSummary > quality > sizingAdvice > userReviews
+        const sectionPriority = ['personalSummary', 'quality', 'sizingAdvice', 'userReviews'];
         const sortedSections = sectionPriority.filter(key => sections[key]);
         
         console.log('🔍 [PointFour] Sorted sections to render:', sortedSections);
         
         for (const sectionKey of sortedSections.slice(0, 3)) {
             const section = sections[sectionKey];
-        console.log(`🔍 [PointFour] Processing section ${sectionKey}:`, {
-            hasSection: !!section,
-            hasRecommendation: !!(section && section.recommendation),
-            recommendation: section?.recommendation?.substring(0, 100),
-            isUseful: section && section.recommendation ? isUsefulRecommendation(section.recommendation) : false,
-            hasEvidence: !!(section && section.evidence && section.evidence.length > 0),
-            evidenceCount: section?.evidence?.length || 0,
-            evidencePreview: section?.evidence?.slice(0, 2) || [] // Show first 2 evidence items
-        });
             
-            if (section && section.recommendation && isUsefulRecommendation(section.recommendation)) {
+            // Check if section has useful content based on new structure
+            let hasUsefulContent = false;
+            let contentToCheck = '';
+            
+            if (sectionKey === 'personalSummary') {
+                hasUsefulContent = !!(section.brandIntroduction || section.tailoredRecommendation);
+                contentToCheck = section.brandIntroduction || section.tailoredRecommendation || '';
+            } else if (sectionKey === 'quality') {
+                hasUsefulContent = !!(section.overallQuality || section.postWashCare);
+                contentToCheck = section.overallQuality || section.postWashCare || '';
+            } else if (sectionKey === 'sizingAdvice') {
+                hasUsefulContent = !!(section.detailedGuidance || section.sizeChartInsights);
+                contentToCheck = section.detailedGuidance || section.sizeChartInsights || '';
+            } else if (sectionKey === 'userReviews') {
+                hasUsefulContent = !!(section.supportingQuotes && section.supportingQuotes.length > 0);
+                contentToCheck = section.supportingQuotes ? section.supportingQuotes.join(' ') : '';
+            } else {
+                // Fallback for old structure
+                hasUsefulContent = !!(section.recommendation && isUsefulRecommendation(section.recommendation));
+                contentToCheck = section.recommendation || '';
+            }
+            
+            console.log(`🔍 [PointFour] Processing section ${sectionKey}:`, {
+                hasSection: !!section,
+                hasUsefulContent,
+                contentToCheck: contentToCheck.substring(0, 100),
+                isUseful: hasUsefulContent ? isUsefulRecommendation(contentToCheck) : false,
+                hasEvidence: !!(section && section.evidence && section.evidence.length > 0),
+                evidenceCount: section?.evidence?.length || 0,
+                evidencePreview: section?.evidence?.slice(0, 2) || []
+            });
+            
+            if (section && hasUsefulContent && isUsefulRecommendation(contentToCheck)) {
                 const renderedSection = renderSectionWithQuotes(sectionKey, section);
                 console.log(`🔍 [PointFour] Rendered section ${sectionKey}:`, renderedSection.substring(0, 200) + '...');
                 contentHTML += renderedSection;
             } else {
                 console.log(`🔍 [PointFour] Skipping section ${sectionKey} - missing data or not useful:`, {
                     hasSection: !!section,
-                    hasRecommendation: !!(section && section.recommendation),
-                    isUseful: section && section.recommendation ? isUsefulRecommendation(section.recommendation) : false,
-                    recommendation: section?.recommendation?.substring(0, 100)
+                    hasUsefulContent,
+                    isUseful: hasUsefulContent ? isUsefulRecommendation(contentToCheck) : false,
+                    contentToCheck: contentToCheck.substring(0, 100)
                 });
             }
         }
@@ -708,16 +732,25 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
 function renderSectionWithQuotes(sectionKey, section) {
     const sectionTitle = getSectionTitle(sectionKey);
     
-    // For recommendations section, focus on concise sizing insights
-    if (sectionKey === 'recommendations') {
-        return renderConciseRecommendations(section);
-    }
+    // Handle new section structure
+    let mainContent = '';
+    let subContent = '';
     
-    // Extract the main insight from recommendation (before the quotes)
-    let mainInsight = section.recommendation;
-    if (mainInsight.length > 100) {
-        // Truncate very long recommendations
-        mainInsight = mainInsight.substring(0, 100) + '...';
+    if (sectionKey === 'personalSummary') {
+        mainContent = section.brandIntroduction || '';
+        subContent = section.tailoredRecommendation || '';
+    } else if (sectionKey === 'quality') {
+        mainContent = section.overallQuality || '';
+        subContent = section.postWashCare || '';
+    } else if (sectionKey === 'sizingAdvice') {
+        mainContent = section.detailedGuidance || '';
+        subContent = section.sizeChartInsights || '';
+    } else if (sectionKey === 'userReviews') {
+        mainContent = 'Customer feedback highlights:';
+        // Handle quotes separately below
+    } else {
+        // Fallback for old structure
+        mainContent = section.recommendation || '';
     }
     
     let html = `
@@ -726,39 +759,42 @@ function renderSectionWithQuotes(sectionKey, section) {
                 <span>${sectionTitle}</span>
             </div>
             <div class="pointfour-section-content">
-                <p class="pointfour-main-insight">${mainInsight}</p>
+                <div class="main-content">${mainContent}</div>
+                ${subContent ? `<div class="sub-content">${subContent}</div>` : ''}
     `;
     
-    // Add real user quotes if evidence exists - filter for section relevance
-    if (section.evidence && section.evidence.length > 0) {
-        console.log(`🔍 [PointFour] ${sectionKey} section evidence:`, {
-            evidenceCount: section.evidence.length,
-            evidence: section.evidence.slice(0, 2) // Show first 2 for debugging
+    // Handle user reviews section specially
+    if (sectionKey === 'userReviews' && section.supportingQuotes && section.supportingQuotes.length > 0) {
+        html += '<div class="pointfour-quotes-container">';
+        section.supportingQuotes.forEach((quote, index) => {
+            if (quote && quote.trim().length > 10) {
+                const cleanedQuote = cleanQuoteText(quote);
+                const sourceLink = section.sourceLinks && section.sourceLinks[index] 
+                    ? `<div class="quote-source"><a href="${section.sourceLinks[index]}" target="_blank" rel="noopener noreferrer">View source</a></div>`
+                    : '';
+                html += `
+                    <div class="pointfour-quote">
+                        <div class="quote-text">"${cleanedQuote}"</div>
+                        ${sourceLink}
+                    </div>
+                `;
+            }
         });
-        
-        // For now, let's show the evidence directly without filtering to see if that fixes the issue
-        // const relevantQuotes = filterQuotesForSection(section.evidence, sectionKey);
-        const relevantQuotes = section.evidence; // Show all evidence for this section
-        
-        console.log(`🔍 [PointFour] ${sectionKey} quotes to show:`, {
-            relevantCount: relevantQuotes.length,
-            relevantQuotes: relevantQuotes.slice(0, 2) // Show first 2 for debugging
-        });
+        html += '</div>';
+    } else if (section.evidence && section.evidence.length > 0) {
+        // Handle evidence for other sections
+        const relevantQuotes = section.evidence;
         
         if (relevantQuotes.length > 0) {
             html += '<div class="pointfour-quotes-container">';
-            for (const quote of relevantQuotes.slice(0, 3)) { // Show max 3 relevant quotes
+            for (const quote of relevantQuotes.slice(0, 3)) {
                 if (quote && quote.trim().length > 10) {
                     const cleanedQuote = cleanQuoteText(quote);
                     html += `<div class="pointfour-quote">"${cleanedQuote}"</div>`;
                 }
             }
             html += '</div>';
-        } else {
-            console.log(`🔍 [PointFour] No quotes shown for ${sectionKey} section - all evidence filtered out`);
         }
-    } else {
-        console.log(`🔍 [PointFour] No evidence available for ${sectionKey} section`);
     }
     
     // Show confidence warning only if confidence is low
@@ -1092,8 +1128,11 @@ function isUsefulRecommendation(recommendation) {
 
 function getSectionTitle(sectionKey) {
     const titles = {
-        fit: 'Fit',
+        personalSummary: 'Personal Summary',
         quality: 'Quality',
+        sizingAdvice: 'Sizing Advice',
+        userReviews: 'User Reviews',
+        fit: 'Fit',
         fabric: 'Fabric',
         washCare: 'Care'
     };
@@ -1234,7 +1273,8 @@ function generateTailoredRecommendations(selectedSize, measurements, sizeChart, 
         fitAnalysis: null,
         reviewInsights: [],
         easeAnalysis: null,
-        garmentType: 'general'
+        garmentType: 'general',
+        sizeConversion: null
     };
     
     if (sizeChart && sizeChart.measurements && Object.keys(sizeChart.measurements).length > 0) {
@@ -1249,6 +1289,22 @@ function generateTailoredRecommendations(selectedSize, measurements, sizeChart, 
         recommendations.easeAnalysis = bestMatch.easeAnalysis;
         recommendations.garmentType = bestMatch.garmentType;
         
+        // Add intelligent size conversion recommendations
+        if (selectedSize && productInfo.brand) {
+            try {
+                // Import size conversion functions (these would be imported from the size-conversion-system module)
+                const sizeConversion = generateIntelligentSizeRecommendation(selectedSize, productInfo.brand, sizeChart);
+                recommendations.sizeConversion = sizeConversion;
+                
+                // Add size conversion advice to fit advice
+                if (sizeConversion.recommendation) {
+                    recommendations.fitAdvice.unshift(sizeConversion.recommendation);
+                }
+            } catch (error) {
+                console.warn('[PointFour] Error generating size conversion:', error);
+            }
+        }
+        
         // Add social review insights (ENHANCEMENT)
         if (socialReviews && socialReviews.length > 0) {
             recommendations.reviewInsights = extractReviewInsights(socialReviews);
@@ -1256,11 +1312,32 @@ function generateTailoredRecommendations(selectedSize, measurements, sizeChart, 
         }
         
     } else {
-        recommendations.fitAdvice = [
-            'No size chart available for this item.',
-            'Consider trying your usual size or checking the brand\'s general sizing guide.',
-            'Look for reviews mentioning sizing to get additional guidance.'
-        ];
+        // Even without size chart, try to provide size conversion advice if we have brand info
+        if (selectedSize && productInfo.brand) {
+            try {
+                const sizeConversion = generateIntelligentSizeRecommendation(selectedSize, productInfo.brand);
+                recommendations.sizeConversion = sizeConversion;
+                recommendations.fitAdvice = [
+                    sizeConversion.recommendation,
+                    'No size chart available for this item.',
+                    'Consider checking the brand\'s general sizing guide.',
+                    'Look for reviews mentioning sizing to get additional guidance.'
+                ];
+            } catch (error) {
+                console.warn('[PointFour] Error generating size conversion:', error);
+                recommendations.fitAdvice = [
+                    'No size chart available for this item.',
+                    'Consider trying your usual size or checking the brand\'s general sizing guide.',
+                    'Look for reviews mentioning sizing to get additional guidance.'
+                ];
+            }
+        } else {
+            recommendations.fitAdvice = [
+                'No size chart available for this item.',
+                'Consider trying your usual size or checking the brand\'s general sizing guide.',
+                'Look for reviews mentioning sizing to get additional guidance.'
+            ];
+        }
     }
     
     return recommendations;

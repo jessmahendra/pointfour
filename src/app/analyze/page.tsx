@@ -28,11 +28,35 @@ interface AnalysisResult {
       sources: string[];
       totalResults: number;
       sections?: {
-        [key: string]: {
-          title: string;
-          recommendation: string;
+        personalSummary?: {
+          brandIntroduction: string;
+          tailoredRecommendation: string;
           confidence: "high" | "medium" | "low";
           evidence: string[];
+        };
+        quality?: {
+          overallQuality: string;
+          postWashCare: string;
+          confidence: "high" | "medium" | "low";
+          evidence: string[];
+        };
+        sizingAdvice?: {
+          detailedGuidance: string;
+          sizeChartInsights: string;
+          confidence: "high" | "medium" | "low";
+          evidence: string[];
+        };
+        userReviews?: {
+          supportingQuotes: string[];
+          sourceLinks: string[];
+          confidence: "high" | "medium" | "low";
+        };
+        // Legacy sections for backward compatibility
+        [key: string]: {
+          title?: string;
+          recommendation?: string;
+          confidence: "high" | "medium" | "low";
+          evidence?: string[];
         };
       };
     } | null;
@@ -1056,13 +1080,15 @@ Please provide a specific answer to this follow-up question.`;
             <div
               style={{
                 fontSize: "14px",
-                backgroundColor: "#F0F7FF",
-                padding: "16px",
-                borderRadius: "8px",
+                backgroundColor: "#F8F7F4",
+                padding: "20px",
+                borderRadius: "12px",
                 margin: 0,
-                color: "#2C5282",
-                lineHeight: "1.2",
-                border: "1px solid #BEE3F8",
+                color: "#333",
+                lineHeight: "1.5",
+                border: "1px solid #E9DED5",
+                fontFamily:
+                  'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
               }}
             >
               {formatMarkdownText(
@@ -1098,96 +1124,343 @@ Please provide a specific answer to this follow-up question.`;
             </div>
           </div>
 
-          {/* Material Composition - Only show if we have material data from specific item search */}
-          {analysisResult?.externalSearchResults?.brandFitSummary?.sections
-            ?.materials && (
+          {/* Analysis Sections */}
+          {analysisResult?.externalSearchResults?.brandFitSummary?.sections && (
             <div style={{ marginBottom: "24px" }}>
-              <h4
-                style={{
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  marginBottom: "8px",
-                  color: "#333",
-                }}
-              >
-                🧵 Material Composition
-              </h4>
-              <div
-                style={{
-                  fontSize: "12px",
-                  backgroundColor: "#F0F7FF",
-                  padding: "12px",
-                  borderRadius: "6px",
-                  margin: 0,
-                  color: "#2C5282",
-                  border: "1px solid #BEE3F8",
-                }}
-              >
-                <p style={{ margin: "0 0 8px 0", fontWeight: "500" }}>
-                  {
-                    analysisResult.externalSearchResults.brandFitSummary
-                      .sections.materials.recommendation
-                  }
-                </p>
-                {analysisResult.externalSearchResults.brandFitSummary.sections
-                  .materials.evidence.length > 0 && (
-                  <p
+              {/* Personal Summary Section */}
+              {analysisResult.externalSearchResults.brandFitSummary.sections
+                .personalSummary && (
+                <div
+                  style={{
+                    backgroundColor: "#F8F7F4",
+                    padding: "20px",
+                    borderRadius: "12px",
+                    marginBottom: "16px",
+                    border: "1px solid #E9DED5",
+                  }}
+                >
+                  <h4
                     style={{
-                      margin: 0,
-                      fontSize: "11px",
-                      fontStyle: "italic",
-                      opacity: 0.8,
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: "#333",
+                      margin: "0 0 12px 0",
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                     }}
                   >
-                    Source:{" "}
-                    {analysisResult.externalSearchResults.brandFitSummary.sections.materials.evidence[0].substring(
-                      0,
-                      100
+                    👤 Personal Summary
+                  </h4>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      color: "#333",
+                      lineHeight: "1.5",
+                      marginBottom: "8px",
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    }}
+                  >
+                    <strong>Brand Introduction:</strong>{" "}
+                    {
+                      analysisResult.externalSearchResults.brandFitSummary
+                        .sections.personalSummary.brandIntroduction
+                    }
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      color: "#333",
+                      lineHeight: "1.5",
+                      marginBottom: "8px",
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    }}
+                  >
+                    <strong>Tailored Recommendation:</strong>{" "}
+                    {
+                      analysisResult.externalSearchResults.brandFitSummary
+                        .sections.personalSummary.tailoredRecommendation
+                    }
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Confidence:{" "}
+                    {
+                      analysisResult.externalSearchResults.brandFitSummary
+                        .sections.personalSummary.confidence
+                    }
+                  </div>
+                </div>
+              )}
+
+              {/* Sizing Advice Section */}
+              {analysisResult.externalSearchResults.brandFitSummary.sections
+                .sizingAdvice && (
+                <div
+                  style={{
+                    backgroundColor: "#F8F7F4",
+                    padding: "20px",
+                    borderRadius: "12px",
+                    marginBottom: "16px",
+                    border: "1px solid #E9DED5",
+                  }}
+                >
+                  <h4
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: "#333",
+                      margin: "0 0 12px 0",
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    }}
+                  >
+                    📏 Sizing Advice
+                  </h4>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      color: "#333",
+                      lineHeight: "1.5",
+                      marginBottom: "8px",
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    }}
+                  >
+                    <strong>Detailed Guidance:</strong>{" "}
+                    {formatMarkdownText(
+                      analysisResult.externalSearchResults.brandFitSummary
+                        .sections.sizingAdvice.detailedGuidance
                     )}
-                    ...
-                  </p>
-                )}
-              </div>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      color: "#333",
+                      lineHeight: "1.5",
+                      marginBottom: "8px",
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    }}
+                  >
+                    <strong>Size Chart Insights:</strong>{" "}
+                    {formatMarkdownText(
+                      analysisResult.externalSearchResults.brandFitSummary
+                        .sections.sizingAdvice.sizeChartInsights
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Confidence:{" "}
+                    {
+                      analysisResult.externalSearchResults.brandFitSummary
+                        .sections.sizingAdvice.confidence
+                    }
+                  </div>
+                </div>
+              )}
+
+              {/* User Reviews Section */}
+              {analysisResult.externalSearchResults.brandFitSummary.sections
+                .userReviews && (
+                <div
+                  style={{
+                    backgroundColor: "#F8F7F4",
+                    padding: "20px",
+                    borderRadius: "12px",
+                    marginBottom: "16px",
+                    border: "1px solid #E9DED5",
+                  }}
+                >
+                  <h4
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color: "#333",
+                      margin: "0 0 12px 0",
+                      fontFamily:
+                        'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    }}
+                  >
+                    💬 User Reviews
+                  </h4>
+                  {analysisResult.externalSearchResults.brandFitSummary.sections
+                    .userReviews.supportingQuotes &&
+                    analysisResult.externalSearchResults.brandFitSummary
+                      .sections.userReviews.supportingQuotes.length > 0 && (
+                      <div style={{ marginBottom: "12px" }}>
+                        {analysisResult.externalSearchResults.brandFitSummary.sections.userReviews.supportingQuotes.map(
+                          (quote, index) => (
+                            <div
+                              key={index}
+                              style={{
+                                backgroundColor: "#FFFFFF",
+                                padding: "12px",
+                                borderRadius: "8px",
+                                marginBottom: "8px",
+                                border: "1px solid #E9DED5",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: "14px",
+                                  color: "#333",
+                                  lineHeight: "1.4",
+                                  marginBottom: "8px",
+                                  fontStyle: "italic",
+                                  fontFamily:
+                                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                }}
+                              >
+                                "{quote}"
+                              </div>
+                              {analysisResult.externalSearchResults
+                                .brandFitSummary.sections.userReviews
+                                .sourceLinks &&
+                                analysisResult.externalSearchResults
+                                  .brandFitSummary.sections.userReviews
+                                  .sourceLinks[index] && (
+                                  <a
+                                    href={
+                                      analysisResult.externalSearchResults
+                                        .brandFitSummary.sections.userReviews
+                                        .sourceLinks[index]
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      fontSize: "12px",
+                                      color: "#DC2626",
+                                      textDecoration: "none",
+                                    }}
+                                  >
+                                    View source →
+                                  </a>
+                                )}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Confidence:{" "}
+                    {
+                      analysisResult.externalSearchResults.brandFitSummary
+                        .sections.userReviews.confidence
+                    }
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Recommendations */}
-          <div style={{ marginBottom: "24px" }}>
-            <h4
-              style={{
-                fontSize: "14px",
-                fontWeight: "600",
-                marginBottom: "8px",
-                color: "#333",
-              }}
-            >
-              Recommendations
-            </h4>
-            <div
-              style={{
-                backgroundColor: "#F8F7F4",
-                padding: "16px",
-                borderRadius: "8px",
-                margin: 0,
-              }}
-            >
-              <ul style={{ margin: 0, paddingLeft: "16px" }}>
-                {parsedData.recommendations.map((rec, index) => (
-                  <li
-                    key={index}
+          {/* User Reviews - Show quotes from external search results */}
+          {analysisResult?.externalSearchResults?.reviews &&
+            analysisResult.externalSearchResults.reviews.length > 0 && (
+              <div style={{ marginBottom: "24px" }}>
+                <h4
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                    color: "#333",
+                  }}
+                >
+                  💬 User Reviews
+                </h4>
+                <div
+                  style={{
+                    backgroundColor: "#F8F7F4",
+                    padding: "16px",
+                    borderRadius: "8px",
+                    margin: 0,
+                  }}
+                >
+                  <div
                     style={{
-                      fontSize: "14px",
-                      marginBottom: "8px",
-                      color: "#4E4B4B",
-                      lineHeight: "1.2",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
                     }}
                   >
-                    {formatMarkdownText(rec)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+                    {analysisResult.externalSearchResults.reviews
+                      .slice(0, 5)
+                      .map((review, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            backgroundColor: "#FFFFFF",
+                            padding: "12px",
+                            borderRadius: "8px",
+                            border: "1px solid #E9DED5",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "14px",
+                              color: "#333",
+                              lineHeight: "1.4",
+                              marginBottom: "8px",
+                              fontStyle: "italic",
+                              fontFamily:
+                                'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            }}
+                          >
+                            "{review.snippet}"
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              fontSize: "12px",
+                              color: "#666",
+                            }}
+                          >
+                            <span
+                              style={{
+                                backgroundColor: "#E9DED5",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              {review.source}
+                            </span>
+                            <a
+                              href={review.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                color: "#DC2626",
+                                textDecoration: "none",
+                              }}
+                            >
+                              View source →
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
           {/* Warnings */}
           {parsedData.warnings.length > 0 && (

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Size Conversion System Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-result { background: #f0f8ff; padding: 10px; margin: 10px 0; border-left: 4px solid #007acc; }
+        .brand-example { background: #fff3cd; padding: 10px; margin: 10px 0; border-left: 4px solid #ffc107; }
+        .conversion-table { margin: 10px 0; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        .highlight { background-color: #e7f3ff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Size Conversion System Test</h1>
+    <p>This page demonstrates the new size conversion system that handles different brand sizing systems like Frame's numeric sizing.</p>
+
+    <!-- Test 1: Frame Brand Example -->
+    <div class="test-section">
+        <h3>Test 1: Frame Brand Size Conversion</h3>
+        <div class="brand-example">
+            <strong>Problem:</strong> Frame uses numeric sizing (25, 26, 27, 28) instead of standard US sizing (6, 8, 10, 12).<br>
+            <strong>Solution:</strong> The system now converts between sizing systems automatically.
+        </div>
+        
+        <div class="test-result">
+            <h4>Size Conversion Examples:</h4>
+            <ul>
+                <li>If you're usually a US size 8 → Try Frame size 26</li>
+                <li>If you're usually a US size 10 → Try Frame size 27</li>
+                <li>If you're usually a US size 12 → Try Frame size 28</li>
+                <li>If you're usually a US size 14 → Try Frame size 29</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Test 2: Conversion Table -->
+    <div class="test-section">
+        <h3>Test 2: Complete Size Conversion Table</h3>
+        <div class="conversion-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>US Standard</th>
+                        <th>Frame Numeric</th>
+                        <th>European</th>
+                        <th>UK</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>0</td><td>23</td><td>32</td><td>4</td></tr>
+                    <tr><td>2</td><td>24</td><td>34</td><td>6</td></tr>
+                    <tr><td>4</td><td>25</td><td>36</td><td>8</td></tr>
+                    <tr><td class="highlight">6</td><td class="highlight">25</td><td class="highlight">36</td><td class="highlight">8</td></tr>
+                    <tr><td class="highlight">8</td><td class="highlight">26</td><td class="highlight">38</td><td class="highlight">10</td></tr>
+                    <tr><td class="highlight">10</td><td class="highlight">27</td><td class="highlight">40</td><td class="highlight">12</td></tr>
+                    <tr><td class="highlight">12</td><td class="highlight">28</td><td class="highlight">42</td><td class="highlight">14</td></tr>
+                    <tr><td class="highlight">14</td><td class="highlight">29</td><td class="highlight">44</td><td class="highlight">16</td></tr>
+                    <tr><td class="highlight">16</td><td class="highlight">30</td><td class="highlight">46</td><td class="highlight">18</td></tr>
+                    <tr><td class="highlight">18</td><td class="highlight">31</td><td class="highlight">48</td><td class="highlight">20</td></tr>
+                    <tr><td class="highlight">20</td><td class="highlight">32</td><td class="highlight">50</td><td class="highlight">22</td></tr>
+                    <tr><td>22</td><td>33</td><td>52</td><td>24</td></tr>
+                    <tr><td>24</td><td>34</td><td>54</td><td>26</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Test 3: Brand Detection -->
+    <div class="test-section">
+        <h3>Test 3: Brand Sizing System Detection</h3>
+        <div class="test-result">
+            <h4>Supported Brands and Their Sizing Systems:</h4>
+            <ul>
+                <li><strong>Frame:</strong> Frame Numeric (25, 26, 27, 28, 29, 30, 31, 32)</li>
+                <li><strong>Agolde:</strong> Frame Numeric (similar to Frame)</li>
+                <li><strong>Mother:</strong> Frame Numeric (similar to Frame)</li>
+                <li><strong>Citizens of Humanity:</strong> Frame Numeric (similar to Frame)</li>
+                <li><strong>J Brand:</strong> Frame Numeric (similar to Frame)</li>
+                <li><strong>Rag & Bone:</strong> US Standard (6, 8, 10, 12, 14, 16, 18, 20)</li>
+                <li><strong>Everlane:</strong> US Standard</li>
+                <li><strong>Madewell:</strong> US Standard</li>
+                <li><strong>Zara:</strong> European (32, 34, 36, 38, 40, 42, 44, 46, 48)</li>
+                <li><strong>H&M:</strong> European</li>
+                <li><strong>Uniqlo:</strong> Asian (XS, S, M, L, XL, XXL)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Test 4: Before vs After -->
+    <div class="test-section">
+        <h3>Test 4: Before vs After Comparison</h3>
+        
+        <div style="background: #f8d7da; padding: 10px; margin: 10px 0; border-left: 4px solid #dc3545;">
+            <h4>❌ Before (Not Helpful):</h4>
+            <p><strong>User:</strong> "I'm usually a size 8, what size should I get in Frame jeans?"</p>
+            <p><strong>System:</strong> "If you're size 8, it's true to size so get your size."</p>
+            <p><strong>Problem:</strong> Frame doesn't have a "size 8" - they have sizes 25, 26, 27, 28, etc.</p>
+        </div>
+        
+        <div style="background: #d4edda; padding: 10px; margin: 10px 0; border-left: 4px solid #28a745;">
+            <h4>✅ After (Helpful):</h4>
+            <p><strong>User:</strong> "I'm usually a size 8, what size should I get in Frame jeans?"</p>
+            <p><strong>System:</strong> "If you're usually a US size 8, try Frame size 26. Frame uses numeric sizing (23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34)."</p>
+            <p><strong>Benefit:</strong> Clear, specific recommendation with context about Frame's sizing system.</p>
+        </div>
+    </div>
+
+    <!-- Test 5: Implementation Details -->
+    <div class="test-section">
+        <h3>Test 5: Implementation Details</h3>
+        <div class="test-result">
+            <h4>How It Works:</h4>
+            <ol>
+                <li><strong>Brand Detection:</strong> System detects the brand and determines its sizing system</li>
+                <li><strong>Size Conversion:</strong> Converts user's usual size to the brand's sizing system</li>
+                <li><strong>Intelligent Recommendation:</strong> Provides specific, actionable advice</li>
+                <li><strong>Context:</strong> Explains the brand's sizing system to the user</li>
+            </ol>
+            
+            <h4>Technical Implementation:</h4>
+            <ul>
+                <li>New <code>size-conversion-system.js</code> module for browser extension</li>
+                <li>New <code>size-conversion.ts</code> utility for API routes</li>
+                <li>Updated widget management to include size conversion</li>
+                <li>Updated API routes to provide intelligent size recommendations</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        console.log('Size Conversion System Test Page Loaded');
+        console.log('This demonstrates the new size conversion system that handles Frame and other brands with different sizing systems');
+        
+        // Simulate the size conversion logic
+        function simulateSizeConversion(userSize, brandName) {
+            const brandSizingSystems = {
+                'frame': 'frame_numeric',
+                'agolde': 'frame_numeric',
+                'mother': 'frame_numeric',
+                'rag & bone': 'standard_us',
+                'zara': 'european',
+                'uniqlo': 'asian'
+            };
+            
+            const conversionTables = {
+                'us_to_frame': {
+                    6: 25, 8: 26, 10: 27, 12: 28, 14: 29, 16: 30, 18: 31, 20: 32
+                },
+                'us_to_eu': {
+                    6: 36, 8: 38, 10: 40, 12: 42, 14: 44, 16: 46, 18: 48, 20: 50
+                }
+            };
+            
+            const brandSystem = brandSizingSystems[brandName.toLowerCase()] || 'standard_us';
+            const conversionKey = `us_to_${brandSystem}`;
+            const conversionTable = conversionTables[conversionKey];
+            
+            if (conversionTable && conversionTable[userSize]) {
+                return conversionTable[userSize];
+            }
+            
+            return userSize;
+        }
+        
+        // Test the conversion
+        console.log('Testing size conversions:');
+        console.log('US 8 → Frame:', simulateSizeConversion(8, 'frame'));
+        console.log('US 10 → Frame:', simulateSizeConversion(10, 'frame'));
+        console.log('US 12 → Frame:', simulateSizeConversion(12, 'frame'));
+        console.log('US 8 → Zara:', simulateSizeConversion(8, 'zara'));
+        console.log('US 8 → Rag & Bone:', simulateSizeConversion(8, 'rag & bone'));
+    </script>
+</body>
+</html>

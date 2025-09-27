@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { generateIntelligentSizeRecommendation } from '@/lib/size-conversion';
 
 interface UserProfile {
   bodyShape: string;
@@ -617,6 +618,19 @@ function generateRealFitAdvice(
   userProfile: UserProfile,
   isFootwear: boolean
 ): string {
+  
+  // Generate intelligent size conversion advice first
+  const userSize = parseInt(userProfile.ukClothingSize || '10');
+  if (!isNaN(userSize) && brand.name) {
+    try {
+      const sizeConversion = generateIntelligentSizeRecommendation(userSize, brand.name);
+      if (sizeConversion.recommendation) {
+        return sizeConversion.recommendation;
+      }
+    } catch (error) {
+      console.warn('Error generating size conversion:', error);
+    }
+  }
   
   // Generate advice from reviews if available (prioritize this over brand data)
   if (brandReviews.length > 0) {

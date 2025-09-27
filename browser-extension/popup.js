@@ -1339,54 +1339,80 @@ function displayDynamicReviews(searchResults) {
     const sections = searchResults.brandFitSummary.sections || {};
     let sectionsHTML = '';
     
-    // Display quality section first if available
+    // Display Personal Summary section first if available
+    if (sections.personalSummary) {
+      sectionsHTML += `
+        <div class="summary-section personal-summary">
+          <strong>Personal Summary:</strong>
+          <div class="brand-intro">${sections.personalSummary.brandIntroduction}</div>
+          <div class="tailored-recommendation">${sections.personalSummary.tailoredRecommendation}</div>
+          <span class="confidence-badge">${sections.personalSummary.confidence}</span>
+        </div>
+      `;
+    }
+    
+    // Display Quality section
     if (sections.quality) {
       sectionsHTML += `
-        <div class="summary-section">
-          <strong>Quality:</strong> ${sections.quality.recommendation}
+        <div class="summary-section quality-section">
+          <strong>Quality:</strong>
+          <div class="overall-quality">${sections.quality.overallQuality}</div>
+          <div class="post-wash-care">${sections.quality.postWashCare}</div>
           <span class="confidence-badge">${sections.quality.confidence}</span>
         </div>
       `;
     }
     
-    // Display fit section
-    if (sections.fit) {
+    // Display Sizing Advice section if available
+    if (sections.sizingAdvice) {
       sectionsHTML += `
-        <div class="summary-section">
-          <strong>Fit:</strong> ${sections.fit.recommendation}
-          <span class="confidence-badge">${sections.fit.confidence}</span>
+        <div class="summary-section sizing-advice">
+          <strong>Sizing Advice:</strong>
+          <div class="detailed-guidance">${sections.sizingAdvice.detailedGuidance}</div>
+          <div class="size-chart-insights">${sections.sizingAdvice.sizeChartInsights}</div>
+          <span class="confidence-badge">${sections.sizingAdvice.confidence}</span>
         </div>
       `;
     }
     
-    // Display fabric section if available
-    if (sections.fabric) {
+    // Display User Reviews section if available
+    if (sections.userReviews) {
+      let quotesHTML = '';
+      if (sections.userReviews.supportingQuotes && sections.userReviews.supportingQuotes.length > 0) {
+        quotesHTML = '<div class="supporting-quotes">';
+        sections.userReviews.supportingQuotes.forEach((quote, index) => {
+          const sourceLink = sections.userReviews.sourceLinks && sections.userReviews.sourceLinks[index] 
+            ? `<a href="${sections.userReviews.sourceLinks[index]}" target="_blank" rel="noopener noreferrer">View source</a>`
+            : '';
+          quotesHTML += `
+            <div class="quote-item">
+              <div class="quote-text">"${quote}"</div>
+              <div class="quote-source">${sourceLink}</div>
+            </div>
+          `;
+        });
+        quotesHTML += '</div>';
+      }
+      
       sectionsHTML += `
-        <div class="summary-section">
-          <strong>Materials:</strong> ${sections.fabric.recommendation}
-          <span class="confidence-badge">${sections.fabric.confidence}</span>
-        </div>
-      `;
-    }
-    
-    // Display wash care section if available
-    if (sections.washCare) {
-      sectionsHTML += `
-        <div class="summary-section">
-          <strong>Care:</strong> ${sections.washCare.recommendation}
-          <span class="confidence-badge">${sections.washCare.confidence}</span>
+        <div class="summary-section user-reviews">
+          <strong>User Reviews:</strong>
+          ${quotesHTML}
+          <span class="confidence-badge">${sections.userReviews.confidence}</span>
         </div>
       `;
     }
     
     // Determine the appropriate title based on available sections
     let sectionTitle = "Brand Review Summary";
-    if (sections.quality && sections.fit) {
-      sectionTitle = "Fit & Quality Summary";
+    if (sections.personalSummary) {
+      sectionTitle = "Personalized Review Summary";
+    } else if (sections.quality && sections.sizingAdvice) {
+      sectionTitle = "Quality & Sizing Summary";
     } else if (sections.quality) {
       sectionTitle = "Quality Summary";
-    } else if (sections.fit) {
-      sectionTitle = "Fit Summary";
+    } else if (sections.sizingAdvice) {
+      sectionTitle = "Sizing Summary";
     }
 
     const summaryHTML = `

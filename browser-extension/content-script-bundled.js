@@ -4644,8 +4644,8 @@ function renderFinalContent(data, brandName, totalReviews, contentDiv) {
         
         contentHTML += '<div class="pointfour-sections">';
         
-        // Prioritize sections: fit > quality > washCare
-        const sectionPriority = ['fit', 'quality', 'washCare'];
+        // Prioritize sections: personalSummary > quality > sizingAdvice > userReviews
+        const sectionPriority = ['personalSummary', 'quality', 'sizingAdvice', 'userReviews'];
         const sortedSections = sectionPriority.filter(key => sections[key]);
         
         console.log('🔍 [PointFour] Sorted sections to render:', sortedSections);

@@ -261,11 +261,13 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
     if (!itemName || itemName.length < 3) return [];
     
     const exactItemQueries = [
-      `"${brand} ${itemName}" review fit quality`,
-      `"${brand} ${itemName}" sizing "runs small" OR "runs large" OR "true to size"`,
-      `"${brand} ${itemName}" material fabric composition`,
+      `"${brand} ${itemName}" review fit quality -site:${brand.toLowerCase()}.com -site:${brand.toLowerCase()}.co.uk`,
+      `"${brand} ${itemName}" sizing "runs small" OR "runs large" OR "true to size" -site:${brand.toLowerCase()}.com`,
+      `"${brand} ${itemName}" material fabric composition -site:${brand.toLowerCase()}.com`,
       `"${brand} ${itemName}" site:reddit.com review`,
-      `"${brand} ${itemName}" site:substack.com review`
+      `"${brand} ${itemName}" site:substack.com review`,
+      `"${brand} ${itemName}" site:medium.com review`,
+      `"${brand} ${itemName}" "customer review" OR "user review" OR "review" -site:${brand.toLowerCase()}.com`
     ];
     
     // Add category-specific item queries
@@ -319,23 +321,25 @@ function generateSearchQueries(brand: string, category: 'clothing' | 'bags' | 's
       case 'clothing':
       default:
         return [
-          `${disambiguatedBrand} "runs small" OR "runs large" OR "true to size" OR "size up" OR "size down"`,
-          `${disambiguatedBrand} "fit" review "tight" OR "loose" OR "perfect" OR "weird" sizing`,
-          `${disambiguatedBrand} "quality" "fabric" "material" "cotton" OR "wool" OR "polyester"`,
-          `${disambiguatedBrand} "shrinks" OR "shrink" OR "wash" OR "care" OR "dry clean"`,
+          `${disambiguatedBrand} "runs small" OR "runs large" OR "true to size" OR "size up" OR "size down" -site:${brand.toLowerCase()}.com`,
+          `${disambiguatedBrand} "fit" review "tight" OR "loose" OR "perfect" OR "weird" sizing -site:${brand.toLowerCase()}.com`,
+          `${disambiguatedBrand} "quality" "fabric" "material" "cotton" OR "wool" OR "polyester" -site:${brand.toLowerCase()}.com`,
+          `${disambiguatedBrand} "shrinks" OR "shrink" OR "wash" OR "care" OR "dry clean" -site:${brand.toLowerCase()}.com`,
           `${disambiguatedBrand} site:reddit.com fit size review`,
-          `${disambiguatedBrand} review "disappointed" OR "impressed" OR "worth it" OR "overpriced"`
+          `${disambiguatedBrand} site:medium.com review`,
+          `${disambiguatedBrand} "customer review" OR "user review" OR "review" -site:${brand.toLowerCase()}.com`
         ];
     }
   })();
   
   // Tier 3: General Brand Search (Last Resort)
   const tier3Queries = [
-    `"${brand}" fashion review`,
-    `"${brand}" clothing review`,
-    `"${brand}" quality "well made" OR "poorly made"`,
-    `"${brand}" fashion brand`,
-    `"${brand}" site:reddit.com review`
+    `"${brand}" fashion review -site:${brand.toLowerCase()}.com`,
+    `"${brand}" clothing review -site:${brand.toLowerCase()}.com`,
+    `"${brand}" quality "well made" OR "poorly made" -site:${brand.toLowerCase()}.com`,
+    `"${brand}" fashion brand -site:${brand.toLowerCase()}.com`,
+    `"${brand}" site:reddit.com review`,
+    `"${brand}" site:medium.com review`
   ];
   
   // Return tiered search strategy
@@ -1081,8 +1085,14 @@ export async function POST(request: NextRequest) {
     
     // Create structured sections
     const sections: Record<string, {
-      title: string;
-      recommendation: string;
+      title?: string;
+      recommendation?: string;
+      overallQuality?: string;
+      postWashCare?: string;
+      detailedGuidance?: string;
+      sizeChartInsights?: string;
+      supportingQuotes?: string[];
+      sourceLinks?: string[];
       confidence: 'low' | 'medium' | 'high';
       evidence: string[];
     }> = {};
@@ -1096,66 +1106,9 @@ export async function POST(request: NextRequest) {
       };
     }
     
-    // Combine quality, fabric, and materials into a single "Quality & Materials" section
-    if (analysis.quality || analysis.fabric || analysis.materials) {
-      let qualityMaterialsRecommendation = '';
-      // eslint-disable-next-line prefer-const
-      let qualityMaterialsEvidence: string[] = [];
-      let qualityMaterialsConfidence: 'low' | 'medium' | 'high' = 'low';
-      
-      // Start with materials if available
-      if (analysis.materials && analysis.materials.composition.length > 0) {
-        const cleanMaterials = analysis.materials.composition.join(', ');
-        qualityMaterialsRecommendation = `Materials: ${cleanMaterials}\n\n`;
-        qualityMaterialsEvidence.push(...analysis.materials.evidence);
-        qualityMaterialsConfidence = analysis.materials.confidence;
-      }
-      
-      // Add quality information
-      if (analysis.quality) {
-        if (qualityMaterialsRecommendation) {
-          qualityMaterialsRecommendation += `Quality: ${analysis.quality.recommendation}`;
-        } else {
-          qualityMaterialsRecommendation = analysis.quality.recommendation;
-        }
-        qualityMaterialsEvidence.push(...analysis.quality.evidence);
-        
-        // Use highest confidence
-        if (analysis.quality.confidence === 'high' || qualityMaterialsConfidence !== 'high') {
-          qualityMaterialsConfidence = analysis.quality.confidence;
-        }
-      }
-      
-      // Add fabric information if no quality info
-      if (analysis.fabric && !analysis.quality) {
-        if (qualityMaterialsRecommendation) {
-          qualityMaterialsRecommendation += `Fabric: ${analysis.fabric.recommendation}`;
-        } else {
-          qualityMaterialsRecommendation = analysis.fabric.recommendation;
-        }
-        qualityMaterialsEvidence.push(...analysis.fabric.evidence);
-        
-        if (analysis.fabric.confidence === 'high' || qualityMaterialsConfidence !== 'high') {
-          qualityMaterialsConfidence = analysis.fabric.confidence;
-        }
-      }
-      
-      sections.quality = {
-        title: 'Quality & Materials',
-        recommendation: qualityMaterialsRecommendation,
-        confidence: qualityMaterialsConfidence,
-        evidence: Array.from(new Set(qualityMaterialsEvidence)).slice(0, 3) // Remove duplicates, limit to 3
-      };
-    }
+    // Quality section will be created after reviews are processed
     
-    if (analysis.washCare) {
-      sections.washCare = {
-        title: 'Wash & Care',
-        recommendation: analysis.washCare.recommendation,
-        confidence: analysis.washCare.confidence,
-        evidence: analysis.washCare.evidence
-      };
-    }
+    // Wash care information is now consolidated into the quality section above
     
     // Summary will be generated after review prioritization to use correct count
     
@@ -1328,7 +1281,10 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       // Medical/health (avoid confusion with medical frames)
       'webmd.com', 'mayoclinic.org', 'healthline.com',
       // Generic amazon product pages (too noisy)
-      'amazon.com/gp/product', 'amazon.com/dp/'
+      'amazon.com/gp/product', 'amazon.com/dp/',
+      // Official brand websites (exclude to get actual reviews, not product pages)
+      'frame-store.com', 'frame.com', 'frameclothing.com', 'frameclothing.co.uk',
+      'frame-denim.com', 'frame-denim.co.uk', 'frameclothing.us'
     ];
     
     const domainFilteredResults = allResults.filter(result => {
@@ -1337,6 +1293,26 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
       
       if (isDomainExcluded) {
         console.log(`🚫 DOMAIN FILTER: Excluding non-fashion domain result: "${result.title}" from ${link}`);
+        return false;
+      }
+      
+      // Additional filter: Exclude official brand websites (they don't contain reviews)
+      const brandLower = brand.toLowerCase();
+      const linkHostname = link.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+      
+      // Check if this looks like an official brand website
+      const isOfficialBrandSite = (
+        linkHostname.includes(brandLower) && 
+        (linkHostname.includes('.com') || linkHostname.includes('.co.uk') || linkHostname.includes('.us')) &&
+        !linkHostname.includes('review') &&
+        !linkHostname.includes('blog') &&
+        !linkHostname.includes('reddit') &&
+        !linkHostname.includes('youtube') &&
+        !linkHostname.includes('medium')
+      );
+      
+      if (isOfficialBrandSite) {
+        console.log(`🚫 BRAND SITE FILTER: Excluding official brand website: "${result.title}" from ${link}`);
         return false;
       }
       
@@ -1553,9 +1529,9 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
     console.log('🤖 Starting GPT-enhanced snippet processing...');
     const formattedReviews = await Promise.all(finalResults.map(convertToReview));
     
-    // Deduplicate reviews with improved logic
+    // Enhanced deduplication with better duplicate detection
     const uniqueReviews = formattedReviews.filter((review, index, array) => {
-      // Check if this is the first occurrence of this title or URL
+      // Check if this is the first occurrence of this review
       const firstIndex = array.findIndex(r => {
         // Exact URL match (highest priority)
         if (r.url === review.url) return true;
@@ -1563,10 +1539,36 @@ Focus on concrete experiences like comfort, durability, functionality, value, et
         // Exact title match
         if (r.title === review.title) return true;
         
-        // Similarity check only for longer titles and with 80% threshold
-        if (r.title.length > 20 && review.title.length > 20) {
-          const similarity = calculateStringSimilarity(r.title.toLowerCase(), review.title.toLowerCase());
-          return similarity > 0.8;
+        // Enhanced similarity check for content duplication
+        if (r.title.length > 15 && review.title.length > 15) {
+          const titleSimilarity = calculateStringSimilarity(r.title.toLowerCase(), review.title.toLowerCase());
+          if (titleSimilarity > 0.85) return true;
+        }
+        
+        // Check for snippet similarity (content duplication)
+        if (r.snippet && review.snippet && r.snippet.length > 50 && review.snippet.length > 50) {
+          const snippetSimilarity = calculateStringSimilarity(r.snippet.toLowerCase(), review.snippet.toLowerCase());
+          if (snippetSimilarity > 0.75) return true;
+        }
+        
+        // Check for same source with very similar content
+        if (r.source === review.source && r.title.length > 20 && review.title.length > 20) {
+          const titleSimilarity = calculateStringSimilarity(r.title.toLowerCase(), review.title.toLowerCase());
+          if (titleSimilarity > 0.7) return true;
+        }
+        
+        // Check for duplicate content patterns (same review posted multiple times)
+        const rContent = `${r.title} ${r.snippet}`.toLowerCase();
+        const reviewContent = `${review.title} ${review.snippet}`.toLowerCase();
+        
+        // Remove common words and check for substantial content overlap
+        const rWords = rContent.split(/\s+/).filter(word => word.length > 3);
+        const reviewWords = reviewContent.split(/\s+/).filter(word => word.length > 3);
+        
+        if (rWords.length > 10 && reviewWords.length > 10) {
+          const commonWords = rWords.filter(word => reviewWords.includes(word));
+          const overlapRatio = commonWords.length / Math.min(rWords.length, reviewWords.length);
+          if (overlapRatio > 0.6) return true;
         }
         
         return false;
@@ -1675,6 +1677,81 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
       } else {
         console.log('🔍 API: Fit analysis failed to generate');
       }
+    }
+    
+    // Create quality section - either from GPT analysis or fallback from reviews
+    console.log('🔍 QUALITY DEBUG: analysis.quality exists?', !!analysis.quality);
+    console.log('🔍 QUALITY DEBUG: analysis.fabric exists?', !!analysis.fabric);
+    console.log('🔍 QUALITY DEBUG: analysis.materials exists?', !!analysis.materials);
+    
+    if (analysis.quality || analysis.fabric || analysis.materials) {
+      // Use GPT analysis if available
+      let qualityMaterialsRecommendation = '';
+      const qualityMaterialsEvidence: string[] = [];
+      let qualityMaterialsConfidence: 'low' | 'medium' | 'high' = 'low';
+      
+      // Start with materials if available
+      if (analysis.materials && analysis.materials.composition.length > 0) {
+        const cleanMaterials = analysis.materials.composition.join(', ');
+        qualityMaterialsRecommendation = `Materials: ${cleanMaterials}\n\n`;
+        qualityMaterialsEvidence.push(...analysis.materials.evidence);
+        qualityMaterialsConfidence = analysis.materials.confidence;
+      }
+      
+      // Add quality information
+      if (analysis.quality) {
+        if (qualityMaterialsRecommendation) {
+          qualityMaterialsRecommendation += `Quality: ${analysis.quality.recommendation}`;
+        } else {
+          qualityMaterialsRecommendation = analysis.quality.recommendation;
+        }
+        qualityMaterialsEvidence.push(...analysis.quality.evidence);
+        
+        // Use highest confidence
+        if (analysis.quality.confidence === 'high' || qualityMaterialsConfidence !== 'high') {
+          qualityMaterialsConfidence = analysis.quality.confidence;
+        }
+      }
+      
+      // Add fabric information if no quality info
+      if (analysis.fabric && !analysis.quality) {
+        if (qualityMaterialsRecommendation) {
+          qualityMaterialsRecommendation += `Fabric: ${analysis.fabric.recommendation}`;
+        } else {
+          qualityMaterialsRecommendation = analysis.fabric.recommendation;
+        }
+        qualityMaterialsEvidence.push(...analysis.fabric.evidence);
+        
+        if (analysis.fabric.confidence === 'high' || qualityMaterialsConfidence !== 'high') {
+          qualityMaterialsConfidence = analysis.fabric.confidence;
+        }
+      }
+      
+      sections.quality = {
+        overallQuality: qualityMaterialsRecommendation,
+        postWashCare: analysis.washCare ? analysis.washCare.recommendation : "Care information not available from reviews",
+        confidence: qualityMaterialsConfidence,
+        evidence: Array.from(new Set(qualityMaterialsEvidence)).slice(0, 3) // Remove duplicates, limit to 3
+      };
+      
+      console.log('🔍 QUALITY DEBUG: Created quality section from GPT analysis:', JSON.stringify(sections.quality, null, 2));
+    } else if (finalPrioritizedReviews.length > 0) {
+      // Fallback: Create quality section from reviews when GPT analysis fails
+      console.log('🔍 QUALITY DEBUG: Creating fallback quality section from reviews');
+      
+      // Extract quality insights from reviews
+      const qualityInsights = extractQualityFromReviews(finalPrioritizedReviews, brand);
+      
+      sections.quality = {
+        overallQuality: qualityInsights.overallQuality,
+        postWashCare: qualityInsights.postWashCare,
+        confidence: qualityInsights.confidence,
+        evidence: qualityInsights.evidence
+      };
+      
+      console.log('🔍 QUALITY DEBUG: Created fallback quality section:', JSON.stringify(sections.quality, null, 2));
+    } else {
+      console.log('🔍 QUALITY DEBUG: No quality section created - no data available');
     }
     
     // Group reviews by source type with proper Review structure using filtered reviews
@@ -1827,6 +1904,109 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
     
     return errorResponse;
   }
+}
+
+// Helper function to extract quality insights from reviews when GPT analysis fails
+function extractQualityFromReviews(reviews: Review[], brand: string): {
+  overallQuality: string;
+  postWashCare: string;
+  confidence: 'low' | 'medium' | 'high';
+  evidence: string[];
+} {
+  const qualityKeywords = {
+    positive: ['high quality', 'well-made', 'durable', 'excellent', 'premium', 'luxury', 'solid construction', 'beautiful quality', 'great quality', 'amazing quality', 'good quality', 'quality materials', 'quality fabric', 'nice quality', 'quality pieces', 'quality construction', 'timeless construction', 'natural fabrics', 'thoughtful silhouettes', 'impressed', 'recommend', 'love', 'satisfied', 'happy', 'perfect', 'beautiful', 'gorgeous', 'amazing', 'fantastic', 'worth the money', 'investment piece'],
+    negative: ['poor quality', 'cheap', 'flimsy', 'falls apart', 'thin material', 'see through', 'transparent', 'cheap feeling', 'not worth', 'disappointed', 'returned', 'poor construction', 'badly made', 'quality come down', 'quality has gone down', 'quality declined', 'fabric.*thinner', 'fabric.*thin', 'wish.*thicker', 'could be thicker', 'quality issues', 'quality concerns', 'regret', 'waste', 'terrible', 'awful', 'horrible']
+  };
+
+  const careKeywords = {
+    positive: ['holds up well', 'maintains shape', 'easy to care for', 'machine washable', 'no shrinking', 'color stays', 'fabric stays soft', 'durable after washing', 'easy maintenance'],
+    negative: ['shrinks', 'fades', 'pills', 'loses shape', 'hard to care for', 'dry clean only', 'delicate', 'requires special care', 'fabric issues after wash']
+  };
+
+  let qualityPositive = 0;
+  let qualityNegative = 0;
+  let carePositive = 0;
+  let careNegative = 0;
+  const qualityEvidence: string[] = [];
+  const careEvidence: string[] = [];
+
+  reviews.forEach(review => {
+    const text = `${review.title} ${review.snippet}`.toLowerCase();
+    
+    // Check quality keywords
+    qualityKeywords.positive.forEach(keyword => {
+      if (text.includes(keyword)) {
+        qualityPositive++;
+        if (qualityEvidence.length < 3) {
+          qualityEvidence.push(`${review.title}: ${review.snippet.substring(0, 100)}...`);
+        }
+      }
+    });
+    
+    qualityKeywords.negative.forEach(keyword => {
+      if (text.includes(keyword)) {
+        qualityNegative++;
+        if (qualityEvidence.length < 3) {
+          qualityEvidence.push(`${review.title}: ${review.snippet.substring(0, 100)}...`);
+        }
+      }
+    });
+
+    // Check care keywords
+    careKeywords.positive.forEach(keyword => {
+      if (text.includes(keyword)) {
+        carePositive++;
+        if (careEvidence.length < 2) {
+          careEvidence.push(`${review.title}: ${review.snippet.substring(0, 100)}...`);
+        }
+      }
+    });
+    
+    careKeywords.negative.forEach(keyword => {
+      if (text.includes(keyword)) {
+        careNegative++;
+        if (careEvidence.length < 2) {
+          careEvidence.push(`${review.title}: ${review.snippet.substring(0, 100)}...`);
+        }
+      }
+    });
+  });
+
+  // Generate overall quality assessment
+  let overallQuality = '';
+  let confidence: 'low' | 'medium' | 'high' = 'low';
+  
+  if (qualityPositive > qualityNegative && qualityPositive >= 2) {
+    overallQuality = `Customer reviews consistently praise ${brand}'s quality, mentioning well-made construction and durable materials.`;
+    confidence = qualityPositive >= 4 ? 'high' : 'medium';
+  } else if (qualityNegative > qualityPositive && qualityNegative >= 2) {
+    overallQuality = `Some quality concerns noted in reviews, with customers mentioning issues with construction or materials.`;
+    confidence = qualityNegative >= 4 ? 'high' : 'medium';
+  } else if (qualityPositive > 0 || qualityNegative > 0) {
+    overallQuality = `Mixed quality feedback from customers - some praise the construction while others note concerns.`;
+    confidence = 'low';
+  } else {
+    overallQuality = `Limited quality information available from customer reviews.`;
+    confidence = 'low';
+  }
+
+  // Generate post-wash care assessment
+  let postWashCare = '';
+  
+  if (carePositive > careNegative && carePositive >= 1) {
+    postWashCare = `Items hold up well after washing according to customer feedback.`;
+  } else if (careNegative > carePositive && careNegative >= 1) {
+    postWashCare = `Some care concerns mentioned in reviews - customers note issues with shrinking, fading, or fabric changes.`;
+  } else {
+    postWashCare = `Limited care information available from customer reviews.`;
+  }
+
+  return {
+    overallQuality,
+    postWashCare,
+    confidence,
+    evidence: [...qualityEvidence, ...careEvidence].slice(0, 3)
+  };
 }
 
 // Helper function to extract direct fit advice from page data
@@ -2193,49 +2373,6 @@ async function analyzeResultsWithGPT4o(results: SerperResult[], brand: string, c
   const directFitContext = directFitAdvice?.hasDirectAdvice ? 
     `\n\nIMPORTANT: Direct fit advice found on product page: "${directFitAdvice.advice.join(', ')}". This should take priority over conflicting review analysis. Use this as the primary fit recommendation unless reviews strongly contradict it.` : '';
   
-  // Create category-aware JSON structure
-  const getFitSection = () => {
-    if (category === 'bags' || category === 'accessories') {
-      // For bags/accessories, fit doesn't make sense - skip it entirely
-      console.log(`🚫 SKIPPING FIT SECTION: Category is ${category}, fit analysis not applicable`);
-      return '';
-    }
-    return `  "fit": {
-    "recommendation": "Clear, specific fit advice based on the reviews (e.g., 'runs small, size up' or 'true to size')",
-    "confidence": "low|medium|high",
-    "evidence": ["Direct quotes from reviews supporting this assessment"]
-  },`;
-  };
-
-  const getQualityLabel = () => {
-    if (category === 'bags' || category === 'accessories') {
-      return 'construction and durability assessment';
-    }
-    return 'quality assessment based on customer feedback';
-  };
-
-  const getMaterialsLabel = () => {
-    if (category === 'bags') {
-      return 'List of materials mentioned (e.g., "ballistic nylon", "leather", "Cordura")';
-    }
-    return 'List of materials mentioned (e.g., "100% cotton", "merino wool")';
-  };
-
-  const getWashCareSection = () => {
-    if (category === 'bags' || category === 'accessories') {
-      return `  "durability": {
-    "recommendation": "Durability and longevity assessment based on customer experiences",
-    "confidence": "low|medium|high",
-    "evidence": ["Quotes about long-term use, wear patterns, durability"]
-  },`;
-    }
-    return `  "washCare": {
-    "recommendation": "Washing and care advice based on customer experiences",
-    "confidence": "low|medium|high",
-    "evidence": ["Quotes about washing, care, durability"]
-  },`;
-  };
-
   const prompt = `You are a fashion expert analyzing customer reviews to provide structured insights. Your goal is to extract useful insights even from limited data, rather than returning empty analysis.
 
 Brand: ${brand}
@@ -2250,18 +2387,29 @@ ${reviewTexts}
 
 Please analyze these reviews and return a JSON object with the following structure:
 {
-${getFitSection()}
-  "quality": {
-    "recommendation": "${getQualityLabel()}",
-    "confidence": "low|medium|high", 
-    "evidence": ["Direct quotes about quality or general customer experiences"]
-  },
-  "materials": {
-    "composition": ["${getMaterialsLabel()}"],
+  "personalSummary": {
+    "brandIntroduction": "Brief 1-2 sentence introduction about the brand based on customer reviews and general knowledge",
+    "tailoredRecommendation": "Specific recommendation based on user's body shape and size, incorporating size chart data and review insights",
     "confidence": "low|medium|high",
-    "evidence": ["Quotes mentioning materials or fabric"]
+    "evidence": ["Direct quotes from reviews supporting the recommendation"]
   },
-${getWashCareSection()}
+  "quality": {
+    "overallQuality": "Assessment of the brand's overall quality based on customer feedback",
+    "postWashCare": "Information about how items hold up after washing and care instructions from customer experiences",
+    "confidence": "low|medium|high", 
+    "evidence": ["Direct quotes about quality, durability, and care experiences"]
+  },
+${category === 'bags' || category === 'accessories' ? '' : `  "sizingAdvice": {
+    "detailedGuidance": "Comprehensive sizing advice including: how the brand runs (small/large/true to size), fabric stretch characteristics, length considerations, body type recommendations, and specific fit details like waist, bust, hips, shoulders, sleeves, etc.",
+    "sizeChartInsights": "Analysis of size chart data and how it relates to customer experiences, including measurements that matter most and any discrepancies between chart and actual fit",
+    "confidence": "low|medium|high",
+    "evidence": ["Direct quotes about sizing experiences, fit issues, stretch, length, and specific body measurements"]
+  },`}
+  "userReviews": {
+    "supportingQuotes": ["Key customer quotes that support the analysis above"],
+    "sourceLinks": ["URLs of the sources where quotes were found"],
+    "confidence": "low|medium|high"
+  },
   "overallConfidence": "low|medium|high"
 }
 
@@ -2270,11 +2418,22 @@ IMPORTANT GUIDELINES:
 - If you find ANY customer feedback patterns, include them even with low confidence
 - Use direct quotes from reviews as evidence, but also paraphrase customer sentiment when helpful
 - Be specific and actionable in recommendations when possible
+- For sizing advice, extract specific details about: fabric stretch, length, body type fit, measurements, and how items fit different body shapes
+- Look for mentions of: "stretchy", "non-stretchy", "runs short/long", "petite", "plus-size", "athletic build", "waist", "bust", "hips", "shoulders", "sleeves", "inseam", "length"
 - For limited data, focus on what customers ARE saying rather than what's missing
 - If only 1-2 reviews mention something, still include it but mark confidence as "low"
 - Extract insights from review titles and snippets even if not perfectly detailed
 - Better to provide cautious insights than no insights at all
 - Focus on customer experiences, not brand descriptions
+- For userReviews section, include actual quotes with their source URLs
+- Make personalSummary tailored to the specific user context when possible
+- AVOID DUPLICATE INFORMATION: Each section should provide unique insights - don't repeat the same information across sections
+- Personal Summary should focus on brand introduction and tailored recommendations
+- Quality section should focus on materials, construction, and care instructions
+- Sizing Advice should focus on fit patterns, size chart analysis, fabric stretch, length, and specific body measurements
+- For sizing advice, be extremely specific about: fabric stretch (stretchy vs non-stretchy), length (short/tall considerations), body type recommendations (petite, plus-size, athletic), and specific fit areas (waist, bust, hips, shoulders, sleeves, inseam, etc.)
+- Include specific measurements and sizing comparisons when available in reviews
+- User Reviews should provide supporting quotes that back up the other sections
 - Return valid JSON only, no other text`;
 
   try {
@@ -2434,35 +2593,68 @@ async function callActualGPT5(
     `\n\nIMPORTANT: Direct fit advice found on product page: "${directFitAdvice.advice.join(', ')}". This should take priority over conflicting review analysis.` : '';
   
   // Create the same prompt structure as legacy function
-  const prompt = `You are a fashion expert analyzing customer reviews to provide structured insights. Your goal is to extract useful insights even from limited data.
+  const prompt = `You are a fashion expert analyzing customer reviews to provide structured insights. Your goal is to extract useful insights even from limited data, rather than returning empty analysis.
 
 Brand: ${brand}
 Category: ${category}${itemContext}${categoryContext}${directFitContext}
+
+CRITICAL: This is a ${category} product. ${category === 'bags' || category === 'accessories' ? 
+    'DO NOT include fit/sizing analysis as it does not apply to bags/accessories. Focus on quality, materials, and functionality instead.' : 
+    'Include fit analysis as it applies to clothing/footwear.'}
 
 Reviews to analyze:
 ${reviewTexts}
 
 Please analyze these reviews and return a JSON object with the following structure:
 {
-  "fit": {
-    "recommendation": "Clear, specific fit advice based on the reviews",
+  "personalSummary": {
+    "brandIntroduction": "Brief 1-2 sentence introduction about the brand based on customer reviews and general knowledge",
+    "tailoredRecommendation": "Specific recommendation based on user's body shape and size, incorporating size chart data and review insights",
     "confidence": "low|medium|high",
-    "evidence": ["Direct quotes from reviews supporting this assessment"]
+    "evidence": ["Direct quotes from reviews supporting the recommendation"]
   },
   "quality": {
-    "recommendation": "Quality assessment based on customer feedback",
+    "overallQuality": "Assessment of the brand's overall quality based on customer feedback",
+    "postWashCare": "Information about how items hold up after washing and care instructions from customer experiences",
     "confidence": "low|medium|high", 
-    "evidence": ["Direct quotes about quality or general customer experiences"]
+    "evidence": ["Direct quotes about quality, durability, and care experiences"]
   },
-  "materials": {
-    "composition": ["List of materials mentioned"],
+${category === 'bags' || category === 'accessories' ? '' : `  "sizingAdvice": {
+    "detailedGuidance": "Comprehensive sizing advice including: how the brand runs (small/large/true to size), fabric stretch characteristics, length considerations, body type recommendations, and specific fit details like waist, bust, hips, shoulders, sleeves, etc.",
+    "sizeChartInsights": "Analysis of size chart data and how it relates to customer experiences, including measurements that matter most and any discrepancies between chart and actual fit",
     "confidence": "low|medium|high",
-    "evidence": ["Quotes mentioning materials or fabric"]
+    "evidence": ["Direct quotes about sizing experiences, fit issues, stretch, length, and specific body measurements"]
+  },`}
+  "userReviews": {
+    "supportingQuotes": ["Key customer quotes that support the analysis above"],
+    "sourceLinks": ["URLs of the sources where quotes were found"],
+    "confidence": "low|medium|high"
   },
   "overallConfidence": "low|medium|high"
 }
 
-IMPORTANT: Return ONLY valid JSON, no markdown formatting.`;
+IMPORTANT GUIDELINES:
+- ALWAYS try to provide SOME analysis rather than completely empty sections
+- If you find ANY customer feedback patterns, include them even with low confidence
+- Use direct quotes from reviews as evidence, but also paraphrase customer sentiment when helpful
+- Be specific and actionable in recommendations when possible
+- For sizing advice, extract specific details about: fabric stretch, length, body type fit, measurements, and how items fit different body shapes
+- Look for mentions of: "stretchy", "non-stretchy", "runs short/long", "petite", "plus-size", "athletic build", "waist", "bust", "hips", "shoulders", "sleeves", "inseam", "length"
+- For limited data, focus on what customers ARE saying rather than what's missing
+- If only 1-2 reviews mention something, still include it but mark confidence as "low"
+- Extract insights from review titles and snippets even if not perfectly detailed
+- Better to provide cautious insights than no insights at all
+- Focus on customer experiences, not brand descriptions
+- For userReviews section, include actual quotes with their source URLs
+- Make personalSummary tailored to the specific user context when possible
+- AVOID DUPLICATE INFORMATION: Each section should provide unique insights - don't repeat the same information across sections
+- Personal Summary should focus on brand introduction and tailored recommendations
+- Quality section should focus on materials, construction, and care instructions
+- Sizing Advice should focus on fit patterns, size chart analysis, fabric stretch, length, and specific body measurements
+- For sizing advice, be extremely specific about: fabric stretch (stretchy vs non-stretchy), length (short/tall considerations), body type recommendations (petite, plus-size, athletic), and specific fit areas (waist, bust, hips, shoulders, sleeves, inseam, etc.)
+- Include specific measurements and sizing comparisons when available in reviews
+- User Reviews should provide supporting quotes that back up the other sections
+- Return valid JSON only, no other text`;
 
   try {
     // ACTUAL GPT-5 API call
