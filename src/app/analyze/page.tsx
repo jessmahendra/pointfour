@@ -589,6 +589,7 @@ Please provide a specific answer to this follow-up question.`;
     // Parse sections from the API response
     const sections = {
       summary: "",
+      quality: "",
       sizing: "",
       recommendations: [] as string[],
       warnings: [] as string[],
@@ -635,12 +636,12 @@ Please provide a specific answer to this follow-up question.`;
           /^(###\s*Quality|^\*\*Quality\*\*:?\s*|^Quality:?\s*$)/i
         )
       ) {
-        currentSection = "summary"; // Add quality info to the main summary section
+        currentSection = "quality"; // Create separate quality section
         const content = trimmedLine.replace(
           /^(###\s*.*|^\*\*.*?\*\*:?\s*|^Quality:?\s*)/i,
           ""
         );
-        if (content.trim()) sections.summary += content + "\n";
+        if (content.trim()) sections.quality += content + "\n";
       } else if (
         trimmedLine.match(/^(###\s*Sizing|^\*\*Sizing\*\*:?\s*|^Sizing:?\s*$)/i)
       ) {
@@ -695,6 +696,8 @@ Please provide a specific answer to this follow-up question.`;
         // Add content to current section
         if (currentSection === "summary") {
           sections.summary += trimmedLine + "\n";
+        } else if (currentSection === "quality") {
+          sections.quality += trimmedLine + "\n";
         } else if (currentSection === "sizing") {
           sections.sizing += trimmedLine + "\n";
         } else if (
@@ -725,6 +728,8 @@ Please provide a specific answer to this follow-up question.`;
     console.log("=== PARSED SECTIONS ===");
     console.log("Summary:", sections.summary);
     console.log("Summary length:", sections.summary.length);
+    console.log("Quality:", sections.quality);
+    console.log("Quality length:", sections.quality.length);
     console.log("Sizing:", sections.sizing);
     console.log("Recommendations count:", sections.recommendations.length);
     console.log("Warnings count:", sections.warnings.length);
@@ -933,6 +938,9 @@ Please provide a specific answer to this follow-up question.`;
       summary:
         sections.summary.trim() ||
         `Analysis for ${brandName} based on available data.`,
+      quality:
+        sections.quality.trim() ||
+        "Quality information is limited based on available reviews",
       sizing:
         sections.sizing.trim() ||
         "Sizing information limited - check brand's size guide",
@@ -1030,6 +1038,36 @@ Please provide a specific answer to this follow-up question.`;
               }}
             >
               {formatMarkdownText(parsedData.summary)}
+            </div>
+          </div>
+
+          {/* Quality Information */}
+          <div style={{ marginBottom: "24px" }}>
+            <h4
+              style={{
+                fontSize: "14px",
+                fontWeight: "600",
+                marginBottom: "8px",
+                color: "#333",
+              }}
+            >
+              Quality
+            </h4>
+            <div
+              style={{
+                fontSize: "14px",
+                backgroundColor: "#F0F7FF",
+                padding: "16px",
+                borderRadius: "8px",
+                margin: 0,
+                color: "#2C5282",
+                lineHeight: "1.2",
+                border: "1px solid #BEE3F8",
+              }}
+            >
+              {formatMarkdownText(
+                parsedData.quality || "Quality information is being analyzed..."
+              )}
             </div>
           </div>
 

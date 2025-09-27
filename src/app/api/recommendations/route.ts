@@ -681,35 +681,41 @@ ${enhancedContext ? `Here's what I know about the brand:\n${enhancedContext}\n` 
 
 User Query: ${query}
 
-Please provide a comprehensive analysis including:
+**MANDATORY: You MUST include ALL of the following sections in your response, even if data is limited:**
 
-**Summary**: Structure this section exactly as follows with these exact headings:
+**Summary**: Structure this section exactly as follows:
 [Brand name] is a [1-2 sentence concise brand description]. [NO user-specific information]
 
 **Fit summary**
-[1-2 sentences about fit for this specific user]
+[1-2 sentences about fit for this specific user based on available data]
 
 **Quality**  
-[1-2 sentences about brand quality and materials]
+[1-2 sentences about brand quality and materials - ALWAYS include this section, even if you must state "Quality information is limited based on available reviews"]
 
-IMPORTANT: Use "Fit summary" not "Your Fit" as the heading.
 **Sizing**: Include all sizing advice, fit considerations, and specific guidance (runs small/large, true to size, etc.) based on customer reviews. This should contain all the detailed sizing information and fit considerations.
+
 **Recommendations**: Provide 3-4 specific, actionable recommendations based on the available customer review data and user profile. Include:
 - A summary of what customers say about this brand (comfort, fit, quality)
 - Specific advice for the user's measurements and preferences
 - Any important considerations or tips based on review patterns
 - Action items (e.g., "Order your usual size", "Size up/down", "Check return policy")
-**Warnings**: Any important fit or quality considerations
-**Price**: Price range information if available
-**Customer Reviews**: Include relevant user feedback and quotes
 
-**IMPORTANT INSTRUCTIONS:**
+**Warnings**: Any important fit or quality considerations (if none, state "No specific warnings identified")
+
+**Price**: Price range information if available (if not available, state "Price information not available")
+
+**Customer Reviews**: Include relevant user feedback and quotes (if limited, state "Limited customer review data available")
+
+**CRITICAL REQUIREMENTS:**
+- ALL sections above must be present in every response
+- Quality section is MANDATORY - never omit it
+- If data is limited for any section, acknowledge this but still provide the section
 - Keep all sections concise (1-2 sentences each)
 - Make recommendations DATA-DRIVEN based on the customer reviews provided
 - If we have good database data, use that as the primary source
 - If database data is limited but we have web search results, focus on the web data
 - Base recommendations on actual customer feedback patterns, not generic advice
-- Include specific insights from the review data (e.g., "85% of customers found them comfortable", "Most reviews mention they run small")
+- Include specific insights from the review data when available
 - Provide actionable next steps based on the available data
 - Always be encouraging but transparent about data availability
 
