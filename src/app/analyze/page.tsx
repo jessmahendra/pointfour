@@ -30,9 +30,9 @@ function BrandAnalysisContent() {
   );
   const [loading, setLoading] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
-  const [userMeasurements, setUserMeasurements] =
+  const [userMeasurements] =
     useState<UserMeasurements | null>(null);
-  const [measurementsLoading, setMeasurementsLoading] = useState(true);
+  const [measurementsLoading] = useState(true);
   const [simpleQuery, setSimpleQuery] = useState("");
   const [parsedData, setParsedData] = useState<string | null>(null);
   const [parsingLoading, setParsingLoading] = useState(false);
@@ -49,27 +49,27 @@ function BrandAnalysisContent() {
     }
   }, [searchParams]);
 
-  const loadUserMeasurements = async () => {
-    try {
-      setMeasurementsLoading(true);
-      const response = await fetch("/api/user/profile");
-      if (response.ok) {
-        const { profile } = await response.json();
-        setUserMeasurements(profile?.measurements || null);
-      } else if (response.status === 401) {
-        // User not authenticated, that's fine
-        setUserMeasurements(null);
-      } else {
-        console.error("Failed to load user measurements");
-        setUserMeasurements(null);
-      }
-    } catch (error) {
-      console.error("Error loading user measurements:", error);
-      setUserMeasurements(null);
-    } finally {
-      setMeasurementsLoading(false);
-    }
-  };
+  // const loadUserMeasurements = async () => {
+  //   try {
+  //     setMeasurementsLoading(true);
+  //     const response = await fetch("/api/user/profile");
+  //     if (response.ok) {
+  //       const { profile } = await response.json();
+  //       setUserMeasurements(profile?.measurements || null);
+  //     } else if (response.status === 401) {
+  //       // User not authenticated, that's fine
+  //       setUserMeasurements(null);
+  //     } else {
+  //       console.error("Failed to load user measurements");
+  //       setUserMeasurements(null);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error loading user measurements:", error);
+  //     setUserMeasurements(null);
+  //   } finally {
+  //     setMeasurementsLoading(false);
+  //   }
+  // };
 
   // Console logging for search type debugging
   useEffect(() => {
