@@ -11,6 +11,23 @@ interface BrandPageProps {
   }>
 }
 
+interface Product {
+  id: number;
+  name: string;
+  url: string;
+  description?: string;
+  image_url?: string;
+  price?: number;
+  currency?: string;
+  created_at: string;
+  brand_id: string;
+  brand: {
+    slug: string;
+    name: string;
+    logo_url?: string;
+  };
+}
+
 // Generate metadata for individual brand pages
 export async function generateMetadata({ params }: BrandPageProps): Promise<Metadata> {
   const supabase = createStaticClient()
@@ -69,6 +86,14 @@ export default async function BrandPage({ params }: BrandPageProps) {
   if (error || !brand) {
     notFound()
   }
+
+  // Fetch products for this brand
+  const { data: products } = await supabase
+    .from('products')
+    .select('*')
+    .eq('brand_id', brand.slug)
+    .order('created_at', { ascending: false })
+    .limit(6)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -135,6 +160,51 @@ export default async function BrandPage({ params }: BrandPageProps) {
             )}
           </div>
         </div>
+
+        {/* Products Section */}
+        {products && products.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Products from {brand.name}
+              </h2>
+              <Link
+                href={`/products?brand_id=${brand.slug}`}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                View all products →
+              </Link>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {products.map((product: Product) => (
+                <Link
+                  key={product.id}
+                  href={`/products/${product.id}`}
+                  className="group block bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 p-4"
+                >
+                  {product.image_url && (
+                    <div className="mb-3 aspect-square relative overflow-hidden rounded-lg">
+                      <Image
+                        src={product.image_url}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-200"
+                      />
+                    </div>
+                  )}
+                  <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors mb-1">
+                    {product.name}
+                  </h3>
+                  {product.price && (
+                    <p className="text-sm text-gray-600">
+                      {product.currency || 'USD'} {product.price.toFixed(2)}
+                    </p>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Brand Details */}
         <div className="grid gap-6 md:grid-cols-2">
