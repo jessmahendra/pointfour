@@ -49,16 +49,16 @@ function validateConfig() {
 // Initialize clients
 function initializeClients() {
   const airtable = new Airtable({
-    apiKey: config.airtable.apiKey,
-  }).base(config.airtable.baseId);
+    apiKey: config.airtable.apiKey!,
+  }).base(config.airtable.baseId!);
   
-  const supabase = createClient(config.supabase.url, config.supabase.anonKey);
+  const supabase = createClient(config.supabase.url!, config.supabase.anonKey!);
   
   return { airtable, supabase };
 }
 
 // Helper function for safe field access
-function safeGet(record, fieldName) {
+function safeGet(record: any, fieldName: string): string {
   try {
     const fields = record.fields;
     if (!fields) return '';
@@ -85,7 +85,7 @@ function safeGet(record, fieldName) {
 }
 
 // Generate URL-friendly slug from brand name
-function generateSlug(name) {
+function generateSlug(name: string): string {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
@@ -95,7 +95,7 @@ function generateSlug(name) {
 }
 
 // Test Airtable connection and data
-async function testAirtableConnection(airtable) {
+async function testAirtableConnection(airtable: any): Promise<number> {
   console.log('🔍 Testing Airtable connection...');
   
   try {
@@ -114,7 +114,7 @@ async function testAirtableConnection(airtable) {
       fields.forEach(field => console.log(`   - ${field}`));
       
       console.log('\n📝 Sample brand data:');
-      records.forEach((record, index) => {
+      records.forEach((record: any, index: number) => {
         const name = safeGet(record, 'Brand Name') || safeGet(record, 'brand name') || 'NO NAME';
         const description = safeGet(record, 'Brand Details Header') || safeGet(record, 'Description') || 'NO DESCRIPTION';
         const url = safeGet(record, 'UK Retailer') || safeGet(record, 'Website') || 'NO URL';
@@ -129,14 +129,14 @@ async function testAirtableConnection(airtable) {
     }
     
     return records.length;
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Airtable connection failed:', error.message);
     throw error;
   }
 }
 
 // Test Supabase connection
-async function testSupabaseConnection(supabase) {
+async function testSupabaseConnection(supabase: any): Promise<void> {
   console.log('🔍 Testing Supabase connection...');
   
   try {
@@ -155,7 +155,7 @@ async function testSupabaseConnection(supabase) {
     
     if (brands && brands.length > 0) {
       console.log('\n📝 Current brands in Supabase:');
-      brands.forEach((brand, index) => {
+      brands.forEach((brand: any, index: number) => {
         console.log(`   ${index + 1}. ${brand.name} (${brand.slug})`);
       });
     }
@@ -188,14 +188,14 @@ async function testSupabaseConnection(supabase) {
       console.log('🧹 Test record cleaned up');
     }
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Supabase connection failed:', error.message);
     throw error;
   }
 }
 
 // Main test function
-async function runTests() {
+async function runTests(): Promise<void> {
   console.log('🧪 Running migration tests...\n');
   
   try {
@@ -222,7 +222,7 @@ async function runTests() {
       console.log('\n⚠️ No brands found in Airtable. Check your table name and data.');
     }
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('\n💥 Tests failed:', error.message);
     console.log('\n🔧 Troubleshooting:');
     console.log('   1. Check your .env.local file has all required variables');

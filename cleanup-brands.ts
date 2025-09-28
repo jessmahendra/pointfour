@@ -39,7 +39,7 @@ function validateConfig() {
 }
 
 // Clear all brands from Supabase
-async function clearAllBrands(supabase: ReturnType<typeof createClient>): Promise<void> {
+async function clearAllBrands(supabase: any): Promise<void> {
   console.log('🧹 Clearing ALL brands from Supabase...');
   
   try {

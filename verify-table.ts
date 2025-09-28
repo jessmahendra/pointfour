@@ -39,7 +39,7 @@ function validateConfig() {
 }
 
 // Check table structure
-async function checkTableStructure(supabase) {
+async function checkTableStructure(supabase: any): Promise<boolean> {
   console.log('🔍 Checking brands table structure...');
   
   try {
@@ -80,11 +80,11 @@ async function checkTableStructure(supabase) {
       }
     } else {
       console.log('📋 Table columns:');
-      columns.forEach(column => {
+      columns.forEach((column: any) => {
         console.log(`   - ${column.column_name} (${column.data_type})`);
       });
       
-      const hasSlug = columns.some(col => col.column_name === 'slug');
+      const hasSlug = columns.some((col: any) => col.column_name === 'slug');
       if (hasSlug) {
         console.log('✅ Slug column found - ready for migration!');
         return true;
@@ -93,14 +93,14 @@ async function checkTableStructure(supabase) {
         return false;
       }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error checking table structure:', error.message);
     return false;
   }
 }
 
 // Test delete operation using slug
-async function testSlugDelete(supabase) {
+async function testSlugDelete(supabase: any): Promise<boolean> {
   console.log('🧪 Testing delete operation using slug...');
   
   try {
@@ -135,14 +135,14 @@ async function testSlugDelete(supabase) {
     console.log('⚠️ All brands were deleted during test!');
     
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error testing delete operation:', error.message);
     return false;
   }
 }
 
 // Main verification function
-async function verifyTable() {
+async function verifyTable(): Promise<void> {
   console.log('🔍 Verifying brands table for migration...\n');
   
   try {
@@ -150,7 +150,7 @@ async function verifyTable() {
     validateConfig();
     
     // Initialize Supabase client
-    const supabase = createClient(config.supabase.url, config.supabase.anonKey);
+    const supabase = createClient(config.supabase.url!, config.supabase.anonKey!);
     
     // Check table structure
     const structureOk = await checkTableStructure(supabase);
@@ -180,7 +180,7 @@ async function verifyTable() {
     console.log('\n🚀 You can now run the migration:');
     console.log('   npm run migrate:brands');
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('\n💥 Verification failed:', error.message);
     process.exit(1);
   }

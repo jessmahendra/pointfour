@@ -90,7 +90,7 @@ function validateConfig(): void {
 
 // Initialize Supabase client
 function initializeSupabase() {
-  return createClient(config.supabase.url, config.supabase.anonKey);
+  return createClient(config.supabase.url!, config.supabase.anonKey!);
 }
 
 // Generate URL for unknown brands
@@ -128,7 +128,7 @@ function getBrandUrl(brandName: string, slug: string): string {
 }
 
 // Get all brands from Supabase
-async function getAllBrands(supabase: ReturnType<typeof createClient>): Promise<Brand[]> {
+async function getAllBrands(supabase: any): Promise<Brand[]> {
   console.log('📊 Fetching brands from Supabase...');
   
   try {
@@ -149,33 +149,6 @@ async function getAllBrands(supabase: ReturnType<typeof createClient>): Promise<
   }
 }
 
-// Update brand URL in Supabase
-async function updateBrandUrl(
-  supabase: ReturnType<typeof createClient>, 
-  slug: string, 
-  url: string
-): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('brands')
-      .update({ url })
-      .eq('slug', slug);
-    
-    if (error) {
-      throw error;
-    }
-    
-    console.log(`✅ Updated URL for slug: ${slug}`);
-  } catch (error) {
-    console.error(`❌ Error updating URL for ${slug}:`, error);
-    throw error;
-  }
-}
-
-// Add delay between requests to avoid rate limiting
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 // Generate SQL update statements
 function generateUrlUpdateSQL(brands: Array<{slug: string, name: string}>): string {

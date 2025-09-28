@@ -29,12 +29,6 @@ interface Brand {
   url: string | null;
 }
 
-interface BrandDescription {
-  slug: string;
-  name: string;
-  description: string;
-}
-
 // Validate configuration
 function validateConfig(): void {
   const missing: string[] = [];
@@ -54,7 +48,7 @@ function validateConfig(): void {
 
 // Initialize Supabase client
 function initializeSupabase() {
-  return createClient(config.supabase.url, config.supabase.anonKey);
+  return createClient(config.supabase.url!, config.supabase.anonKey!);
 }
 
 // Fetch brand description from web search
@@ -63,7 +57,6 @@ async function fetchBrandDescription(brandName: string): Promise<string> {
     console.log(`🔍 Searching for description of "${brandName}"...`);
     
     // Use web search to get brand information
-    const searchQuery = `${brandName} brand company description about`;
     
     // For now, we'll use a simple approach - you can enhance this with actual web search API
     // This is a placeholder that generates a basic description
@@ -99,7 +92,7 @@ async function generateBrandDescription(brandName: string): Promise<string> {
 }
 
 // Get all brands from Supabase
-async function getAllBrands(supabase: ReturnType<typeof createClient>): Promise<Brand[]> {
+async function getAllBrands(supabase: any): Promise<Brand[]> {
   console.log('📊 Fetching brands from Supabase...');
   
   try {
@@ -122,7 +115,7 @@ async function getAllBrands(supabase: ReturnType<typeof createClient>): Promise<
 
 // Update brand description in Supabase
 async function updateBrandDescription(
-  supabase: ReturnType<typeof createClient>, 
+  supabase: any, 
   slug: string, 
   description: string
 ): Promise<void> {

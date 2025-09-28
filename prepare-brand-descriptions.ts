@@ -51,11 +51,11 @@ function validateConfig(): void {
 
 // Initialize Supabase client
 function initializeSupabase() {
-  return createClient(config.supabase.url, config.supabase.anonKey);
+  return createClient(config.supabase.url!, config.supabase.anonKey!);
 }
 
 // Get all brands from Supabase
-async function getAllBrands(supabase: ReturnType<typeof createClient>): Promise<Brand[]> {
+async function getAllBrands(supabase: any): Promise<Brand[]> {
   console.log('📊 Fetching brands from Supabase...');
   
   try {
@@ -78,7 +78,7 @@ async function getAllBrands(supabase: ReturnType<typeof createClient>): Promise<
 
 // Update brand description in Supabase
 async function updateBrandDescription(
-  supabase: ReturnType<typeof createClient>, 
+  supabase: any, 
   slug: string, 
   description: string
 ): Promise<void> {
@@ -115,7 +115,7 @@ function generateUpdateSQL(brands: Brand[], descriptions: Record<string, string>
 }
 
 // Main function to prepare brand descriptions
-async function prepareBrandDescriptions(): Promise<void> {
+async function prepareBrandDescriptions(): Promise<Brand[]> {
   console.log('🚀 Preparing brand descriptions for update...\n');
   
   try {
@@ -130,7 +130,7 @@ async function prepareBrandDescriptions(): Promise<void> {
     
     if (brands.length === 0) {
       console.log('⚠️ No brands found in Supabase');
-      return;
+      return [];
     }
     
     // Show current state
@@ -147,7 +147,7 @@ async function prepareBrandDescriptions(): Promise<void> {
     
     if (brandsNeedingDescriptions.length === 0) {
       console.log('✅ All brands already have descriptions');
-      return;
+      return [];
     }
     
     // Show brands that need descriptions

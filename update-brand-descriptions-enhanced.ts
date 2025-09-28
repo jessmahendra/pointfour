@@ -48,7 +48,7 @@ function validateConfig(): void {
 
 // Initialize Supabase client
 function initializeSupabase() {
-  return createClient(config.supabase.url, config.supabase.anonKey);
+  return createClient(config.supabase.url!, config.supabase.anonKey!);
 }
 
 // Fetch brand description using web search
@@ -57,11 +57,10 @@ async function fetchBrandDescription(brandName: string): Promise<string> {
     console.log(`🔍 Searching for description of "${brandName}"...`);
     
     // Use web search to get brand information
-    const searchQuery = `${brandName} brand company description about fashion clothing`;
     
     // For demonstration, we'll use a web search approach
     // In a production environment, you would use a proper web search API
-    const description = await performWebSearch(brandName, searchQuery);
+    const description = await performWebSearch(brandName);
     
     console.log(`✅ Generated description for "${brandName}"`);
     return description;
@@ -72,7 +71,7 @@ async function fetchBrandDescription(brandName: string): Promise<string> {
 }
 
 // Perform web search (placeholder implementation)
-async function performWebSearch(brandName: string, query: string): Promise<string> {
+async function performWebSearch(brandName: string): Promise<string> {
   // This is a placeholder for web search functionality
   // In a real implementation, you would:
   // 1. Use a web search API (Google Custom Search, Bing Search API, etc.)
@@ -115,7 +114,7 @@ async function performWebSearch(brandName: string, query: string): Promise<strin
 }
 
 // Get all brands from Supabase
-async function getAllBrands(supabase: ReturnType<typeof createClient>): Promise<Brand[]> {
+async function getAllBrands(supabase: any): Promise<Brand[]> {
   console.log('📊 Fetching brands from Supabase...');
   
   try {
@@ -138,7 +137,7 @@ async function getAllBrands(supabase: ReturnType<typeof createClient>): Promise<
 
 // Update brand description in Supabase
 async function updateBrandDescription(
-  supabase: ReturnType<typeof createClient>, 
+  supabase: any, 
   slug: string, 
   description: string
 ): Promise<void> {

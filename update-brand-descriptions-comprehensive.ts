@@ -91,7 +91,7 @@ function validateConfig(): void {
 
 // Initialize Supabase client
 function initializeSupabase() {
-  return createClient(config.supabase.url, config.supabase.anonKey);
+  return createClient(config.supabase.url!, config.supabase.anonKey!);
 }
 
 // Generate description for unknown brands
@@ -129,7 +129,7 @@ function getBrandDescription(brandName: string, slug: string): string {
 }
 
 // Get all brands from Supabase
-async function getAllBrands(supabase: ReturnType<typeof createClient>): Promise<Brand[]> {
+async function getAllBrands(supabase: any): Promise<Brand[]> {
   console.log('📊 Fetching brands from Supabase...');
   
   try {
@@ -152,7 +152,7 @@ async function getAllBrands(supabase: ReturnType<typeof createClient>): Promise<
 
 // Update brand description in Supabase
 async function updateBrandDescription(
-  supabase: ReturnType<typeof createClient>, 
+  supabase: any, 
   slug: string, 
   description: string
 ): Promise<void> {

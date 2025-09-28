@@ -106,7 +106,7 @@ function validateConfig(): void {
 
 // Initialize Supabase client
 function initializeSupabase() {
-  return createClient(config.supabase.url, config.supabase.anonKey);
+  return createClient(config.supabase.url!, config.supabase.anonKey!);
 }
 
 // Generate URL for unknown brands
@@ -151,7 +151,7 @@ function getBrandUrl(brandName: string, slug: string): string {
 }
 
 // Get all brands from Supabase
-async function getAllBrands(supabase: ReturnType<typeof createClient>): Promise<Array<{slug: string, name: string, url: string | null}>> {
+async function getAllBrands(supabase: any): Promise<Array<{slug: string, name: string, url: string | null}>> {
   console.log('📊 Fetching brands from Supabase...');
   
   try {

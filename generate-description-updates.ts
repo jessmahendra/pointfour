@@ -87,7 +87,7 @@ async function generateDescriptionUpdates(): Promise<void> {
   console.log('🚀 Generating brand description updates...\n');
   
   try {
-    const supabase = createClient(config.supabase.url, config.supabase.anonKey);
+    const supabase = createClient(config.supabase.url!, config.supabase.anonKey!);
     
     // Get all brands
     const { data: brands, error } = await supabase

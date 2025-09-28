@@ -93,7 +93,7 @@ function initializeClients() {
     apiKey: config.airtable.apiKey,
   }).base(config.airtable.baseId);
   
-  const supabase = createClient(config.supabase.url, config.supabase.anonKey);
+  const supabase = createClient(config.supabase.url!, config.supabase.anonKey!);
   
   return { airtable, supabase };
 }
@@ -136,7 +136,7 @@ function generateSlug(name: string): string {
 }
 
 // Clear existing brands from Supabase
-async function clearExistingBrands(supabase: ReturnType<typeof createClient>): Promise<void> {
+async function clearExistingBrands(supabase: any): Promise<void> {
   console.log('🧹 Clearing existing brands from Supabase...');
   
   try {
@@ -251,7 +251,7 @@ function transformBrand(airtableRecord: AirtableRecord): SupabaseBrand | null {
 }
 
 // Insert brands into Supabase
-async function insertBrandsToSupabase(supabase: ReturnType<typeof createClient>, brands: SupabaseBrand[]): Promise<number> {
+async function insertBrandsToSupabase(supabase: any, brands: SupabaseBrand[]): Promise<number> {
   console.log(`📥 Inserting ${brands.length} brands into Supabase...`);
   
   try {
