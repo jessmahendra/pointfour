@@ -2,6 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { UserProfile } from "../../../types/analysis";
+import { UserMeasurements } from "../../../types/user";
 
 interface UserProfileFormProps {
   userProfile: UserProfile;
@@ -10,6 +11,8 @@ interface UserProfileFormProps {
   setBrandQuery: React.Dispatch<React.SetStateAction<string>>;
   loading: boolean;
   onSubmit: () => void;
+  userMeasurements: UserMeasurements | null;
+  measurementsLoading: boolean;
 }
 
 export const UserProfileForm: React.FC<UserProfileFormProps> = ({
@@ -19,17 +22,34 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
   setBrandQuery,
   loading,
   onSubmit,
+  userMeasurements,
+  measurementsLoading,
 }) => {
   const isFootwear = userProfile.category === "footwear";
   const showSpecificFields = userProfile.category !== "";
+
+  // Check if user has saved measurements
+  const hasMeasurements =
+    userMeasurements &&
+    (userMeasurements.usualSize?.tops?.length > 0 ||
+      userMeasurements.usualSize?.bottoms?.length > 0 ||
+      userMeasurements.usualSize?.shoes?.length > 0 ||
+      userMeasurements.height ||
+      userMeasurements.fitPreference?.tops ||
+      userMeasurements.fitPreference?.bottoms);
+
+  // Show sizing fields only if user doesn't have measurements
+  const showSizingFields = !hasMeasurements && !measurementsLoading;
 
   const buttonEnabled =
     !loading &&
     brandQuery.trim() &&
     userProfile.category &&
-    (isFootwear || userProfile.fitPreference) && // Don't require fitPreference for footwear
-    ((isFootwear && userProfile.footType) ||
-      (!isFootwear && userProfile.bodyShape));
+    // If user has measurements, we don't need additional sizing info
+    (hasMeasurements ||
+      ((isFootwear || userProfile.fitPreference) && // Don't require fitPreference for footwear
+        ((isFootwear && userProfile.footType) ||
+          (!isFootwear && userProfile.bodyShape))));
 
   return (
     <div className="max-w-md mx-auto">
@@ -109,7 +129,7 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
         </div>
 
         {/* Specific Fields based on category */}
-        {showSpecificFields && (
+        {showSpecificFields && showSizingFields && (
           <>
             {/* Size Selection */}
             <div className="mb-6">
@@ -117,11 +137,16 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
                 Your UK size (optional)
               </label>
               <select
-                value={isFootwear ? userProfile.ukShoeSize : userProfile.ukClothingSize}
+                value={
+                  isFootwear
+                    ? userProfile.ukShoeSize
+                    : userProfile.ukClothingSize
+                }
                 onChange={(e) =>
                   setUserProfile((prev) => ({
                     ...prev,
-                    [isFootwear ? "ukShoeSize" : "ukClothingSize"]: e.target.value,
+                    [isFootwear ? "ukShoeSize" : "ukClothingSize"]:
+                      e.target.value,
                   }))
                 }
                 className="w-full p-3 text-sm bg-stone-50 border border-stone-300 rounded-lg outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
@@ -172,11 +197,21 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
                 >
                   <option value="">Select height (optional)</option>
                   <option value="under-5-2">Under 5&apos;2&quot;</option>
-                  <option value="5-2-to-5-4">5&apos;2&quot; - 5&apos;4&quot;</option>
-                  <option value="5-4-to-5-6">5&apos;4&quot; - 5&apos;6&quot;</option>
-                  <option value="5-6-to-5-8">5&apos;6&quot; - 5&apos;8&quot;</option>
-                  <option value="5-8-to-5-10">5&apos;8&quot; - 5&apos;10&quot;</option>
-                  <option value="5-10-to-6-0">5&apos;10&quot; - 6&apos;0&quot;</option>
+                  <option value="5-2-to-5-4">
+                    5&apos;2&quot; - 5&apos;4&quot;
+                  </option>
+                  <option value="5-4-to-5-6">
+                    5&apos;4&quot; - 5&apos;6&quot;
+                  </option>
+                  <option value="5-6-to-5-8">
+                    5&apos;6&quot; - 5&apos;8&quot;
+                  </option>
+                  <option value="5-8-to-5-10">
+                    5&apos;8&quot; - 5&apos;10&quot;
+                  </option>
+                  <option value="5-10-to-6-0">
+                    5&apos;10&quot; - 6&apos;0&quot;
+                  </option>
                   <option value="over-6-0">Over 6&apos;0&quot;</option>
                 </select>
               </div>

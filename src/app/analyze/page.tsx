@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { UserProfile, AnalysisResult } from "../../types/analysis";
+import { UserMeasurements } from "../../types/user";
 import { UserProfileForm } from "./components/UserProfileForm";
 import { AnalysisResults } from "./components/AnalysisResults";
 import { ChatInterface } from "./components/ChatInterface";
@@ -29,8 +30,16 @@ function BrandAnalysisContent() {
   );
   const [loading, setLoading] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
+  const [userMeasurements, setUserMeasurements] =
+    useState<UserMeasurements | null>(null);
+  const [measurementsLoading, setMeasurementsLoading] = useState(true);
 
   const searchParams = useSearchParams();
+
+  // Load user measurements on component mount
+  useEffect(() => {
+    loadUserMeasurements();
+  }, []);
 
   // Handle loading shared analysis from URL parameters
   useEffect(() => {
@@ -39,6 +48,28 @@ function BrandAnalysisContent() {
       loadSharedAnalysis(shareId);
     }
   }, [searchParams]);
+
+  const loadUserMeasurements = async () => {
+    try {
+      setMeasurementsLoading(true);
+      const response = await fetch("/api/user/profile");
+      if (response.ok) {
+        const { profile } = await response.json();
+        setUserMeasurements(profile?.measurements || null);
+      } else if (response.status === 401) {
+        // User not authenticated, that's fine
+        setUserMeasurements(null);
+      } else {
+        console.error("Failed to load user measurements");
+        setUserMeasurements(null);
+      }
+    } catch (error) {
+      console.error("Error loading user measurements:", error);
+      setUserMeasurements(null);
+    } finally {
+      setMeasurementsLoading(false);
+    }
+  };
 
   // Console logging for search type debugging
   useEffect(() => {
@@ -152,12 +183,32 @@ function BrandAnalysisContent() {
     try {
       setLoading(true);
 
+      // Use saved measurements if available, otherwise use form data
+      const profileToSubmit = userMeasurements
+        ? {
+            ...userProfile,
+            // Map saved measurements to the expected format
+            ukClothingSize:
+              userMeasurements.usualSize?.tops?.[0] ||
+              userProfile.ukClothingSize,
+            ukShoeSize:
+              userMeasurements.usualSize?.shoes?.[0] || userProfile.ukShoeSize,
+            height: userMeasurements.height
+              ? `${Math.floor(userMeasurements.height / 30.48)}'${Math.round(
+                  (userMeasurements.height % 30.48) / 2.54
+                )}"`
+              : userProfile.height,
+            fitPreference:
+              userMeasurements.fitPreference?.tops || userProfile.fitPreference,
+          }
+        : userProfile;
+
       const response = await fetch("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query: brandQuery,
-          userProfile,
+          userProfile: profileToSubmit,
         }),
       });
 
@@ -215,7 +266,8 @@ function BrandAnalysisContent() {
           ...prev,
           {
             type: "assistant",
-            content: "Sorry, I couldn't process your message. Please try again.",
+            content:
+              "Sorry, I couldn't process your message. Please try again.",
             timestamp: Date.now(),
           },
         ]);
@@ -247,6 +299,8 @@ function BrandAnalysisContent() {
           setBrandQuery={setBrandQuery}
           loading={loading}
           onSubmit={handleFormSubmit}
+          userMeasurements={userMeasurements}
+          measurementsLoading={measurementsLoading}
         />
       )}
       {currentStep === "analysis" && analysisResult && (
