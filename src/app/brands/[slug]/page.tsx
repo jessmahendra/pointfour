@@ -1,14 +1,14 @@
-import { createClient } from '@/utils/supabase/server'
-import { createStaticClient } from '@/utils/supabase/static'
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import Image from 'next/image'
-import { Metadata } from 'next'
+import { createClient } from "@/utils/supabase/server";
+import { createStaticClient } from "@/utils/supabase/static";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { Metadata } from "next";
 
 interface BrandPageProps {
   params: Promise<{
-    slug: string
-  }>
+    slug: string;
+  }>;
 }
 
 interface Product {
@@ -29,27 +29,29 @@ interface Product {
 }
 
 // Generate metadata for individual brand pages
-export async function generateMetadata({ params }: BrandPageProps): Promise<Metadata> {
-  const supabase = createStaticClient()
-  const { slug } = await params
-  
+export async function generateMetadata({
+  params,
+}: BrandPageProps): Promise<Metadata> {
+  const supabase = createStaticClient();
+  const { slug } = await params;
+
   const { data: brand } = await supabase
-    .from('brands')
-    .select('name, description, url')
-    .eq('slug', slug)
-    .single()
+    .from("brands")
+    .select("name, description, url")
+    .eq("slug", slug)
+    .single();
 
   if (!brand) {
     return {
-      title: 'Brand Not Found | PointFour',
-      description: 'The requested brand could not be found.',
-    }
+      title: "Brand Not Found | PointFour",
+      description: "The requested brand could not be found.",
+    };
   }
 
-  const title = `${brand.name} | Fashion Brand | PointFour`
-  const description = brand.description 
+  const title = `${brand.name} | Fashion Brand | PointFour`;
+  const description = brand.description
     ? `${brand.description} - Learn more about ${brand.name} and visit their official website.`
-    : `Discover ${brand.name} - a leading fashion brand. Learn more about their products and visit their official website.`
+    : `Discover ${brand.name} - a leading fashion brand. Learn more about their products and visit their official website.`;
 
   return {
     title,
@@ -58,66 +60,66 @@ export async function generateMetadata({ params }: BrandPageProps): Promise<Meta
     openGraph: {
       title,
       description,
-      type: 'website',
+      type: "website",
       url: brand.url,
-      siteName: 'PointFour',
+      siteName: "PointFour",
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title,
       description,
     },
     alternates: {
       canonical: brand.url,
     },
-  }
+  };
 }
 
 export default async function BrandPage({ params }: BrandPageProps) {
-  const supabase = await createClient()
-  const { slug } = await params
-  
+  const supabase = await createClient();
+  const { slug } = await params;
+
   const { data: brand, error } = await supabase
-    .from('brands')
-    .select('*')
-    .eq('slug', slug)
-    .single()
+    .from("brands")
+    .select("*")
+    .eq("slug", slug)
+    .single();
 
   if (error || !brand) {
-    notFound()
+    notFound();
   }
 
   // Fetch products for this brand
   const { data: products } = await supabase
-    .from('products')
-    .select('*')
-    .eq('brand_id', brand.slug)
-    .order('created_at', { ascending: false })
-    .limit(6)
+    .from("products")
+    .select("*")
+    .eq("brand_id", brand.slug)
+    .order("created_at", { ascending: false })
+    .limit(6);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-stone-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <nav className="mb-6">
-          <Link 
-            href="/brands" 
-            className="text-blue-600 hover:text-blue-800 underline"
+          <Link
+            href="/brands"
+            className="text-[#928704] hover:text-[#928704] font-semibold underline"
           >
             ← Back to Brands
           </Link>
         </nav>
 
         {/* Brand Header */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
+        <div className="bg-white rounded-lg shadow-sm p-8 mb-8 border border-stone-200">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              <h1 className="text-xl font-bold text-stone-900 mb-4">
                 {brand.name}
               </h1>
-              
+
               {brand.description && (
-                <p className="text-xl text-gray-600 mb-6">
+                <p className="text-base text-stone-600 mb-6">
                   {brand.description}
                 </p>
               )}
@@ -127,20 +129,20 @@ export default async function BrandPage({ params }: BrandPageProps) {
                   href={brand.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center px-6 py-3 bg-black text-white font-semibold rounded-lg hover:bg-stone-800 transition-colors"
                 >
                   Visit Official Website
-                  <svg 
-                    className="ml-2 w-4 h-4" 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <svg
+                    className="ml-2 w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                     />
                   </svg>
                 </a>
@@ -165,12 +167,12 @@ export default async function BrandPage({ params }: BrandPageProps) {
         {products && products.length > 0 && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-lg font-bold text-stone-900">
                 Products from {brand.name}
               </h2>
               <Link
                 href={`/products?brand_id=${brand.slug}`}
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="text-[#928704] hover:text-[#928704] font-semibold"
               >
                 View all products →
               </Link>
@@ -180,7 +182,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
                 <Link
                   key={product.id}
                   href={`/products/${product.id}`}
-                  className="group block bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 p-4"
+                  className="group block bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 border border-stone-200 hover:border-stone-300 p-4"
                 >
                   {product.image_url && (
                     <div className="mb-3 aspect-square relative overflow-hidden rounded-lg">
@@ -192,12 +194,12 @@ export default async function BrandPage({ params }: BrandPageProps) {
                       />
                     </div>
                   )}
-                  <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors mb-1">
+                  <h3 className="font-semibold text-stone-900 group-hover:text-[#928704] transition-colors mb-1">
                     {product.name}
                   </h3>
                   {product.price && (
-                    <p className="text-sm text-gray-600">
-                      {product.currency || 'USD'} {product.price.toFixed(2)}
+                    <p className="text-sm text-stone-600">
+                      {product.currency || "USD"} {product.price.toFixed(2)}
                     </p>
                   )}
                 </Link>
@@ -208,26 +210,28 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
         {/* Brand Details */}
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold mb-4">Brand Information</h2>
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-stone-200">
+            <h2 className="text-lg font-semibold mb-4">Brand Information</h2>
             <dl className="space-y-3">
               <div>
-                <dt className="font-medium text-gray-900">Name</dt>
-                <dd className="text-gray-600">{brand.name}</dd>
+                <dt className="font-medium text-stone-900">Name</dt>
+                <dd className="text-stone-600">{brand.name}</dd>
               </div>
               <div>
-                <dt className="font-medium text-gray-900">Slug</dt>
-                <dd className="text-gray-600 font-mono text-sm">{brand.slug}</dd>
+                <dt className="font-medium text-stone-900">Slug</dt>
+                <dd className="text-stone-600 font-mono text-sm">
+                  {brand.slug}
+                </dd>
               </div>
               {brand.url && (
                 <div>
-                  <dt className="font-medium text-gray-900">Website</dt>
-                  <dd className="text-gray-600">
-                    <a 
-                      href={brand.url} 
-                      target="_blank" 
+                  <dt className="font-medium text-stone-900">Website</dt>
+                  <dd className="text-stone-600">
+                    <a
+                      href={brand.url}
+                      target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 underline"
+                      className="text-[#928704] hover:text-[#928704] font-semibold underline"
                     >
                       {brand.url}
                     </a>
@@ -235,22 +239,22 @@ export default async function BrandPage({ params }: BrandPageProps) {
                 </div>
               )}
               <div>
-                <dt className="font-medium text-gray-900">Created</dt>
-                <dd className="text-gray-600">
+                <dt className="font-medium text-stone-900">Created</dt>
+                <dd className="text-stone-600">
                   {new Date(brand.created_at).toLocaleDateString()}
                 </dd>
               </div>
             </dl>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold mb-4">About {brand.name}</h2>
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-stone-200">
+            <h2 className="text-lg font-semibold mb-4">About {brand.name}</h2>
             {brand.description ? (
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-stone-600 leading-relaxed">
                 {brand.description}
               </p>
             ) : (
-              <p className="text-gray-500 italic">
+              <p className="text-stone-500 italic">
                 No description available for this brand.
               </p>
             )}
@@ -258,18 +262,18 @@ export default async function BrandPage({ params }: BrandPageProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 // Generate static params for all brands (optional - for static generation)
 export async function generateStaticParams() {
-  const supabase = createStaticClient()
-  
-  const { data: brands } = await supabase
-    .from('brands')
-    .select('slug')
+  const supabase = createStaticClient();
 
-  return brands?.map((brand) => ({
-    slug: brand.slug,
-  })) || []
+  const { data: brands } = await supabase.from("brands").select("slug");
+
+  return (
+    brands?.map((brand) => ({
+      slug: brand.slug,
+    })) || []
+  );
 }
