@@ -1,13 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// GPT-5 Testing Configuration
-const ENABLE_GPT5_TESTING = process.env.ENABLE_GPT5_TESTING === 'true';
-const GPT5_TEST_PERCENTAGE = parseInt(process.env.GPT5_TEST_PERCENTAGE || '10') || 10;
+import { llmService } from '@/lib/llm-service';
 
 // Caching Configuration
 const CACHE_CONFIG = {
@@ -67,11 +59,7 @@ function generateCacheKey(brandName: string, itemName: string, query: string): s
   return `${brandName.toLowerCase()}::${itemName.toLowerCase()}::${query.toLowerCase().slice(0, 100)}`;
 }
 
-console.log('🔍 RECOMMENDATIONS API GPT-5 CONFIG:', {
-  enabled: ENABLE_GPT5_TESTING,
-  testPercentage: GPT5_TEST_PERCENTAGE,
-  model: 'gpt-5-mini'
-});
+// GPT-5 testing is now handled by the centralized LLM service
 
 // Cache management endpoint
 export async function GET(request: NextRequest) {
@@ -218,7 +206,14 @@ export async function POST(request: NextRequest) {
     
     if (!AIRTABLE_BASE_ID || !AIRTABLE_API_KEY) {
       console.log('Missing Airtable config - BASE_ID:', !!AIRTABLE_BASE_ID, 'API_KEY:', !!AIRTABLE_API_KEY);
-      throw new Error(`Missing Airtable configuration. BASE_ID: ${!!AIRTABLE_BASE_ID}, API_KEY: ${!!AIRTABLE_API_KEY}`);
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Airtable configuration missing',
+          recommendation: "Airtable configuration is missing. Please check your environment variables for AIRTABLE_BASE_ID and AIRTABLE_API_KEY."
+        },
+        { status: 500 }
+      );
     }
     
     // Extract brand name and item name from query for external search
@@ -415,8 +410,10 @@ export async function POST(request: NextRequest) {
           // Direct Serper API call for external search
           const serperApiKey = process.env.SERPER_API_KEY;
           if (!serperApiKey) {
-            throw new Error('SERPER_API_KEY not configured');
-          }
+            console.log('SERPER_API_KEY not configured, skipping external search');
+            externalSearchError = 'SERPER_API_KEY not configured';
+            // Continue without external search instead of throwing
+          } else {
         
           // Create search queries for the brand
           const searchQueries = [
@@ -469,6 +466,7 @@ export async function POST(request: NextRequest) {
           // Cache the Serper results
           setCachedData(serperCache, serperCacheKey, allResults);
           console.log(`💾 CACHED: Serper results for ${brandName} ${itemName}`);
+          }
         }
         
         // Group reviews by source type
@@ -730,34 +728,32 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
     console.log('=== DEBUG: AI prompt created ===');
     console.log('Prompt length:', aiPrompt.length);
     
-    // Choose model based on GPT-5 testing configuration
-    const useGPT5 = ENABLE_GPT5_TESTING && Math.random() * 100 < GPT5_TEST_PERCENTAGE;
-    const modelToUse = useGPT5 ? "gpt-5-mini" : "gpt-4o-mini";
+    // Use the centralized LLM service with GPT-5 testing logic
+    console.log(`🤖 RECOMMENDATIONS API: Using LLM service with GPT-5 testing`);
     
-    console.log(`🤖 RECOMMENDATIONS API: Using ${modelToUse} ${useGPT5 ? '(GPT-5 test)' : '(standard)'}`);
-    
-    const completion = await openai.chat.completions.create({
-      model: modelToUse,
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful fashion expert who provides detailed, accurate sizing and fit advice based on available data. Always be encouraging but honest about data limitations."
-        },
-        {
-          role: "user",
-          content: aiPrompt
-        }
-      ],
-      max_completion_tokens: 2000,
+    const { text: aiResponse, interaction } = await llmService.generateText(aiPrompt, {
+      systemPrompt: "You are a helpful fashion expert who provides detailed, accurate sizing and fit advice based on available data. Always be encouraging but honest about data limitations.",
       temperature: 1,
+      maxTokens: 2000,
+      metadata: { 
+        query: query,
+        totalBrands: brands.length,
+        hasDatabaseData: !!matchingBrand && hasSufficientData,
+        hasExternalData: !!externalSearchResults,
+        searchType: externalSearchResults ? 'external' : 
+                   hasSufficientData ? 'database' : 'fallback'
+      },
+      source: 'recommendations-api'
     });
-    
-    const aiResponse = completion.choices[0]?.message?.content || "Sorry, I couldn't generate a response.";
     
     console.log('=== DEBUG: AI response received ===');
     console.log('Response length:', aiResponse.length);
     console.log('=== DEBUG: AI response content (first 500 chars) ===');
     console.log(aiResponse.substring(0, 500));
+    console.log('=== DEBUG: LLM interaction details ===');
+    console.log('Model used:', interaction.model);
+    console.log('Duration:', interaction.duration, 'ms');
+    console.log('Tokens used:', interaction.tokens?.total || 'unknown');
     
     // Cache the AI response for future identical queries
     setCachedData(aiResponseCache, cacheKey, aiResponse);
@@ -777,6 +773,13 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
       externalSearchError: externalSearchError,
       dataSource: externalSearchResults ? 'web_search' :
                   hasSufficientData ? 'database' : 'no_data',
+      llmInteraction: {
+        id: interaction.id,
+        model: interaction.model,
+        duration: interaction.duration,
+        tokens: interaction.tokens,
+        timestamp: interaction.timestamp.toISOString()
+      },
       cacheStats: {
         aiResponseCacheSize: aiResponseCache.size,
         serperCacheSize: serperCache.size,

@@ -88,9 +88,20 @@ export interface AnalysisResult {
   totalBrands: number;
   hasDatabaseData?: boolean;
   hasExternalData?: boolean;
-  searchType?: "database" | "hybrid" | "external" | "fallback";
-  dataSource?: "database" | "web_search" | "hybrid_data" | "no_data";
+  searchType?: "database" | "hybrid" | "external" | "fallback" | "llm";
+  dataSource?: "database" | "web_search" | "hybrid_data" | "no_data" | "llm_service";
   externalSearchResults?: ExternalSearchResults | null;
+  llmInteraction?: {
+    id: string;
+    model: string;
+    duration: number;
+    tokens?: {
+      prompt: number;
+      completion: number;
+      total: number;
+    };
+    timestamp: string;
+  };
 }
 
 export interface ParsedAnalysisData {
