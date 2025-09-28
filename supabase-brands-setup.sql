@@ -1,21 +1,22 @@
 -- Create the brands table
 CREATE TABLE brands (
   id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  slug text NOT NULL UNIQUE,
   name text NOT NULL,
   description text,
-  website_url text,
+  url text,
   logo_url text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now()
 );
 
 -- Insert some sample data
-INSERT INTO brands (name, description, website_url) VALUES
-  ('Nike', 'Just Do It - Athletic wear and footwear', 'https://nike.com'),
-  ('Adidas', 'Impossible is Nothing - Sports and lifestyle brand', 'https://adidas.com'),
-  ('Zara', 'Fast fashion for men, women and children', 'https://zara.com'),
-  ('H&M', 'Fashion and quality at the best price', 'https://hm.com'),
-  ('Uniqlo', 'LifeWear - Simple made better', 'https://uniqlo.com');
+INSERT INTO brands (slug, name, description, url) VALUES
+  ('nike', 'Nike', 'Just Do It - Athletic wear and footwear', 'https://nike.com'),
+  ('adidas', 'Adidas', 'Impossible is Nothing - Sports and lifestyle brand', 'https://adidas.com'),
+  ('zara', 'Zara', 'Fast fashion for men, women and children', 'https://zara.com'),
+  ('hm', 'H&M', 'Fashion and quality at the best price', 'https://hm.com'),
+  ('uniqlo', 'Uniqlo', 'LifeWear - Simple made better', 'https://uniqlo.com');
 
 -- Enable Row Level Security
 ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
