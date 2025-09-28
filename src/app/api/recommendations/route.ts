@@ -146,14 +146,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   let query = '';
+  let userProfile = null;
   
   try {
     const body = await request.json();
     query = body.query;
+    userProfile = body.userProfile;
     // Remove enableExternalSearch parameter - we'll decide automatically
     
     console.log('=== DEBUG: Starting recommendation request ===');
     console.log('Query received:', query);
+    console.log('User profile received:', userProfile);
     console.log('OpenAI API Key exists:', !!process.env.OPENAI_API_KEY);
     
     // Generate cache key early for potential cache hits
@@ -678,10 +681,24 @@ export async function POST(request: NextRequest) {
     console.log('Context length:', enhancedContext.length);
     console.log('Has external data:', !!externalSearchResults);
     
+    // Create user context from measurements
+    let userContext = '';
+    if (userProfile) {
+      userContext = '\n**USER MEASUREMENTS AND PREFERENCES:**\n';
+      if (userProfile.ukClothingSize) userContext += `- UK Clothing Size: ${userProfile.ukClothingSize}\n`;
+      if (userProfile.ukShoeSize) userContext += `- UK Shoe Size: ${userProfile.ukShoeSize}\n`;
+      if (userProfile.height) userContext += `- Height: ${userProfile.height}\n`;
+      if (userProfile.fitPreference) userContext += `- Fit Preference: ${userProfile.fitPreference}\n`;
+      if (userProfile.bodyShape) userContext += `- Body Shape: ${userProfile.bodyShape}\n`;
+      if (userProfile.footType) userContext += `- Foot Type: ${userProfile.footType}\n`;
+      if (userProfile.category) userContext += `- Category: ${userProfile.category}\n`;
+      userContext += '\n';
+    }
+
     // Create the AI prompt with enhanced context
     const aiPrompt = `You are a fashion expert helping users find the right fit for clothing and footwear brands. 
 
-${enhancedContext ? `Here's what I know about the brand:\n${enhancedContext}\n` : ''}
+${enhancedContext ? `Here's what I know about the brand:\n${enhancedContext}\n` : ''}${userContext}
 
 User Query: ${query}
 
@@ -691,18 +708,18 @@ User Query: ${query}
 [Brand name] is a [1-2 sentence concise brand description]. [NO user-specific information]
 
 **Fit summary**
-[1-2 sentences about fit for this specific user based on available data]
+[1-2 sentences about fit for this specific user based on available data and their measurements]
 
 **Quality**  
 [1-2 sentences about brand quality and materials - ALWAYS include this section, even if you must state "Quality information is limited based on available reviews"]
 
-**Sizing**: Include all sizing advice, fit considerations, and specific guidance (runs small/large, true to size, etc.) based on customer reviews. This should contain all the detailed sizing information and fit considerations.
+**Sizing**: Include all sizing advice, fit considerations, and specific guidance (runs small/large, true to size, etc.) based on customer reviews AND the user's specific measurements. This should contain all the detailed sizing information and fit considerations tailored to their size and preferences.
 
-**Recommendations**: Provide 3-4 specific, actionable recommendations based on the available customer review data and user profile. Include:
+**Recommendations**: Provide 3-4 specific, actionable recommendations based on the available customer review data and the user's specific measurements and preferences. Include:
 - A summary of what customers say about this brand (comfort, fit, quality)
-- Specific advice for the user's measurements and preferences
-- Any important considerations or tips based on review patterns
-- Action items (e.g., "Order your usual size", "Size up/down", "Check return policy")
+- Specific advice tailored to the user's measurements, size, height, and fit preferences
+- Any important considerations or tips based on review patterns for users with similar measurements
+- Action items (e.g., "Order your usual size", "Size up/down", "Check return policy") based on their specific measurements
 
 **Warnings**: Any important fit or quality considerations (if none, state "No specific warnings identified")
 
@@ -715,13 +732,15 @@ User Query: ${query}
 - Quality section is MANDATORY - never omit it
 - If data is limited for any section, acknowledge this but still provide the section
 - Keep all sections concise (1-2 sentences each)
-- Make recommendations DATA-DRIVEN based on the customer reviews provided
+- Make recommendations DATA-DRIVEN based on the customer reviews provided AND the user's specific measurements
+- If user measurements are provided, ALWAYS tailor recommendations to their specific size, height, and fit preferences
 - If we have good database data, use that as the primary source
 - If database data is limited but we have web search results, focus on the web data
-- Base recommendations on actual customer feedback patterns, not generic advice
-- Include specific insights from the review data when available
-- Provide actionable next steps based on the available data
+- Base recommendations on actual customer feedback patterns AND the user's measurements, not generic advice
+- Include specific insights from the review data when available, especially for users with similar measurements
+- Provide actionable next steps based on the available data AND the user's specific measurements
 - Always be encouraging but transparent about data availability
+- When user measurements are available, make sizing advice specific to their size and preferences
 
 Make your response helpful, specific, and actionable. Be concise and avoid verbose descriptions.`;
     

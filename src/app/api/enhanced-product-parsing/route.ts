@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { enhancedProductParsingService } from '../../../lib/services/enhanced-product-parsing-service';
+import { enhancedProductParsingServiceServiceRole } from '../../../lib/services/enhanced-product-parsing-service-role';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     console.log('🚀 API: Starting enhanced product parsing for:', prompt);
 
-    const result = await enhancedProductParsingService.parseAndStoreProduct(prompt, options);
+    const result = await enhancedProductParsingServiceServiceRole.parseAndStoreProduct(prompt, options);
 
     return NextResponse.json({
       success: true,
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action');
 
     if (action === 'summary') {
-      const summary = await enhancedProductParsingService.getDatabaseSummary();
+      const summary = await enhancedProductParsingServiceServiceRole.getDatabaseSummary();
       return NextResponse.json({
         success: true,
         data: summary
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         'uniqlo'
       ];
 
-      await enhancedProductParsingService.testFuzzyMatching(testBrands);
+      await enhancedProductParsingServiceServiceRole.testFuzzyMatching(testBrands);
       return NextResponse.json({
         success: true,
         message: 'Fuzzy matching test completed. Check server logs for results.'

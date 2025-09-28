@@ -5,6 +5,8 @@ import { UserMeasurements } from "@/types/user";
 
 interface MeasurementsFormProps {
   onSave?: (measurements: UserMeasurements) => void;
+  skipLoading?: boolean; // New prop to skip loading existing measurements
+  skipSaving?: boolean; // New prop to skip saving to database
 }
 
 // Size options for UK women's sizing
@@ -67,7 +69,11 @@ const FIT_PREFERENCES = [
 
 type Step = "basic" | "sizes" | "preferences" | "body" | "complete";
 
-export default function MeasurementsForm({ onSave }: MeasurementsFormProps) {
+export default function MeasurementsForm({
+  onSave,
+  skipLoading = false,
+  skipSaving = false,
+}: MeasurementsFormProps) {
   const [measurements, setMeasurements] = useState<UserMeasurements>({
     DOB: "",
     height: undefined,
@@ -95,8 +101,12 @@ export default function MeasurementsForm({ onSave }: MeasurementsFormProps) {
 
   // Load existing measurements on component mount
   useEffect(() => {
-    loadMeasurements();
-  }, []);
+    if (!skipLoading) {
+      loadMeasurements();
+    } else {
+      setLoading(false);
+    }
+  }, [skipLoading]);
 
   const loadMeasurements = async () => {
     setLoading(true);
@@ -145,26 +155,36 @@ export default function MeasurementsForm({ onSave }: MeasurementsFormProps) {
     setSuccess(null);
 
     try {
-      const response = await fetch("/api/user/profile", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ measurements }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess("Measurements saved successfully!");
+      if (skipSaving) {
+        // Skip database saving, just call onSave and complete
+        setSuccess("Measurements completed!");
         onSave?.(measurements);
         setCurrentStep("complete");
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        setError(data.error || "Failed to save measurements");
-        if (data.details) {
-          setError(data.details.join(", "));
+        // Normal flow - save to database
+        const response = await fetch("/api/user/profile", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ measurements }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setSuccess("Measurements saved successfully!");
+          onSave?.(measurements);
+          setCurrentStep("complete");
+          // Clear success message after 3 seconds
+          setTimeout(() => setSuccess(null), 3000);
+        } else {
+          setError(data.error || "Failed to save measurements");
+          if (data.details) {
+            setError(data.details.join(", "));
+          }
         }
       }
     } catch {
@@ -496,7 +516,7 @@ export default function MeasurementsForm({ onSave }: MeasurementsFormProps) {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-6">
             {/* Tops Fit Preference */}
             <div>
               <label
@@ -760,15 +780,31 @@ export default function MeasurementsForm({ onSave }: MeasurementsFormProps) {
             </p>
           </div>
 
-          <div className="flex justify-center">
-            <button
-              type="button"
-              onClick={() => (window.location.href = "/analyze")}
-              className="px-8 py-3 rounded-lg text-sm font-semibold transition-colors bg-black hover:bg-stone-800 text-white"
-            >
-              Start New Search
-            </button>
-          </div>
+          {skipSaving ? (
+            // Loading state for analyze page flow
+            <div className="flex flex-col items-center space-y-4">
+              <div className="flex items-center space-x-2">
+                <div
+                  className="animate-spin rounded-full h-6 w-6 border-b-2"
+                  style={{ borderColor: "#4E4B4B" }}
+                ></div>
+                <span className="text-sm" style={{ color: "#6C6A68" }}>
+                  Taking you to your personalized recommendations...
+                </span>
+              </div>
+            </div>
+          ) : (
+            // Button for regular measurements page
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => (window.location.href = "/analyze")}
+                className="px-8 py-3 rounded-lg text-sm font-semibold transition-colors bg-black hover:bg-stone-800 text-white"
+              >
+                Start New Search
+              </button>
+            </div>
+          )}
         </div>
       )}
 

@@ -5,6 +5,8 @@ import { useRecommendations } from "@/lib/useRecommendations";
 import { RecommendationDisplay } from "@/components/RecommendationDisplay";
 import { ReviewSection } from "../../analyze/components/ReviewSection";
 import { createClient } from "@/utils/supabase/client";
+import { UserMeasurements } from "@/types/user";
+import { UserProfile } from "@/types/analysis";
 
 interface ProductRecommendationsProps {
   productName: string;
@@ -29,8 +31,79 @@ export function ProductRecommendations({
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [tempMeasurements, setTempMeasurements] =
+    useState<UserMeasurements | null>(null);
+  const [savedMeasurements, setSavedMeasurements] =
+    useState<UserMeasurements | null>(null);
+  const [measurementsLoading, setMeasurementsLoading] = useState(true);
   const supabase = createClient();
   const initializationRef = useRef(false);
+
+  // Load user measurements from profiles table
+  const loadUserMeasurements = async () => {
+    try {
+      setMeasurementsLoading(true);
+      const response = await fetch("/api/user/profile");
+      if (response.ok) {
+        const { profile } = await response.json();
+        setSavedMeasurements(profile?.measurements || null);
+      } else if (response.status === 401) {
+        // User not authenticated, that's fine
+        setSavedMeasurements(null);
+      } else {
+        console.error("Failed to load user measurements");
+        setSavedMeasurements(null);
+      }
+    } catch (error) {
+      console.error("Error loading user measurements:", error);
+      setSavedMeasurements(null);
+    } finally {
+      setMeasurementsLoading(false);
+    }
+  };
+
+  // Convert UserMeasurements to UserProfile format with comprehensive data
+  const convertMeasurementsToProfile = (
+    measurements: UserMeasurements
+  ): UserProfile => {
+    // Determine category based on product type (this will be enhanced later)
+    const category = "clothing"; // Default to clothing, can be enhanced based on product analysis
+
+    return {
+      ukClothingSize:
+        measurements.usualSize?.tops?.[0] ||
+        measurements.usualSize?.bottoms?.[0] ||
+        "",
+      ukShoeSize: measurements.usualSize?.shoes?.[0] || "",
+      bodyShape: "", // Not directly available in new measurement system
+      height: measurements.height
+        ? `${Math.floor(measurements.height / 30.48)}'${Math.round(
+            (measurements.height % 30.48) / 2.54
+          )}"`
+        : "",
+      fitPreference:
+        measurements.fitPreference?.tops ||
+        measurements.fitPreference?.bottoms ||
+        "",
+      footType: "", // Not available in new measurement system
+      category: category,
+    };
+  };
+
+  // Check for temporary measurements from session storage
+  useEffect(() => {
+    const tempMeasurementsStr = sessionStorage.getItem("tempMeasurements");
+    if (tempMeasurementsStr) {
+      try {
+        const measurements = JSON.parse(tempMeasurementsStr);
+        setTempMeasurements(measurements);
+        // Clear the temporary measurements after using them
+        sessionStorage.removeItem("tempMeasurements");
+      } catch (error) {
+        console.error("Failed to parse temporary measurements:", error);
+      }
+    }
+  }, []);
 
   // Generate the LLM query using the same format as the analyze page
   const llmQuery = `${productName} from ${brandName}${
@@ -40,8 +113,15 @@ export function ProductRecommendations({
   const handleGetRecommendations = useCallback(async () => {
     setHasRun(true);
     console.log("🤖 ProductRecommendations: Using legacy API");
-    await getRecommendations(llmQuery);
-  }, [getRecommendations, llmQuery]);
+
+    // Use saved measurements for logged-in users, or temporary measurements for non-logged-in users
+    const measurements = savedMeasurements || tempMeasurements;
+    const userProfile = measurements
+      ? convertMeasurementsToProfile(measurements)
+      : undefined;
+
+    await getRecommendations(llmQuery, userProfile);
+  }, [getRecommendations, llmQuery, savedMeasurements, tempMeasurements]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -50,24 +130,63 @@ export function ProductRecommendations({
     }_${productName}_${brandName}`;
     localStorage.removeItem(cacheKey); // Clear cache
     setHasRun(false);
-    await handleGetRecommendations();
-    setIsRefreshing(false);
-  }, [userEmail, productName, brandName, handleGetRecommendations]);
 
-  // Get user email on component mount
+    // Use saved measurements for logged-in users, or temporary measurements for non-logged-in users
+    const measurements = savedMeasurements || tempMeasurements;
+    const userProfile = measurements
+      ? convertMeasurementsToProfile(measurements)
+      : undefined;
+
+    await getRecommendations(llmQuery, userProfile);
+    setIsRefreshing(false);
+  }, [
+    userEmail,
+    productName,
+    brandName,
+    handleGetRecommendations,
+    llmQuery,
+    savedMeasurements,
+    tempMeasurements,
+  ]);
+
+  // Get user email and load measurements on component mount
   useEffect(() => {
     const getUserEmail = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       setUserEmail(user?.email || null);
+
+      // Load measurements if user is authenticated
+      if (user) {
+        await loadUserMeasurements();
+      } else {
+        setMeasurementsLoading(false);
+      }
     };
     getUserEmail();
   }, [supabase.auth]);
 
   // Auto-run recommendations on mount - only run once
   useEffect(() => {
-    if (userEmail !== null && !initializationRef.current) {
+    console.log("🤖 ProductRecommendations: Auto-run check", {
+      userEmail: userEmail !== null,
+      savedMeasurements: savedMeasurements !== null,
+      tempMeasurements: tempMeasurements !== null,
+      measurementsLoading,
+      initializationRef: initializationRef.current,
+    });
+
+    // Wait for measurements to load before auto-running
+    if (measurementsLoading) return;
+
+    const hasMeasurements =
+      savedMeasurements !== null || tempMeasurements !== null;
+
+    if ((userEmail !== null || hasMeasurements) && !initializationRef.current) {
+      console.log(
+        "🤖 ProductRecommendations: Starting auto-run initialization"
+      );
       initializationRef.current = true;
 
       const runInitialization = async () => {
@@ -102,7 +221,14 @@ export function ProductRecommendations({
         // No valid cache, run recommendations
         setHasRun(true);
         console.log("🤖 ProductRecommendations: Using legacy API");
-        await getRecommendations(llmQuery);
+
+        // Use saved measurements for logged-in users, or temporary measurements for non-logged-in users
+        const measurements = savedMeasurements || tempMeasurements;
+        const userProfile = measurements
+          ? convertMeasurementsToProfile(measurements)
+          : undefined;
+
+        await getRecommendations(llmQuery, userProfile);
         setIsInitialized(true);
       };
 
@@ -116,6 +242,9 @@ export function ProductRecommendations({
     loadCachedResult,
     getRecommendations,
     llmQuery,
+    savedMeasurements,
+    tempMeasurements,
+    measurementsLoading,
   ]);
 
   // Save to cache when analysis result changes

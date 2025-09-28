@@ -6,11 +6,14 @@ import { UserMeasurements } from "../../types/user";
 import { UserProfileForm } from "./components/UserProfileForm";
 import { AnalysisResults } from "./components/AnalysisResults";
 import { ChatInterface } from "./components/ChatInterface";
+import MeasurementsForm from "../../components/MeasurementsForm";
+import { createClient } from "@/utils/supabase/client";
+import { User } from "@supabase/supabase-js";
 
 function BrandAnalysisContent() {
-  const [currentStep, setCurrentStep] = useState<"form" | "analysis" | "chat">(
-    "form"
-  );
+  const [currentStep, setCurrentStep] = useState<
+    "form" | "measurements" | "analysis" | "chat"
+  >("form");
   const [messages, setMessages] = useState<
     Array<{ type: "user" | "assistant"; content: string; timestamp: number }>
   >([]);
@@ -30,15 +33,53 @@ function BrandAnalysisContent() {
   );
   const [loading, setLoading] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
-  const [userMeasurements] = useState<UserMeasurements | null>(null);
-  const [measurementsLoading] = useState(true);
+  const [userMeasurements, setUserMeasurements] =
+    useState<UserMeasurements | null>(null);
+  const [measurementsLoading, setMeasurementsLoading] = useState(true);
   const [simpleQuery, setSimpleQuery] = useState("");
   const [parsedData, setParsedData] = useState<string | null>(null);
   const [parsingLoading, setParsingLoading] = useState(false);
   const [navigating, setNavigating] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [pendingProductId, setPendingProductId] = useState<string | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = createClient();
+
+  // Handle authentication state
+  useEffect(() => {
+    const getInitialSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    };
+
+    getInitialSession();
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
+
+  // Load user measurements if authenticated
+  useEffect(() => {
+    if (user && !measurementsLoading) {
+      loadUserMeasurements();
+    } else if (!user) {
+      setUserMeasurements(null);
+      setMeasurementsLoading(false);
+    }
+  }, [user]);
 
   // Handle loading shared analysis from URL parameters
   useEffect(() => {
@@ -48,27 +89,27 @@ function BrandAnalysisContent() {
     }
   }, [searchParams]);
 
-  // const loadUserMeasurements = async () => {
-  //   try {
-  //     setMeasurementsLoading(true);
-  //     const response = await fetch("/api/user/profile");
-  //     if (response.ok) {
-  //       const { profile } = await response.json();
-  //       setUserMeasurements(profile?.measurements || null);
-  //     } else if (response.status === 401) {
-  //       // User not authenticated, that's fine
-  //       setUserMeasurements(null);
-  //     } else {
-  //       console.error("Failed to load user measurements");
-  //       setUserMeasurements(null);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error loading user measurements:", error);
-  //     setUserMeasurements(null);
-  //   } finally {
-  //     setMeasurementsLoading(false);
-  //   }
-  // };
+  const loadUserMeasurements = async () => {
+    try {
+      setMeasurementsLoading(true);
+      const response = await fetch("/api/user/profile");
+      if (response.ok) {
+        const { profile } = await response.json();
+        setUserMeasurements(profile?.measurements || null);
+      } else if (response.status === 401) {
+        // User not authenticated, that's fine
+        setUserMeasurements(null);
+      } else {
+        console.error("Failed to load user measurements");
+        setUserMeasurements(null);
+      }
+    } catch (error) {
+      console.error("Error loading user measurements:", error);
+      setUserMeasurements(null);
+    } finally {
+      setMeasurementsLoading(false);
+    }
+  };
 
   // Console logging for search type debugging
   useEffect(() => {
@@ -183,6 +224,7 @@ function BrandAnalysisContent() {
       setParsingLoading(true);
       setParsedData(null);
 
+      // Start running parser
       const response = await fetch("/api/enhanced-product-parsing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -215,12 +257,21 @@ function BrandAnalysisContent() {
         };
         setParsedData(JSON.stringify(enhancedResult, null, 2));
 
-        // Navigate to the product page after a short delay to show the results
-        if (result.product?.id) {
-          setNavigating(true);
-          setTimeout(() => {
-            router.push(`/products/${result.product.id}`);
-          }, 2000); // 2 second delay to let user see the results
+        // Check if user is logged in
+        if (user) {
+          // User is logged in, navigate directly to product page
+          if (result.product?.id) {
+            setNavigating(true);
+            setTimeout(() => {
+              router.push(`/products/${result.product.id}`);
+            }, 2000); // 2 second delay to let user see the results
+          }
+        } else {
+          // User is not logged in, store product ID and show measurements form
+          if (result.product?.id) {
+            setPendingProductId(result.product.id);
+            setCurrentStep("measurements");
+          }
         }
       } else {
         console.error("Parsing failed:", data.error);
@@ -288,6 +339,22 @@ function BrandAnalysisContent() {
     }
   };
 
+  const handleMeasurementsComplete = (measurements: UserMeasurements) => {
+    // Store measurements temporarily for this session
+    setUserMeasurements(measurements);
+
+    // Store measurements in session storage for the product page
+    sessionStorage.setItem("tempMeasurements", JSON.stringify(measurements));
+
+    // Navigate to product page with measurements
+    if (pendingProductId) {
+      setNavigating(true);
+      setTimeout(() => {
+        router.push(`/products/${pendingProductId}`);
+      }, 1000);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!currentInput.trim() || !analysisResult) return;
 
@@ -344,6 +411,12 @@ function BrandAnalysisContent() {
     }
   };
 
+  const handleBackToForm = () => {
+    setCurrentStep("form");
+    setPendingProductId(null);
+    setParsedData(null);
+  };
+
   return (
     <div
       className={`min-h-screen bg-stone-50 ${
@@ -369,6 +442,33 @@ function BrandAnalysisContent() {
           router={router}
           setNavigating={setNavigating}
         />
+      )}
+      {currentStep === "measurements" && (
+        <div className="max-w-md mx-auto p-8">
+          <div className="mb-6">
+            <button
+              onClick={handleBackToForm}
+              className="text-stone-600 hover:text-stone-800 text-sm font-medium mb-4"
+            >
+              ← Back to form
+            </button>
+            <h2
+              className="text-2xl font-bold mb-2"
+              style={{ color: "#4E4B4B" }}
+            >
+              Complete Your Details
+            </h2>
+            <p className="text-sm" style={{ color: "#6C6A68" }}>
+              Help us provide personalized sizing recommendations by sharing
+              your measurements.
+            </p>
+          </div>
+          <MeasurementsForm
+            onSave={handleMeasurementsComplete}
+            skipLoading={true}
+            skipSaving={true}
+          />
+        </div>
       )}
       {currentStep === "analysis" && analysisResult && (
         <AnalysisResults
