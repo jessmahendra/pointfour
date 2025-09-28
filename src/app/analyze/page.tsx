@@ -182,7 +182,7 @@ function BrandAnalysisContent() {
           wasBrandCreated: result.wasBrandCreated,
           wasProductCreated: result.wasProductCreated,
           databaseInfo: {
-            brandId: result.brand.id,
+            brandSlug: result.brand.slug,
             productId: result.product.id,
             brandCreated: result.wasBrandCreated,
             productCreated: result.wasProductCreated
@@ -350,7 +350,7 @@ function BrandAnalysisContent() {
                             <div className="font-semibold text-green-800 mb-1">Database Operations:</div>
                             <div className={`flex items-center gap-1 ${result.wasBrandCreated ? 'text-green-600' : 'text-blue-600'}`}>
                               {result.wasBrandCreated ? '🆕' : '🔍'} 
-                              Brand {result.wasBrandCreated ? 'created' : 'found'} (ID: {result.brand?.id || 'N/A'})
+                              Brand {result.wasBrandCreated ? 'created' : 'found'} (Slug: {result.brand?.slug || 'N/A'})
                             </div>
                             <div className={`flex items-center gap-1 ${result.wasProductCreated ? 'text-green-600' : 'text-blue-600'}`}>
                               {result.wasProductCreated ? '🆕' : '🔍'} 

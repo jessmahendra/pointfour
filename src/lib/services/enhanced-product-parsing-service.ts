@@ -180,7 +180,7 @@ export class EnhancedProductParsingService {
       const match = await databaseService.findMatchingBrand(brandName, 0.7);
       
       if (match) {
-        console.log(`✅ Found match: ${match.name} (ID: ${match.id})`);
+        console.log(`✅ Found match: ${match.name} (Slug: ${match.slug})`);
       } else {
         console.log(`❌ No match found`);
       }
