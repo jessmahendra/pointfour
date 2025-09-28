@@ -118,6 +118,14 @@ export default function GlobalNavigation() {
             >
               Directory
             </Link>
+            {user && (
+              <Link
+                href="/measurements"
+                className="text-stone-600 hover:text-stone-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                My Measurements
+              </Link>
+            )}
           </div>
 
           {/* Auth Section */}
