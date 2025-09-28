@@ -118,8 +118,11 @@ async function cleanupBrands(): Promise<void> {
     // Validate configuration
     validateConfig();
     
-    // Initialize Supabase client
-    const supabase = createClient(config.supabase.url, config.supabase.anonKey);
+    // Initialize Supabase client (safe to assert non-null after validation)
+    const supabase = createClient(
+      config.supabase.url!, 
+      config.supabase.anonKey!
+    );
     
     // Clear all brands
     await clearAllBrands(supabase);
