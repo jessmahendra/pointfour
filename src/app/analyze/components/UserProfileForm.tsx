@@ -31,9 +31,9 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
   // Check if user has saved measurements
   const hasMeasurements =
     userMeasurements &&
-    (userMeasurements.usualSize?.tops?.length > 0 ||
-      userMeasurements.usualSize?.bottoms?.length > 0 ||
-      userMeasurements.usualSize?.shoes?.length > 0 ||
+    ((userMeasurements.usualSize?.tops?.length ?? 0) > 0 ||
+      (userMeasurements.usualSize?.bottoms?.length ?? 0) > 0 ||
+      (userMeasurements.usualSize?.shoes?.length ?? 0) > 0 ||
       userMeasurements.height ||
       userMeasurements.fitPreference?.tops ||
       userMeasurements.fitPreference?.bottoms);

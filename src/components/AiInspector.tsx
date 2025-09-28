@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { LLMInteraction, useLLMStore } from "@/lib/llm-store";
-import { Popover } from '@base-ui-components/react/popover';
-
 
 // LLMInteraction and LLMStats interfaces are now imported from llm-store
 
@@ -41,12 +39,11 @@ export function AiInspector() {
     return () => clearInterval(pollInterval);
   }, [interactions.length]);
 
-
   const refreshInteractions = async () => {
     try {
       const response = await fetch("/api/llm-interactions?limit=100");
       const data = await response.json();
-      
+
       if (data.success) {
         // Clear current interactions and add server interactions
         clearInteractions();
@@ -81,19 +78,33 @@ export function AiInspector() {
   // No useEffect needed - Zustand store updates automatically
 
   return (
-    <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Popover.Trigger className="fixed bottom-2 right-0 bg-stone-800/70 text-white px-3 py-1 text-sm border rounded-lg shadow-lg hover:bg-stone-800 transition-colors z-50">
+    <div className="fixed bottom-2 right-2 z-50">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-stone-800/70 text-white px-3 py-1 text-sm border rounded-lg shadow-lg hover:bg-stone-800 transition-colors"
+      >
         AI Inspector
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Positioner side="top" align="end" sideOffset={8}>
-          <Popover.Popup className="w-[90vw] max-w-6xl h-[85vh] shadow-lg border border-gray-200 rounded-lg bg-white z-50 flex flex-col text-xs">
+      </button>
+
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/20 z-40"
+            onClick={() => setIsOpen(false)}
+          />
+
+          {/* Popup */}
+          <div className="absolute bottom-full right-0 mb-2 w-[90vw] max-w-6xl h-[85vh] shadow-lg border border-gray-200 rounded-lg bg-white z-50 flex flex-col text-xs">
             {/* Header */}
             <div className="py-2 px-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="font-medium text-sm">AI Inspector</h3>
-              <Popover.Close className="text-gray-400 hover:text-gray-600">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 ✕
-              </Popover.Close>
+              </button>
             </div>
 
             {/* Main Content Area */}
@@ -101,7 +112,6 @@ export function AiInspector() {
               {/* Left Sidebar - Interactions List */}
               <div className="w-1/3 border-r border-gray-200 flex flex-col">
                 {/* Test Section */}
-                
 
                 {/* Interactions List */}
                 <div className="flex-1 overflow-y-auto">
@@ -136,8 +146,8 @@ export function AiInspector() {
                           key={interaction.id}
                           className={`p-2 border rounded cursor-pointer transition-colors ${
                             selectedInteraction?.id === interaction.id
-                              ? 'bg-blue-50 border-blue-200'
-                              : 'border-gray-200 hover:bg-gray-50'
+                              ? "bg-blue-50 border-blue-200"
+                              : "border-gray-200 hover:bg-gray-50"
                           }`}
                           onClick={() => setSelectedInteraction(interaction)}
                         >
@@ -159,7 +169,7 @@ export function AiInspector() {
                                 {interaction.source}
                               </span>
                             )}
-                            {interaction.status === 'in-progress' && (
+                            {interaction.status === "in-progress" && (
                               <span className="px-1 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded animate-pulse">
                                 In Progress
                               </span>
@@ -175,9 +185,14 @@ export function AiInspector() {
                             {interaction.prompt.length > 60 && "..."}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {new Date(interaction.timestamp).toLocaleTimeString()} •
-                            {interaction.status === 'in-progress' ? 'In progress...' : `${interaction.duration}ms`} •
-                            {interaction.tokens?.total || 0} tokens
+                            {new Date(
+                              interaction.timestamp
+                            ).toLocaleTimeString()}{" "}
+                            •
+                            {interaction.status === "in-progress"
+                              ? "In progress..."
+                              : `${interaction.duration}ms`}{" "}
+                            •{interaction.tokens?.total || 0} tokens
                           </div>
                         </div>
                       ))}
@@ -210,7 +225,7 @@ export function AiInspector() {
                             {selectedInteraction.source}
                           </span>
                         )}
-                        {selectedInteraction.status === 'in-progress' && (
+                        {selectedInteraction.status === "in-progress" && (
                           <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded animate-pulse">
                             In Progress
                           </span>
@@ -222,9 +237,14 @@ export function AiInspector() {
                         )}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {new Date(selectedInteraction.timestamp).toLocaleString()} •
-                        {selectedInteraction.status === 'in-progress' ? 'In progress...' : `${selectedInteraction.duration}ms`} •
-                        {selectedInteraction.tokens?.total || 0} tokens
+                        {new Date(
+                          selectedInteraction.timestamp
+                        ).toLocaleString()}{" "}
+                        •
+                        {selectedInteraction.status === "in-progress"
+                          ? "In progress..."
+                          : `${selectedInteraction.duration}ms`}{" "}
+                        •{selectedInteraction.tokens?.total || 0} tokens
                       </div>
                     </div>
 
@@ -251,11 +271,18 @@ export function AiInspector() {
 
                       {/* Metadata */}
                       {selectedInteraction.metadata &&
-                        Object.keys(selectedInteraction.metadata).length > 0 && (
+                        Object.keys(selectedInteraction.metadata).length >
+                          0 && (
                           <div>
-                            <h4 className="font-medium mb-2 text-xs">Metadata</h4>
+                            <h4 className="font-medium mb-2 text-xs">
+                              Metadata
+                            </h4>
                             <pre className="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
-                              {JSON.stringify(selectedInteraction.metadata, null, 2)}
+                              {JSON.stringify(
+                                selectedInteraction.metadata,
+                                null,
+                                2
+                              )}
                             </pre>
                           </div>
                         )}
@@ -268,9 +295,9 @@ export function AiInspector() {
                 )}
               </div>
             </div>
-          </Popover.Popup>
-        </Popover.Positioner>
-      </Popover.Portal>
-    </Popover.Root>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
