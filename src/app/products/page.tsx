@@ -33,8 +33,9 @@ interface Product {
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: { brand_id?: string; search?: string };
+  searchParams: Promise<{ brand_id?: string; search?: string }>;
 }) {
+  const { brand_id, search } = await searchParams;
   const supabase = await createClient();
   
   let query = supabase
@@ -49,13 +50,13 @@ export default async function ProductsPage({
     `);
 
   // Filter by brand if specified
-  if (searchParams.brand_id) {
-    query = query.eq('brand_id', searchParams.brand_id);
+  if (brand_id) {
+    query = query.eq('brand_id', brand_id);
   }
 
   // Search by name if specified
-  if (searchParams.search) {
-    query = query.ilike('name', `%${searchParams.search}%`);
+  if (search) {
+    query = query.ilike('name', `%${search}%`);
   }
 
   const { data: products, error } = await query.order('created_at', { ascending: false });

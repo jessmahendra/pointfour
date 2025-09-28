@@ -11,6 +11,23 @@ interface BrandPageProps {
   }>
 }
 
+interface Product {
+  id: number;
+  name: string;
+  url: string;
+  description?: string;
+  image_url?: string;
+  price?: number;
+  currency?: string;
+  created_at: string;
+  brand_id: string;
+  brand: {
+    slug: string;
+    name: string;
+    logo_url?: string;
+  };
+}
+
 // Generate metadata for individual brand pages
 export async function generateMetadata({ params }: BrandPageProps): Promise<Metadata> {
   const supabase = createStaticClient()
@@ -159,7 +176,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
               </Link>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {products.map((product: any) => (
+              {products.map((product: Product) => (
                 <Link
                   key={product.id}
                   href={`/products/${product.id}`}
