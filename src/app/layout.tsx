@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import PlausibleProvider from "next-plausible";
+import GlobalNavigation from "@/components/GlobalNavigation";
 import "./globals.css";
 
 // GPT-5 Testing Configuration
@@ -48,7 +49,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <PlausibleProvider domain="pointfour.in">{children}</PlausibleProvider>
+        <PlausibleProvider domain="pointfour.in">
+          <GlobalNavigation />
+          {children}
+        </PlausibleProvider>
       </body>
     </html>
   );
