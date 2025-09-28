@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { UserProfile, AnalysisResult } from "../../types/analysis";
 import { UserMeasurements } from "../../types/user";
 import { UserProfileForm } from "./components/UserProfileForm";
@@ -33,13 +33,13 @@ function BrandAnalysisContent() {
   const [userMeasurements, setUserMeasurements] =
     useState<UserMeasurements | null>(null);
   const [measurementsLoading, setMeasurementsLoading] = useState(true);
+  const [simpleQuery, setSimpleQuery] = useState("");
+  const [parsedData, setParsedData] = useState<string | null>(null);
+  const [parsingLoading, setParsingLoading] = useState(false);
+  const [navigating, setNavigating] = useState(false);
 
+  const router = useRouter();
   const searchParams = useSearchParams();
-
-  // Load user measurements on component mount
-  useEffect(() => {
-    loadUserMeasurements();
-  }, []);
 
   // Handle loading shared analysis from URL parameters
   useEffect(() => {
@@ -177,6 +177,64 @@ function BrandAnalysisContent() {
     }
   };
 
+  const handleSimpleFormSubmit = async () => {
+    if (!simpleQuery.trim()) return;
+
+    try {
+      setParsingLoading(true);
+      setParsedData(null);
+
+      const response = await fetch("/api/enhanced-product-parsing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: `Parse this product query and identify the brand name and product name. The user may have made typos, used incomplete names, or provided vague descriptions. Use web search to verify and correct any information, find the most likely brand and product they're referring to, and return accurate data. Be forgiving of typos and incomplete information - use your knowledge and web search to fill in the gaps and find the correct brand and product. Always return the official brand website and specific product URL when available. Query: "${simpleQuery}"`,
+          options: {
+            enableWebSearch: true,
+            temperature: 0.3,
+            fuzzyMatchThreshold: 0.7
+          }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const result = data.data;
+        const enhancedResult = {
+          parsedData: result.parsedData,
+          brand: result.brand,
+          product: result.product,
+          wasBrandCreated: result.wasBrandCreated,
+          wasProductCreated: result.wasProductCreated,
+          databaseInfo: {
+            brandSlug: result.brand.slug,
+            productId: result.product.id,
+            brandCreated: result.wasBrandCreated,
+            productCreated: result.wasProductCreated
+          }
+        };
+        setParsedData(JSON.stringify(enhancedResult, null, 2));
+        
+        // Navigate to the product page after a short delay to show the results
+        if (result.product?.id) {
+          setNavigating(true);
+          setTimeout(() => {
+            router.push(`/products/${result.product.id}`);
+          }, 2000); // 2 second delay to let user see the results
+        }
+      } else {
+        console.error("Parsing failed:", data.error);
+        setParsedData(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error during parsing:", error);
+      setParsedData(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setParsingLoading(false);
+    }
+  };
+
   const handleFormSubmit = async () => {
     if (!brandQuery.trim() || !userProfile.category) return;
 
@@ -291,6 +349,111 @@ function BrandAnalysisContent() {
         currentStep === "form" ? "p-10 px-6" : ""
       }`}
     >
+      {/* Simple Product Parser Form */}
+      <div className="max-w-4xl mx-auto mb-8 p-6 bg-white rounded-lg shadow-sm border">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Enhanced Product Parser
+        </h2>
+        <p className="text-gray-600 mb-4">
+          Enter a product query like &quot;nike air max 270&quot; to parse brand and product information and automatically store it in the database. 
+          Don&apos;t worry about typos or incomplete names - we&apos;ll use web search to find the correct information and fuzzy matching to handle variations.
+        </p>
+        <div className="flex gap-4">
+          <input
+            type="text"
+            value={simpleQuery}
+            onChange={(e) => setSimpleQuery(e.target.value)}
+            placeholder="e.g., nike air max 270, adidas stan smith, nike air max (typos ok!)"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onKeyPress={(e) => e.key === 'Enter' && handleSimpleFormSubmit()}
+          />
+          <button
+            onClick={handleSimpleFormSubmit}
+            disabled={parsingLoading || navigating || !simpleQuery.trim()}
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {parsingLoading ? "Parsing..." : navigating ? "Navigating..." : "Parse"}
+          </button>
+        </div>
+        {parsedData && (
+          <div className="mt-4 space-y-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+              <h3 className="text-sm font-medium text-green-800 mb-3">✅ Enhanced Parsing Results</h3>
+              <div className="text-xs text-green-700 space-y-2">
+                {(() => {
+                  try {
+                    const result = JSON.parse(parsedData);
+                    return (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="font-semibold text-green-800 mb-1">Parsed Information:</div>
+                            <div><strong>Brand:</strong> {result.parsedData?.brandName || 'N/A'}</div>
+                            <div><strong>Product:</strong> {result.parsedData?.productName || 'N/A'}</div>
+                            <div><strong>Brand Website:</strong> {result.parsedData?.brandWebsite || 'N/A'}</div>
+                            <div><strong>Product URL:</strong> {result.parsedData?.productUrl || 'N/A'}</div>
+                          </div>
+                          <div>
+                            <div className="font-semibold text-green-800 mb-1">Database Operations:</div>
+                            <div className={`flex items-center gap-1 ${result.wasBrandCreated ? 'text-green-600' : 'text-blue-600'}`}>
+                              {result.wasBrandCreated ? '🆕' : '🔍'} 
+                              Brand {result.wasBrandCreated ? 'created' : 'found'} (Slug: {result.brand?.slug || 'N/A'})
+                            </div>
+                            <div className={`flex items-center gap-1 ${result.wasProductCreated ? 'text-green-600' : 'text-blue-600'}`}>
+                              {result.wasProductCreated ? '🆕' : '🔍'} 
+                              Product {result.wasProductCreated ? 'created' : 'found'} (ID: {result.product?.id || 'N/A'})
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-green-300">
+                          <div className="font-semibold text-green-800 mb-1">Summary:</div>
+                          <div className="text-xs mb-2">
+                            {result.wasBrandCreated && result.wasProductCreated ? (
+                              <span className="text-green-600">🆕 Both brand and product were created in the database</span>
+                            ) : result.wasBrandCreated ? (
+                              <span className="text-green-600">🆕 Brand was created, product already existed</span>
+                            ) : result.wasProductCreated ? (
+                              <span className="text-green-600">🆕 Product was created, brand already existed</span>
+                            ) : (
+                              <span className="text-blue-600">🔍 Both brand and product already existed in the database</span>
+                            )}
+                          </div>
+                          {result.product?.id && (
+                            <div className="flex items-center gap-2">
+                              {navigating ? (
+                                <span className="text-blue-600 text-xs">🚀 Navigating to product page...</span>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setNavigating(true);
+                                    router.push(`/products/${result.product.id}`);
+                                  }}
+                                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                                >
+                                  View Product Page →
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  } catch {
+                    return <div>Error parsing results</div>;
+                  }
+                })()}
+              </div>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-md">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Full Response:</h3>
+              <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto max-h-64">
+                {parsedData}
+              </pre>
+            </div>
+          </div>
+        )}
+      </div>
+
       {currentStep === "form" && (
         <UserProfileForm
           userProfile={userProfile}

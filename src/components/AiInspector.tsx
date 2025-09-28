@@ -24,12 +24,12 @@ export function AiInspector() {
         if (data.success && data.interactions.length !== interactions.length) {
           // If server has different count, we might need to sync
           // For now, the store should be the source of truth
-          console.log(
-            "🤖 AI Inspector: Server has",
-            data.interactions.length,
-            "interactions, store has",
-            interactions.length
-          );
+          // console.log(
+          //   "🤖 AI Inspector: Server has",
+          //   data.interactions.length,
+          //   "interactions, store has",
+          //   interactions.length
+          // );
         }
       } catch (error) {
         console.error("❌ AI Inspector: Polling failed:", error);
@@ -50,7 +50,7 @@ export function AiInspector() {
         data.interactions.forEach((interaction: LLMInteraction) => {
           useLLMStore.getState().addInteraction(interaction);
         });
-        console.log("🔄 AI Inspector: Refreshed interactions from server");
+        // console.log("🔄 AI Inspector: Refreshed interactions from server");
       }
     } catch (error) {
       console.error("❌ AI Inspector: Failed to refresh interactions:", error);

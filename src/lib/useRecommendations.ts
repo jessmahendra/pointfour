@@ -14,6 +14,7 @@ interface UseRecommendationsReturn {
   error: string | null;
   getRecommendations: (query: string, userProfile?: UserProfile) => Promise<void>;
   clearResults: () => void;
+  loadCachedResult: (result: AnalysisResult) => void;
 }
 
 export function useRecommendations(options: UseRecommendationsOptions = {}): UseRecommendationsReturn {
@@ -72,11 +73,18 @@ export function useRecommendations(options: UseRecommendationsOptions = {}): Use
     setError(null);
   }, []);
 
+  const loadCachedResult = useCallback((result: AnalysisResult) => {
+    setAnalysisResult(result);
+    setError(null);
+    setLoading(false);
+  }, []);
+
   return {
     analysisResult,
     loading,
     error,
     getRecommendations,
     clearResults,
+    loadCachedResult,
   };
 }

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Parser Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .result h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.loading {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .details {
+            margin-top: 15px;
+        }
+        .detail-item {
+            margin: 8px 0;
+            padding: 8px;
+            background-color: white;
+            border-radius: 3px;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .detail-value {
+            color: #333;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Product Parser Test</h1>
+        
+        <div class="input-group">
+            <label for="productQuery">Enter a product query:</label>
+            <input 
+                type="text" 
+                id="productQuery" 
+                placeholder="e.g., Nike Air Max 270 running shoes, Adidas Stan Smith white sneakers, Zara basic t-shirt"
+                value="Nike Air Max 270 running shoes"
+            >
+        </div>
+        
+        <button id="parseButton" onclick="parseProduct()">
+            Parse Product
+        </button>
+        
+        <div id="result" class="result" style="display: none;">
+            <h3>Result</h3>
+            <div id="status"></div>
+            <div id="details" class="details"></div>
+        </div>
+    </div>
+
+    <script>
+        async function parseProduct() {
+            const query = document.getElementById('productQuery').value.trim();
+            const button = document.getElementById('parseButton');
+            const result = document.getElementById('result');
+            const status = document.getElementById('status');
+            const details = document.getElementById('details');
+            
+            if (!query) {
+                alert('Please enter a product query');
+                return;
+            }
+            
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<span class="loading-spinner"></span>Parsing...';
+            result.style.display = 'block';
+            status.innerHTML = '<div class="status loading">🔄 Parsing product and checking database...</div>';
+            details.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/enhanced-product-parsing-service-role', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: `Query: "${query}"`,
+                        options: {
+                            fuzzyMatchThreshold: 0.7,
+                            enableWebSearch: true
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const result = data.data;
+                    
+                    // Show success status
+                    status.innerHTML = '<div class="status success">✅ Product parsed and stored successfully!</div>';
+                    
+                    // Show details
+                    details.innerHTML = `
+                        <div class="detail-item">
+                            <div class="detail-label">Brand Name:</div>
+                            <div class="detail-value">${result.parsedData.brandName}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Product Name:</div>
+                            <div class="detail-value">${result.parsedData.productName}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Brand Slug:</div>
+                            <div class="detail-value">${result.brand.slug}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Product ID:</div>
+                            <div class="detail-value">${result.product.id}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Brand Created:</div>
+                            <div class="detail-value">${result.wasBrandCreated ? '✅ Yes' : '❌ No (found existing)'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Product Created:</div>
+                            <div class="detail-value">${result.wasProductCreated ? '✅ Yes' : '❌ No (found existing)'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Confidence:</div>
+                            <div class="detail-value">${result.parsedData.confidence}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Brand Website:</div>
+                            <div class="detail-value"><a href="${result.parsedData.brandWebsite}" target="_blank">${result.parsedData.brandWebsite}</a></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Product URL:</div>
+                            <div class="detail-value"><a href="${result.parsedData.productUrl}" target="_blank">${result.parsedData.productUrl}</a></div>
+                        </div>
+                    `;
+                } else {
+                    status.innerHTML = '<div class="status error">❌ Error: ' + (data.details || data.error) + '</div>';
+                }
+            } catch (error) {
+                status.innerHTML = '<div class="status error">❌ Network error: ' + error.message + '</div>';
+            } finally {
+                button.disabled = false;
+                button.innerHTML = 'Parse Product';
+            }
+        }
+        
+        // Allow Enter key to trigger parsing
+        document.getElementById('productQuery').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                parseProduct();
+            }
+        });
+    </script>
+</body>
+</html>
