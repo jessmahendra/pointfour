@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ProductRecommendations } from "@/app/products/[id]/ProductRecommendations";
+import { ShareButton } from "@/components/ShareButton";
 
 interface ProductPageProps {
   params: Promise<{
@@ -84,34 +85,43 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  const llmName = `${product.name} from ${product.brand.name} (${
-    product.brand.url
-  })`;
+  const llmName = `${product.name} from ${product.brand.name} (${product.brand.url})`;
 
   console.log(llmName);
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-stone-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <nav className="mb-6">
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <Link href="/products" className="hover:text-blue-600">
-              Products
-            </Link>
-            <span>/</span>
-            <Link
-              href={`/brands/${product.brand.slug}`}
-              className="hover:text-blue-600"
-            >
-              {product.brand.name}
-            </Link>
-            <span>/</span>
-            <span className="text-gray-900">{product.name}</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-sm text-stone-500">
+              <Link
+                href="/products"
+                className="hover:text-[#928704] font-semibold"
+              >
+                Products
+              </Link>
+              <span>/</span>
+              <Link
+                href={`/brands/${product.brand.slug}`}
+                className="hover:text-[#928704] font-semibold"
+              >
+                {product.brand.name}
+              </Link>
+              <span>/</span>
+              <span className="text-stone-900">{product.name}</span>
+            </div>
+            <ShareButton
+              url={`${
+                process.env.NEXT_PUBLIC_BASE_URL || "https://pointfour.in"
+              }/products/${product.id}`}
+              title={`${product.name} from ${product.brand.name}`}
+            />
           </div>
         </nav>
 
         {/* Product Header */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
+        <div className="bg-white rounded-lg shadow-sm p-8 mb-8 border border-stone-200">
           <div className="grid gap-8 md:grid-cols-2">
             {/* Product Image */}
             <div className="aspect-square relative overflow-hidden rounded-lg">
@@ -156,27 +166,27 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 )}
                 <Link
                   href={`/brands/${product.brand.slug}`}
-                  className="text-lg font-medium text-blue-600 hover:text-blue-800"
+                  className="text-base text-stone-700 hover:text-[#928704] font-semibold"
                 >
                   {product.brand.name}
                 </Link>
               </div>
 
               {/* Product Name */}
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold text-stone-900">
                 {product.name}
               </h1>
 
               {/* Price */}
               {product.price && (
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-stone-900">
                   {product.currency || "USD"} {product.price.toFixed(2)}
                 </div>
               )}
 
               {/* Description */}
               {product.description && (
-                <p className="text-gray-600 text-lg leading-relaxed">
+                <p className="text-stone-600 text-base leading-relaxed">
                   {product.description}
                 </p>
               )}
@@ -187,7 +197,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                   href={product.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center px-6 py-3 bg-black text-white font-semibold rounded-lg hover:bg-stone-800 transition-colors"
                 >
                   View Product
                   <svg
@@ -206,7 +216,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 </a>
                 <Link
                   href={`/brands/${product.brand.slug}`}
-                  className="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                  className="inline-flex items-center px-6 py-3 bg-stone-100 text-stone-700 font-semibold rounded-lg hover:bg-stone-200 hover:text-[#928704] transition-colors"
                 >
                   More from {product.brand.name}
                 </Link>
@@ -216,7 +226,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </div>
 
         {/* AI Recommendations */}
-        <ProductRecommendations 
+        <ProductRecommendations
           productName={product.name}
           brandName={product.brand.name}
           brandUrl={product.brand.url}
@@ -225,37 +235,39 @@ export default async function ProductPage({ params }: ProductPageProps) {
         {/* Additional Product Information */}
         <div className="grid gap-6 md:grid-cols-2">
           {/* Product Details */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold mb-4">Product Details</h2>
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-stone-200">
+            <h2 className="text-xl font-semibold mb-4 text-stone-900">
+              Product Details
+            </h2>
             <dl className="space-y-3">
               <div>
-                <dt className="text-sm font-medium text-gray-500">Brand</dt>
-                <dd className="text-sm text-gray-900">
+                <dt className="text-sm font-medium text-stone-500">Brand</dt>
+                <dd className="text-sm text-stone-900">
                   <Link
                     href={`/brands/${product.brand.slug}`}
-                    className="text-blue-600 hover:text-blue-800"
+                    className="text-[#928704] hover:text-[#928704] font-semibold"
                   >
                     {product.brand.name}
                   </Link>
                 </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">
+                <dt className="text-sm font-medium text-stone-500">
                   Product Name
                 </dt>
-                <dd className="text-sm text-gray-900">{product.name}</dd>
+                <dd className="text-sm text-stone-900">{product.name}</dd>
               </div>
               {product.price && (
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Price</dt>
-                  <dd className="text-sm text-gray-900">
+                  <dt className="text-sm font-medium text-stone-500">Price</dt>
+                  <dd className="text-sm text-stone-900">
                     {product.currency || "USD"} {product.price.toFixed(2)}
                   </dd>
                 </div>
               )}
               <div>
-                <dt className="text-sm font-medium text-gray-500">Added</dt>
-                <dd className="text-sm text-gray-900">
+                <dt className="text-sm font-medium text-stone-500">Added</dt>
+                <dd className="text-sm text-stone-900">
                   {new Date(product.created_at).toLocaleDateString()}
                 </dd>
               </div>
@@ -263,21 +275,21 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
 
           {/* Brand Information */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold mb-4">
+          <div className="bg-white rounded-lg shadow-sm p-6 border border-stone-200">
+            <h2 className="text-xl font-semibold mb-4 text-stone-900">
               About {product.brand.name}
             </h2>
             {product.brand.description ? (
-              <p className="text-gray-600 mb-4">{product.brand.description}</p>
+              <p className="text-stone-600 mb-4">{product.brand.description}</p>
             ) : (
-              <p className="text-gray-500 italic">No description available</p>
+              <p className="text-stone-500 italic">No description available</p>
             )}
             {product.brand.url && (
               <a
                 href={product.brand.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                className="inline-flex items-center text-[#928704] hover:text-[#928704] font-semibold"
               >
                 Visit {product.brand.name} Website
                 <svg
