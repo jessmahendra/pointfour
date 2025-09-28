@@ -133,7 +133,10 @@ Based on the web search results above, please parse the product query and provid
       }
     );
 
-    console.log('✅ ProductParsingService: Product parsing completed');
+    console.log('✅ ProductParsingService: Product parsing completed', {
+        object,
+        interaction
+    });
 
     return { result: object, interaction };
   }
