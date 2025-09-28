@@ -1,27 +1,12 @@
 import { generateText, generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
+import { useLLMStore, LLMInteraction } from './llm-store';
 
-// Types for our debug logging
-export interface LLMInteraction {
-  id: string;
-  timestamp: Date;
-  type: 'text' | 'object';
-  model: string;
-  prompt: string;
-  response: string;
-  tokens?: {
-    prompt: number;
-    completion: number;
-    total: number;
-  };
-  duration: number;
-  error?: string;
-  metadata?: Record<string, any>;
-}
+// LLMInteraction interface is now imported from llm-store
 
-// In-memory store for debug data (in production, use a database)
-const interactionLog: LLMInteraction[] = [];
+// Get the Zustand store instance
+const getStore = () => useLLMStore.getState();
 
 // Configuration
 const DEFAULT_MODEL = 'gpt-4o-mini';
@@ -52,7 +37,8 @@ export class LLMService {
       systemPrompt?: string;
       temperature?: number;
       maxTokens?: number;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
+      source?: string;
     } = {}
   ): Promise<{ text: string; interaction: LLMInteraction }> {
     const startTime = Date.now();
@@ -63,7 +49,8 @@ export class LLMService {
       systemPrompt = "You are a helpful assistant.",
       temperature = 0.7,
       // maxTokens = 2000, // TODO: Fix AI SDK v5 property name
-      metadata = {}
+      metadata = {},
+      source = 'llm-service'
     } = options;
 
     const messages = [
@@ -97,11 +84,12 @@ export class LLMService {
           total: result.usage.totalTokens || 0
         } : undefined,
         duration,
-        metadata
+        metadata,
+        source
       };
 
-      // Log the interaction
-      this.logInteraction(interaction);
+      // Log the interaction to Zustand store
+      getStore().addInteraction(interaction);
 
       console.log(`✅ LLM Service: Text generation completed (ID: ${interactionId})`);
       console.log(`✅ Duration: ${duration}ms`);
@@ -119,10 +107,11 @@ export class LLMService {
         response: '',
         duration,
         error: error instanceof Error ? error.message : 'Unknown error',
-        metadata
+        metadata,
+        source
       };
 
-      this.logInteraction(interaction);
+      getStore().addInteraction(interaction);
       console.error(`❌ LLM Service: Text generation failed (ID: ${interactionId})`, error);
       throw error;
     }
@@ -139,7 +128,8 @@ export class LLMService {
       systemPrompt?: string;
       temperature?: number;
       maxTokens?: number;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
+      source?: string;
     } = {}
   ): Promise<{ object: T; interaction: LLMInteraction }> {
     const startTime = Date.now();
@@ -150,7 +140,8 @@ export class LLMService {
       systemPrompt = "You are a helpful assistant that returns structured data.",
       temperature = 0.3,
       // maxTokens = 2000, // TODO: Fix AI SDK v5 property name
-      metadata = {}
+      metadata = {},
+      source = 'llm-service'
     } = options;
 
     const messages = [
@@ -185,11 +176,12 @@ export class LLMService {
           total: result.usage.totalTokens || 0
         } : undefined,
         duration,
-        metadata
+        metadata,
+        source
       };
 
-      // Log the interaction
-      this.logInteraction(interaction);
+      // Log the interaction to Zustand store
+      getStore().addInteraction(interaction);
 
       console.log(`✅ LLM Service: Object generation completed (ID: ${interactionId})`);
       console.log(`✅ Duration: ${duration}ms`);
@@ -207,10 +199,11 @@ export class LLMService {
         response: '',
         duration,
         error: error instanceof Error ? error.message : 'Unknown error',
-        metadata
+        metadata,
+        source
       };
 
-      this.logInteraction(interaction);
+      getStore().addInteraction(interaction);
       console.error(`❌ LLM Service: Object generation failed (ID: ${interactionId})`, error);
       throw error;
     }
@@ -220,68 +213,43 @@ export class LLMService {
    * Get all logged interactions for debugging
    */
   getInteractions(): LLMInteraction[] {
-    return [...interactionLog].reverse(); // Most recent first
+    return getStore().getRecentInteractions();
   }
 
   /**
    * Get interactions by model
    */
   getInteractionsByModel(model: string): LLMInteraction[] {
-    return interactionLog.filter(interaction => interaction.model === model).reverse();
+    return getStore().getInteractionsByModel(model);
   }
 
   /**
    * Get interactions by type
    */
   getInteractionsByType(type: 'text' | 'object'): LLMInteraction[] {
-    return interactionLog.filter(interaction => interaction.type === type).reverse();
+    return getStore().getInteractionsByType(type);
+  }
+
+  /**
+   * Get interactions by source
+   */
+  getInteractionsBySource(source: string): LLMInteraction[] {
+    return getStore().getInteractionsBySource(source);
   }
 
   /**
    * Clear all interaction logs
    */
   clearLogs(): void {
-    interactionLog.length = 0;
+    getStore().clearInteractions();
     console.log('🧹 LLM Service: Cleared all interaction logs');
   }
 
   /**
    * Get usage statistics
    */
-  getUsageStats(): {
-    totalInteractions: number;
-    totalTokens: number;
-    averageDuration: number;
-    modelBreakdown: Record<string, number>;
-    typeBreakdown: Record<string, number>;
-    errorRate: number;
-  } {
-    const totalInteractions = interactionLog.length;
-    const totalTokens = interactionLog.reduce((sum, interaction) => sum + (interaction.tokens?.total || 0), 0);
-    const totalDuration = interactionLog.reduce((sum, interaction) => sum + interaction.duration, 0);
-    const averageDuration = totalInteractions > 0 ? totalDuration / totalInteractions : 0;
-    
-    const modelBreakdown = interactionLog.reduce((acc, interaction) => {
-      acc[interaction.model] = (acc[interaction.model] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const typeBreakdown = interactionLog.reduce((acc, interaction) => {
-      acc[interaction.type] = (acc[interaction.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const errorCount = interactionLog.filter(interaction => interaction.error).length;
-    const errorRate = totalInteractions > 0 ? (errorCount / totalInteractions) * 100 : 0;
-
-    return {
-      totalInteractions,
-      totalTokens,
-      averageDuration,
-      modelBreakdown,
-      typeBreakdown,
-      errorRate
-    };
+  getUsageStats() {
+    return getStore().getStats();
   }
 
   private selectModel(): string {
@@ -296,14 +264,7 @@ export class LLMService {
     return `llm_${Date.now()}_${++this.interactionCounter}`;
   }
 
-  private logInteraction(interaction: LLMInteraction): void {
-    interactionLog.push(interaction);
-    
-    // Keep only last 1000 interactions to prevent memory issues
-    if (interactionLog.length > 1000) {
-      interactionLog.shift();
-    }
-  }
+  // logInteraction method removed - now using Zustand store
 }
 
 // Export singleton instance

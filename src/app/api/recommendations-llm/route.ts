@@ -77,10 +77,10 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
         temperature: 1,
         maxTokens: 2000,
         metadata: { 
-          source: 'recommendations-api',
           userQuery: query,
           hasUserProfile: !!userProfile
-        }
+        },
+        source: 'recommendations-api'
       }
     );
 
@@ -107,7 +107,13 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
         model: interaction.model,
         duration: interaction.duration,
         tokens: interaction.tokens,
-        timestamp: interaction.timestamp
+        timestamp: interaction.timestamp,
+        type: interaction.type,
+        prompt: interaction.prompt,
+        response: interaction.response,
+        metadata: interaction.metadata,
+        source: interaction.source,
+        error: interaction.error
       }
     };
 

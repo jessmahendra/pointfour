@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
+import { LLMInteraction, useLLMStore } from "@/lib/llm-store";
 
 interface LLMTestResult {
   success: boolean;
@@ -18,67 +19,45 @@ interface LLMTestResult {
   };
 }
 
-interface LLMInteraction {
-  id: string;
-  timestamp: string;
-  type: 'text' | 'object';
-  model: string;
-  prompt: string;
-  response: string;
-  tokens?: {
-    prompt: number;
-    completion: number;
-    total: number;
-  };
-  duration: number;
-  error?: string;
-  metadata?: Record<string, unknown>;
-}
-
-interface UsageStats {
-  totalInteractions: number;
-  totalTokens: number;
-  averageDuration: number;
-  modelBreakdown: Record<string, number>;
-  typeBreakdown: Record<string, number>;
-  errorRate: number;
-}
+// LLMInteraction and LLMStats interfaces are now imported from llm-store
 
 export function AiInspector() {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'test' | 'interactions' | 'stats'>('test');
   const [testLoading, setTestLoading] = useState(false);
   const [testResult, setTestResult] = useState<LLMTestResult | null>(null);
-  const [testQuery, setTestQuery] = useState('Tell me about Zara sizing for jeans');
-  const [testType, setTestType] = useState<'text' | 'object'>('text');
-  const [interactions, setInteractions] = useState<LLMInteraction[]>([]);
-  const [stats, setStats] = useState<UsageStats | null>(null);
-  const [selectedInteraction, setSelectedInteraction] = useState<LLMInteraction | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [testQuery, setTestQuery] = useState("");
+  const [testType, setTestType] = useState<"text" | "object">("text");
+  const [selectedInteraction, setSelectedInteraction] =
+    useState<LLMInteraction | null>(null);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [interactionsRes, statsRes] = await Promise.all([
-        fetch('/api/llm-test?action=interactions&limit=50'),
-        fetch('/api/llm-test?action=stats')
-      ]);
+  // Use Zustand store for interactions
+  const interactions = useLLMStore((state) => state.interactions);
+  const clearInteractions = useLLMStore((state) => state.clearInteractions);
 
-      const interactionsData = await interactionsRes.json();
-      const statsData = await statsRes.json();
+  // Poll for server updates every 5 seconds as fallback
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch("/api/llm-interactions?limit=100");
+        const data = await response.json();
 
-      if (interactionsData.success) {
-        setInteractions(interactionsData.interactions);
+        if (data.success && data.interactions.length !== interactions.length) {
+          // If server has different count, we might need to sync
+          // For now, the store should be the source of truth
+          console.log(
+            "🤖 AI Inspector: Server has",
+            data.interactions.length,
+            "interactions, store has",
+            interactions.length
+          );
+        }
+      } catch (error) {
+        console.error("❌ AI Inspector: Polling failed:", error);
       }
-      if (statsData.success) {
-        setStats(statsData.stats);
-      }
-    } catch (error) {
-      console.error('Failed to fetch debug data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, [interactions.length]);
 
   const runTest = async () => {
     if (!testQuery.trim()) return;
@@ -86,29 +65,45 @@ export function AiInspector() {
     try {
       setTestLoading(true);
       setTestResult(null);
-      
-      const response = await fetch('/api/llm-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: testQuery, type: testType })
+
+      console.log("🤖 AI Inspector: Running test via API");
+
+      const response = await fetch("/api/ai-inspector", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: testQuery,
+          type: testType,
+        }),
       });
 
       const data = await response.json();
-      setTestResult(data);
-      
-      // Refresh data to show new interaction
-      await fetchData();
+
+      setTestResult({
+        success: data.success,
+        result: data.result,
+        interaction: data.interaction,
+      });
+
+      // Interactions will be automatically updated via the store
+
+      console.log("✅ AI Inspector: Test completed successfully");
     } catch (error) {
-      console.error('Test failed:', error);
+      console.error("❌ AI Inspector: Test failed:", error);
+
       setTestResult({
         success: false,
-        result: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        result: `Error: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         interaction: {
-          id: 'error',
-          model: 'unknown',
+          id: "error",
+          model: "unknown",
           duration: 0,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       });
     } finally {
       setTestLoading(false);
@@ -117,26 +112,24 @@ export function AiInspector() {
 
   const clearLogs = async () => {
     try {
-      const response = await fetch('/api/llm-test?action=clear');
+      // Clear from server
+      const response = await fetch("/api/llm-interactions", {
+        method: "DELETE",
+      });
       const data = await response.json();
+
       if (data.success) {
-        await fetchData();
+        // Clear from store
+        clearInteractions();
         setTestResult(null);
+        console.log("🧹 AI Inspector: Cleared all interactions");
       }
     } catch (error) {
-      console.error('Failed to clear logs:', error);
+      console.error("❌ AI Inspector: Failed to clear interactions:", error);
     }
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchData();
-      // Refresh every 10 seconds when open
-      const interval = setInterval(fetchData, 10000);
-      return () => clearInterval(interval);
-    }
-    return undefined;
-  }, [isOpen]);
+  // No useEffect needed - Zustand store updates automatically
 
   if (!isOpen) {
     return (
@@ -152,8 +145,7 @@ export function AiInspector() {
   return (
     <div className="fixed bottom-4 right-4 w-full max-w-2xl h-[80vh] shadow-lg border border-gray-200 rounded-lg bg-white z-50 flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-        <h3 className="text-lg font-semibold">AI Inspector</h3>
+      <div className="py-2 px-4 border-b border-gray-200 flex justify-end items-center">
         <button
           onClick={() => setIsOpen(false)}
           className="text-gray-400 hover:text-gray-600"
@@ -162,236 +154,157 @@ export function AiInspector() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab('test')}
-          className={`px-4 py-2 text-sm font-medium ${
-            activeTab === 'test' 
-              ? 'text-blue-600 border-b-2 border-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Test
-        </button>
-        <button
-          onClick={() => setActiveTab('interactions')}
-          className={`px-4 py-2 text-sm font-medium ${
-            activeTab === 'interactions' 
-              ? 'text-blue-600 border-b-2 border-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Interactions ({interactions.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('stats')}
-          className={`px-4 py-2 text-sm font-medium ${
-            activeTab === 'stats' 
-              ? 'text-blue-600 border-b-2 border-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Stats
-        </button>
-      </div>
-
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === 'test' && (
-          <div className="space-y-4">
-            {/* Test Controls */}
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Test Query
-                </label>
-                <input
-                  type="text"
-                  value={testQuery}
-                  onChange={(e) => setTestQuery(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter test query..."
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Test Type
-                </label>
-                <select
-                  value={testType}
-                  onChange={(e) => setTestType(e.target.value as 'text' | 'object')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="text">Text Generation</option>
-                  <option value="object">Structured Object</option>
-                </select>
-              </div>
-              
+      <div className="flex-1 overflow-y-auto space-y-6">
+        {/* Test Section */}
+        <div className="space-y-4">
+          {/* Test Controls */}
+          <div className="space-y-2 pt-2 bg-stone-100">
+            <input
+              type="text"
+              value={testQuery}
+              onChange={(e) => setTestQuery(e.target.value)}
+              className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter test query..."
+            />
+
+            <div className="flex gap-2 border-t border-stone-200 py-1 pr-2">
+              <select
+                value={testType}
+                onChange={(e) =>
+                  setTestType(e.target.value as "text" | "object")
+                }
+                className="px-3 py-2 rounded-md hover:text-stone-800 text-stone-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="text">Text Generation</option>
+                <option value="object">Structured Object</option>
+              </select>
+              <div className="flex-1" />
               <button
                 onClick={runTest}
                 disabled={testLoading || !testQuery.trim()}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="h-8 px-3 rounded-full bg-stone-200 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
-                {testLoading ? 'Testing...' : 'Run Test'}
+                {testLoading ? "Testing..." : "Run Test"}
               </button>
             </div>
-
-            {/* Test Results */}
-            {testResult && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${testResult.success ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                  <span className="text-sm font-medium">
-                    {testResult.success ? 'Success' : 'Failed'}
-                  </span>
-                </div>
-                
-                {testResult.interaction && (
-                  <div className="text-xs text-gray-600 space-y-1">
-                    <div>Model: {testResult.interaction.model}</div>
-                    <div>Duration: {testResult.interaction.duration}ms</div>
-                    {testResult.interaction.tokens && (
-                      <div>Tokens: {testResult.interaction.tokens.total}</div>
-                    )}
-                    <div>Time: {new Date(testResult.interaction.timestamp).toLocaleTimeString()}</div>
-                  </div>
-                )}
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Result
-                  </label>
-                  <div className="bg-gray-50 p-3 rounded-md text-sm max-h-40 overflow-y-auto">
-                    <pre className="whitespace-pre-wrap">
-                      {typeof testResult.result === 'string' 
-                        ? testResult.result 
-                        : JSON.stringify(testResult.result, null, 2)
-                      }
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
-        )}
 
-        {activeTab === 'interactions' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h4 className="text-lg font-medium">Recent Interactions</h4>
-              <button
-                onClick={clearLogs}
-                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-              >
-                Clear All
-              </button>
-            </div>
-            
-            {loading ? (
-              <div className="text-center py-4">Loading interactions...</div>
-            ) : interactions.length === 0 ? (
-              <div className="text-center py-4 text-gray-500">
-                No interactions yet. Try running a test.
+          {/* Test Results */}
+          {testResult && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    testResult.success ? "bg-green-500" : "bg-red-500"
+                  }`}
+                ></div>
+                <span className="text-sm font-medium">
+                  {testResult.success ? "Success" : "Failed"}
+                </span>
               </div>
-            ) : (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {interactions.map((interaction) => (
-                  <div
-                    key={interaction.id}
-                    className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-                    onClick={() => setSelectedInteraction(interaction)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`px-2 py-1 text-xs rounded ${
-                            interaction.type === 'text' 
-                              ? 'bg-blue-100 text-blue-800' 
-                              : 'bg-green-100 text-green-800'
-                          }`}>
-                            {interaction.type}
+
+              {testResult.interaction && (
+                <div className="text-xs text-gray-600 space-y-1">
+                  <div>Model: {testResult.interaction.model}</div>
+                  <div>Duration: {testResult.interaction.duration}ms</div>
+                  {testResult.interaction.tokens && (
+                    <div>Tokens: {testResult.interaction.tokens.total}</div>
+                  )}
+                  <div>
+                    Time:{" "}
+                    {new Date(
+                      testResult.interaction.timestamp
+                    ).toLocaleTimeString()}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Result
+                </label>
+                <div className="bg-gray-50 p-3 rounded-md text-sm max-h-40 overflow-y-auto">
+                  <pre className="whitespace-pre-wrap">
+                    {typeof testResult.result === "string"
+                      ? testResult.result
+                      : JSON.stringify(testResult.result, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Interactions Section */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h4 className="text-lg font-medium">
+              Recent Interactions ({interactions.length})
+            </h4>
+            <button
+              onClick={clearLogs}
+              className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+            >
+              Clear All
+            </button>
+          </div>
+
+          {interactions.length === 0 ? (
+            <div className="text-center py-4 text-gray-500">
+              No interactions yet. Try running a test or using the
+              ProductRecommendations component.
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {interactions.map((interaction) => (
+                <div
+                  key={interaction.id}
+                  className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSelectedInteraction(interaction)}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className={`px-2 py-1 text-xs rounded ${
+                            interaction.type === "text"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {interaction.type}
+                        </span>
+                        <span className="text-sm font-medium">
+                          {interaction.model}
+                        </span>
+                        {interaction.source && (
+                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
+                            {interaction.source}
                           </span>
-                          <span className="text-sm font-medium">{interaction.model}</span>
-                          {interaction.error && (
-                            <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">
-                              Error
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-600 mb-1">
-                          {interaction.prompt.substring(0, 80)}
-                          {interaction.prompt.length > 80 && '...'}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(interaction.timestamp).toLocaleString()} • 
-                          {interaction.duration}ms • 
-                          {interaction.tokens?.total || 0} tokens
-                        </div>
+                        )}
+                        {interaction.error && (
+                          <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">
+                            Error
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-600 mb-1">
+                        {interaction.prompt.substring(0, 80)}
+                        {interaction.prompt.length > 80 && "..."}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(interaction.timestamp).toLocaleString()} •
+                        {interaction.duration}ms •
+                        {interaction.tokens?.total || 0} tokens
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'stats' && (
-          <div className="space-y-4">
-            <h4 className="text-lg font-medium">Usage Statistics</h4>
-            {loading ? (
-              <div className="text-center py-4">Loading statistics...</div>
-            ) : stats ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{stats.totalInteractions}</div>
-                    <div className="text-sm text-gray-600">Total Interactions</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{stats.totalTokens.toLocaleString()}</div>
-                    <div className="text-sm text-gray-600">Total Tokens</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{Math.round(stats.averageDuration)}ms</div>
-                    <div className="text-sm text-gray-600">Avg Duration</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">{stats.errorRate.toFixed(1)}%</div>
-                    <div className="text-sm text-gray-600">Error Rate</div>
-                  </div>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h5 className="font-medium mb-2">Model Breakdown</h5>
-                    {Object.entries(stats.modelBreakdown).map(([model, count]) => (
-                      <div key={model} className="flex justify-between text-sm">
-                        <span>{model}</span>
-                        <span>{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div>
-                    <h5 className="font-medium mb-2">Type Breakdown</h5>
-                    {Object.entries(stats.typeBreakdown).map(([type, count]) => (
-                      <div key={type} className="flex justify-between text-sm">
-                        <span>{type}</span>
-                        <span>{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-4 text-gray-500">
-                No statistics available
-              </div>
-            )}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Interaction Detail Modal */}
@@ -418,32 +331,40 @@ export function AiInspector() {
                 <div>
                   <h4 className="font-medium mb-2">Response</h4>
                   <pre className="bg-gray-100 p-3 rounded text-sm whitespace-pre-wrap">
-                    {selectedInteraction.response || (selectedInteraction.error ? `Error: ${selectedInteraction.error}` : 'No response')}
+                    {selectedInteraction.response ||
+                      (selectedInteraction.error
+                        ? `Error: ${selectedInteraction.error}`
+                        : "No response")}
                   </pre>
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <span className="font-medium">Model:</span> {selectedInteraction.model}
+                  <span className="font-medium">Model:</span>{" "}
+                  {selectedInteraction.model}
                 </div>
                 <div>
-                  <span className="font-medium">Type:</span> {selectedInteraction.type}
+                  <span className="font-medium">Type:</span>{" "}
+                  {selectedInteraction.type}
                 </div>
                 <div>
-                  <span className="font-medium">Duration:</span> {selectedInteraction.duration}ms
+                  <span className="font-medium">Duration:</span>{" "}
+                  {selectedInteraction.duration}ms
                 </div>
                 <div>
-                  <span className="font-medium">Tokens:</span> {selectedInteraction.tokens?.total || 0}
+                  <span className="font-medium">Tokens:</span>{" "}
+                  {selectedInteraction.tokens?.total || 0}
                 </div>
               </div>
-              {selectedInteraction.metadata && Object.keys(selectedInteraction.metadata).length > 0 && (
-                <div className="mt-4">
-                  <h4 className="font-medium mb-2">Metadata</h4>
-                  <pre className="bg-gray-100 p-3 rounded text-sm">
-                    {JSON.stringify(selectedInteraction.metadata, null, 2)}
-                  </pre>
-                </div>
-              )}
+              {selectedInteraction.metadata &&
+                Object.keys(selectedInteraction.metadata).length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-medium mb-2">Metadata</h4>
+                    <pre className="bg-gray-100 p-3 rounded text-sm">
+                      {JSON.stringify(selectedInteraction.metadata, null, 2)}
+                    </pre>
+                  </div>
+                )}
             </div>
           </div>
         </div>

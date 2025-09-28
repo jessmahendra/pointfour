@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
           systemPrompt: "You are a fashion expert who provides detailed, structured recommendations for clothing brands and sizing advice.",
           temperature: 0.7,
           maxTokens: 1000,
-          metadata: { testType: 'object', userQuery: query }
+          metadata: { testType: 'object', userQuery: query },
+          source: 'llm-test-api'
         }
       );
 
@@ -52,7 +53,8 @@ export async function POST(request: NextRequest) {
           systemPrompt: "You are a helpful fashion expert who provides detailed sizing and brand recommendations.",
           temperature: 0.7,
           maxTokens: 1000,
-          metadata: { testType: 'text', userQuery: query }
+          metadata: { testType: 'text', userQuery: query },
+          source: 'llm-test-api'
         }
       );
 
@@ -91,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     switch (action) {
       case 'stats':
-        // Get usage statistics
+        // Get usage statistics from Zustand store
         const stats = llmService.getUsageStats();
         return NextResponse.json({
           success: true,
@@ -99,7 +101,7 @@ export async function GET(request: NextRequest) {
         });
 
       case 'interactions':
-        // Get all interactions
+        // Get all interactions from Zustand store
         const interactions = llmService.getInteractions();
         const limit = parseInt(url.searchParams.get('limit') || '50');
         return NextResponse.json({
@@ -119,7 +121,7 @@ export async function GET(request: NextRequest) {
       default:
         return NextResponse.json({
           success: true,
-          message: 'LLM Test API is running',
+          message: 'LLM Test API is running (now using Zustand store)',
           endpoints: {
             'POST /api/llm-test': 'Test LLM generation (text or object)',
             'GET /api/llm-test?action=stats': 'Get usage statistics',
