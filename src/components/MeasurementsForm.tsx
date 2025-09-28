@@ -133,7 +133,7 @@ export default function MeasurementsForm({
       } else {
         setError("Failed to load measurements");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to load measurements");
     } finally {
       setLoading(false);
@@ -168,7 +168,7 @@ export default function MeasurementsForm({
           setError(data.details.join(", "));
         }
       }
-    } catch (err) {
+    } catch {
       setError("Failed to save measurements");
     } finally {
       setSaving(false);
@@ -304,7 +304,7 @@ export default function MeasurementsForm({
                 onChange={(e) =>
                   handleInputChange(
                     "height",
-                    e.target.value ? Number(e.target.value) : undefined
+                    e.target.value ? Number(e.target.value) : 0
                   )
                 }
                 min="50"
@@ -323,7 +323,7 @@ export default function MeasurementsForm({
         {/* Usual Sizes */}
         <div className="border-b border-gray-200 pb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Usual Sizes (UK Women's)
+            Usual Sizes (UK Women&apos;s)
           </h3>
           <p className="text-sm text-gray-600 mb-4">
             Select all sizes that fit you (you can be between sizes)
@@ -422,7 +422,7 @@ export default function MeasurementsForm({
               <select
                 value={measurements.fitPreference?.tops || ""}
                 onChange={(e) =>
-                  handleFitPreferenceChange("tops", e.target.value as any)
+                  handleFitPreferenceChange("tops", e.target.value as "true-to-size" | "loose-relaxed" | "tight-fitting")
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
@@ -443,7 +443,7 @@ export default function MeasurementsForm({
               <select
                 value={measurements.fitPreference?.bottoms || ""}
                 onChange={(e) =>
-                  handleFitPreferenceChange("bottoms", e.target.value as any)
+                  handleFitPreferenceChange("bottoms", e.target.value as "true-to-size" | "loose-relaxed" | "tight-fitting")
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
@@ -598,7 +598,7 @@ export default function MeasurementsForm({
       <div className="mt-6 p-4 bg-blue-50 rounded-md">
         <h3 className="text-sm font-medium text-blue-900 mb-2">Coming Soon</h3>
         <p className="text-xs text-blue-700">
-          We're working on adding more measurement fields like weight, chest,
+          We&apos;re working on adding more measurement fields like weight, chest,
           waist, and hips to provide even better size recommendations.
         </p>
       </div>
