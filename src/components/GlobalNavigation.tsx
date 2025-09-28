@@ -125,12 +125,6 @@ export default function GlobalNavigation() {
               Review a Brand
             </Link>
             <Link
-              href="/recommendations"
-              className="text-stone-600 hover:text-stone-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Recommendations
-            </Link>
-            <Link
               href="/brands"
               className="text-stone-600 hover:text-stone-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
             >
