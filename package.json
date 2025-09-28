@@ -13,7 +13,20 @@
     "check": "npm run type-check && npm run lint",
     "build:extension": "node build-extension.js",
     "build:bundle": "node build-extension-bundle.js",
-    "friend": "node build-extension.js"
+    "friend": "node build-extension.js",
+    "migrate:brands": "npx tsx migrate-brands.ts",
+    "migrate:brands:js": "node migrate-brands.js",
+    "test:migration": "npx tsx test-migration.ts",
+    "verify:table": "npx tsx verify-table.ts",
+    "cleanup:brands": "npx tsx cleanup-brands.ts",
+    "update:descriptions": "npx tsx update-brand-descriptions.ts",
+    "update:descriptions:enhanced": "npx tsx update-brand-descriptions-enhanced.ts",
+    "update:descriptions:comprehensive": "npx tsx update-brand-descriptions-comprehensive.ts",
+    "update:urls": "npx tsx update-brand-urls.ts",
+    "update:urls:enhanced": "npx tsx update-brand-urls-enhanced.ts",
+    "update:urls:comprehensive": "npx tsx update-brand-urls-comprehensive.ts",
+    "generate:descriptions": "npx tsx generate-description-updates.ts",
+    "prepare:descriptions": "npx tsx prepare-brand-descriptions.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

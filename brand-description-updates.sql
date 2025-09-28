@@ -1,0 +1,41 @@
+-- Brand Description Updates
+-- Run these statements in your Supabase SQL Editor
+
+UPDATE brands SET description = 'A well-known fashion company offering a. emery clothing with contemporary designs and attention to detail.' WHERE slug = 'a-emery';
+UPDATE brands SET description = 'Abercrombie & Fitch is an American lifestyle retailer known for its casual luxury clothing, particularly popular among young adults for its preppy aesthetic.' WHERE slug = 'abercrombie-fitch';
+UPDATE brands SET description = 'Amina Muaddi is a luxury shoe designer known for her bold, architectural designs and glamorous aesthetic, popular among celebrities and fashion enthusiasts.' WHERE slug = 'amina-muaddi';
+UPDATE brands SET description = 'An established fashion label offering ancient greek sandals collections with a focus on modern design and customer satisfaction.' WHERE slug = 'ancient-greek-sandals';
+UPDATE brands SET description = 'A fashion brand specializing in and other stories apparel and accessories, known for its commitment to style and quality.' WHERE slug = 'and-other-stories';
+UPDATE brands SET description = 'A well-known fashion company offering ben-amun clothing with contemporary designs and attention to detail.' WHERE slug = 'ben-amun';
+UPDATE brands SET description = 'COS is a contemporary fashion brand offering modern, functional design with a focus on timeless pieces and innovative materials.' WHERE slug = 'cos';
+UPDATE brands SET description = 'Dissh is an Australian fashion brand known for its contemporary, effortless style and commitment to creating versatile pieces for modern women.' WHERE slug = 'dissh';
+UPDATE brands SET description = 'A fashion brand recognized for doen designs, innovative style, and commitment to quality craftsmanship.' WHERE slug = 'doen';
+UPDATE brands SET description = 'A contemporary fashion brand known for donni style and quality craftsmanship.' WHERE slug = 'donni';
+UPDATE brands SET description = 'A fashion brand specializing in emme parsons apparel and accessories, known for its commitment to style and quality.' WHERE slug = 'emme-parsons';
+UPDATE brands SET description = 'Everlane is an American clothing retailer known for its transparent pricing, ethical manufacturing practices, and minimalist aesthetic.' WHERE slug = 'everlane';
+UPDATE brands SET description = 'A fashion brand recognized for frank & eileen designs, innovative style, and commitment to quality craftsmanship.' WHERE slug = 'frank-eileen';
+UPDATE brands SET description = 'Ganni is a Danish fashion brand known for its playful, contemporary designs and commitment to sustainable fashion practices.' WHERE slug = 'ganni';
+UPDATE brands SET description = 'A fashion brand specializing in jamie haller apparel and accessories, known for its commitment to style and quality.' WHERE slug = 'jamie-haller';
+UPDATE brands SET description = 'An established fashion label offering jenni kayne collections with a focus on modern design and customer satisfaction.' WHERE slug = 'jenni-kayne';
+UPDATE brands SET description = 'Khaite is a luxury contemporary fashion brand founded by Catherine Holstein, known for its modern, sophisticated designs and focus on quality materials.' WHERE slug = 'khaite';
+UPDATE brands SET description = 'A well-known fashion company offering le bon shoppe clothing with contemporary designs and attention to detail.' WHERE slug = 'le-bon-shoppe';
+UPDATE brands SET description = 'Le Monde Beryl is a contemporary fashion brand known for its sophisticated, minimalist designs and focus on quality craftsmanship.' WHERE slug = 'le-monde-beryl';
+UPDATE brands SET description = 'A contemporary fashion brand known for leset style and quality craftsmanship.' WHERE slug = 'leset';
+UPDATE brands SET description = 'Levi''s is an iconic American denim brand founded in 1853, known worldwide for its classic blue jeans and pioneering denim innovations.' WHERE slug = 'levis';
+UPDATE brands SET description = 'A well-known fashion company offering madewell clothing with contemporary designs and attention to detail.' WHERE slug = 'madewell';
+UPDATE brands SET description = 'A fashion brand recognized for maje designs, innovative style, and commitment to quality craftsmanship.' WHERE slug = 'maje';
+UPDATE brands SET description = 'Mango is a Spanish clothing design and manufacturing company known for its contemporary, feminine fashion for women with a focus on Mediterranean style.' WHERE slug = 'mango';
+UPDATE brands SET description = 'An established fashion label offering mother collections with a focus on modern design and customer satisfaction.' WHERE slug = 'mother';
+UPDATE brands SET description = 'A contemporary fashion brand known for paige style and quality craftsmanship.' WHERE slug = 'paige';
+UPDATE brands SET description = 'Posse is an Australian fashion brand known for its contemporary, feminine designs and commitment to sustainable fashion practices.' WHERE slug = 'posse';
+UPDATE brands SET description = 'An established fashion label offering quince collections with a focus on modern design and customer satisfaction.' WHERE slug = 'quince';
+UPDATE brands SET description = 'Reformation is a Los Angeles-based sustainable fashion brand known for its eco-friendly practices, feminine silhouettes, and commitment to environmental responsibility.' WHERE slug = 'reformation';
+UPDATE brands SET description = 'A contemporary fashion brand known for rejina pyo style and quality craftsmanship.' WHERE slug = 'rejina-pyo';
+UPDATE brands SET description = 'An established fashion label offering sezane collections with a focus on modern design and customer satisfaction.' WHERE slug = 'sezane';
+UPDATE brands SET description = 'A well-known fashion company offering st. agni clothing with contemporary designs and attention to detail.' WHERE slug = 'st-agni';
+UPDATE brands SET description = 'An established fashion label offering the frankie shop collections with a focus on modern design and customer satisfaction.' WHERE slug = 'the-frankie-shop';
+UPDATE brands SET description = 'Toteme is a Swedish minimalist fashion brand founded by Elin Kling, known for its timeless, sophisticated designs and high-quality craftsmanship.' WHERE slug = 'toteme';
+UPDATE brands SET description = 'A fashion brand specializing in vibi venezia apparel and accessories, known for its commitment to style and quality.' WHERE slug = 'vibi-venezia';
+UPDATE brands SET description = 'A well-known fashion company offering vollebak clothing with contemporary designs and attention to detail.' WHERE slug = 'vollebak';
+UPDATE brands SET description = 'A well-known fashion company offering with nothing underneath clothing with contemporary designs and attention to detail.' WHERE slug = 'with-nothing-underneath';
+UPDATE brands SET description = 'Zara is a Spanish fast-fashion retailer owned by Inditex, known for its rapid response to fashion trends and affordable contemporary clothing for men, women, and children.' WHERE slug = 'zara';

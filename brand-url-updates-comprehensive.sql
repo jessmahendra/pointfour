@@ -1,0 +1,42 @@
+-- Comprehensive Brand URL Updates
+-- This updates ALL brands with their official website URLs
+-- Run these statements in your Supabase SQL Editor
+
+UPDATE brands SET url = 'https://www.aemery.com' WHERE slug = 'a-emery';
+UPDATE brands SET url = 'https://www.abercrombie.com' WHERE slug = 'abercrombie-fitch';
+UPDATE brands SET url = 'https://www.aminamuaddi.com' WHERE slug = 'amina-muaddi';
+UPDATE brands SET url = 'https://www.ancient-greek-sandals.com' WHERE slug = 'ancient-greek-sandals';
+UPDATE brands SET url = 'https://www.andotherstories.com' WHERE slug = 'and-other-stories';
+UPDATE brands SET url = 'https://www.ben-amun.com' WHERE slug = 'ben-amun';
+UPDATE brands SET url = 'https://www.cos.com' WHERE slug = 'cos';
+UPDATE brands SET url = 'https://www.dissh.com.au' WHERE slug = 'dissh';
+UPDATE brands SET url = 'https://www.doen.com' WHERE slug = 'doen';
+UPDATE brands SET url = 'https://www.donni.com' WHERE slug = 'donni';
+UPDATE brands SET url = 'https://www.emmeparsons.com' WHERE slug = 'emme-parsons';
+UPDATE brands SET url = 'https://www.everlane.com' WHERE slug = 'everlane';
+UPDATE brands SET url = 'https://www.frankandeileen.com' WHERE slug = 'frank-eileen';
+UPDATE brands SET url = 'https://www.ganni.com' WHERE slug = 'ganni';
+UPDATE brands SET url = 'https://www.jamiehaller.com' WHERE slug = 'jamie-haller';
+UPDATE brands SET url = 'https://www.jennikayne.com' WHERE slug = 'jenni-kayne';
+UPDATE brands SET url = 'https://www.khaite.com' WHERE slug = 'khaite';
+UPDATE brands SET url = 'https://www.lebonshoppe.com' WHERE slug = 'le-bon-shoppe';
+UPDATE brands SET url = 'https://www.lemondeberyl.com' WHERE slug = 'le-monde-beryl';
+UPDATE brands SET url = 'https://www.leset.com' WHERE slug = 'leset';
+UPDATE brands SET url = 'https://www.levi.com' WHERE slug = 'levis';
+UPDATE brands SET url = 'https://www.madewell.com' WHERE slug = 'madewell';
+UPDATE brands SET url = 'https://www.maje.com' WHERE slug = 'maje';
+UPDATE brands SET url = 'https://www.mango.com' WHERE slug = 'mango';
+UPDATE brands SET url = 'https://www.motherdenim.com' WHERE slug = 'mother';
+UPDATE brands SET url = 'https://www.paige.com' WHERE slug = 'paige';
+UPDATE brands SET url = 'https://www.posse.com.au' WHERE slug = 'posse';
+UPDATE brands SET url = 'https://www.onequince.com' WHERE slug = 'quince';
+UPDATE brands SET url = 'https://www.thereformation.com' WHERE slug = 'reformation';
+UPDATE brands SET url = 'https://www.rejinapyo.com' WHERE slug = 'rejina-pyo';
+UPDATE brands SET url = 'https://www.sezane.com' WHERE slug = 'sezane';
+UPDATE brands SET url = 'https://www.stagni.com.au' WHERE slug = 'st-agni';
+UPDATE brands SET url = 'https://www.thefrankieshop.com' WHERE slug = 'the-frankie-shop';
+UPDATE brands SET url = 'https://www.toteme.com' WHERE slug = 'toteme';
+UPDATE brands SET url = 'https://www.vibivenezia.com' WHERE slug = 'vibi-venezia';
+UPDATE brands SET url = 'https://www.vollebak.com' WHERE slug = 'vollebak';
+UPDATE brands SET url = 'https://www.withnothingunderneath.com' WHERE slug = 'with-nothing-underneath';
+UPDATE brands SET url = 'https://www.zara.com' WHERE slug = 'zara';
