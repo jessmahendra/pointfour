@@ -28,6 +28,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-konva": "^19.0.7",
+    "react-markdown": "^10.1.0",
     "sharp": "^0.34.3",
     "uuid": "^11.1.0",
     "zustand": "^5.0.7"
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

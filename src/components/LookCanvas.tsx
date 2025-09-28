@@ -263,15 +263,11 @@ export default function LookCanvas({
   if (isLoading) {
     return (
       <div
+        className="flex items-center justify-center border border-gray-300 rounded-lg"
         style={{
           width,
           height,
           backgroundColor: bg,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          border: "1px solid #ddd",
-          borderRadius: "8px",
         }}
       >
         <div>Loading images...</div>
@@ -284,11 +280,9 @@ export default function LookCanvas({
       ref={canvasRef}
       width={width}
       height={height}
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        cursor: dragState.isDragging ? "grabbing" : "grab",
-      }}
+      className={`border border-gray-300 rounded-lg ${
+        dragState.isDragging ? "cursor-grabbing" : "cursor-grab"
+      }`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}

@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
 import { AnalysisResult, UserProfile } from "../types/analysis";
-import { formatTextWithStyling } from "../utils/textFormatting";
 
 interface ChatMessage {
   type: "user" | "assistant";
@@ -45,72 +44,28 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   ];
 
   return (
-    <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+    <div className="max-w-3xl mx-auto">
       {/* Header */}
-      <div
-        style={{
-          backgroundColor: "#FFFFFF",
-          padding: "24px",
-          borderRadius: "16px",
-          border: "1px solid #D8D6D5",
-          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
-          marginBottom: "24px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "20px",
-            fontWeight: "700",
-            color: "#333",
-            margin: "0 0 12px 0",
-          }}
-        >
+      <div className="bg-white p-6 rounded-2xl border border-stone-300 shadow-lg mb-6">
+        <h2 className="text-xl font-bold text-gray-800 m-0 mb-3">
           Analysis for: {brandQuery}
         </h2>
-        <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-          <span
-            style={{
-              fontSize: "12px",
-              backgroundColor: "#F8F7F4",
-              padding: "4px 8px",
-              borderRadius: "4px",
-            }}
-          >
+        <div className="flex gap-2 mb-3">
+          <span className="text-xs bg-stone-50 px-2 py-1 rounded">
             {userProfile.category}
           </span>
-          <span
-            style={{
-              fontSize: "12px",
-              backgroundColor: "#F8F7F4",
-              padding: "4px 8px",
-              borderRadius: "4px",
-            }}
-          >
+          <span className="text-xs bg-stone-50 px-2 py-1 rounded">
             {userProfile.category === "footwear"
               ? userProfile.footType
               : userProfile.bodyShape}
           </span>
-          <span
-            style={{
-              fontSize: "12px",
-              backgroundColor: "#F8F7F4",
-              padding: "4px 8px",
-              borderRadius: "4px",
-            }}
-          >
+          <span className="text-xs bg-stone-50 px-2 py-1 rounded">
             {userProfile.fitPreference}
           </span>
         </div>
         <button
           onClick={onBackToAnalysis}
-          style={{
-            fontSize: "12px",
-            color: "#6C6A68",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            textDecoration: "underline",
-          }}
+          className="text-xs text-stone-600 bg-transparent border-none cursor-pointer underline hover:text-stone-800"
         >
           ← View full analysis
         </button>
@@ -118,34 +73,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       {/* Messages */}
       {messages.map((message, index) => (
-        <div key={index} style={{ marginBottom: "24px" }}>
+        <div key={index} className="mb-6">
           {message.type === "user" ? (
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <div
-                style={{
-                  maxWidth: "400px",
-                  backgroundColor: "#E9DED5",
-                  padding: "16px 20px",
-                  borderRadius: "16px",
-                  fontSize: "14px",
-                }}
-              >
+            <div className="flex justify-end">
+              <div className="max-w-sm bg-stone-200 px-5 py-4 rounded-2xl text-sm">
                 {message.content}
               </div>
             </div>
           ) : (
-            <div
-              style={{
-                backgroundColor: "#FFFFFF",
-                padding: "24px",
-                borderRadius: "16px",
-                border: "1px solid #D8D6D5",
-                boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
-              }}
-            >
-              <div style={{ fontSize: "14px", lineHeight: "1.6" }}>
-                {formatTextWithStyling(message.content)}
-              </div>
+            <div className="bg-white p-6 rounded-2xl border border-stone-300 shadow-lg">
+              {formatTextWithStyling(message.content)}
             </div>
           )}
         </div>
@@ -153,45 +90,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       {/* Suggested Questions */}
       {messages.length === 0 && (
-        <div
-          style={{
-            backgroundColor: "#F8F7F4",
-            padding: "20px",
-            borderRadius: "12px",
-            marginBottom: "24px",
-          }}
-        >
-          <p
-            style={{
-              fontSize: "14px",
-              fontWeight: "500",
-              color: "#333",
-              margin: "0 0 12px 0",
-            }}
-          >
+        <div className="bg-stone-50 p-5 rounded-xl mb-6">
+          <p className="text-sm font-medium text-gray-800 m-0 mb-3">
             Ask me anything about {brandQuery} sizing and fit:
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div className="flex flex-col gap-2">
             {suggestedQuestions.map((question, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentInput(question)}
-                style={{
-                  textAlign: "left",
-                  padding: "12px 16px",
-                  fontSize: "14px",
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #D8D6D5",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  transition: "background-color 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "#F0F0F0";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "#FFFFFF";
-                }}
+                className="text-left p-3 px-4 text-sm bg-white border border-stone-300 rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
               >
                 {question}
               </button>
@@ -201,50 +109,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       )}
 
       {/* Input */}
-      <div
-        style={{
-          backgroundColor: "#FFFFFF",
-          padding: "20px",
-          borderRadius: "16px",
-          border: "1px solid #D8D6D5",
-          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <div style={{ display: "flex", gap: "12px" }}>
+      <div className="bg-white p-5 rounded-2xl border border-stone-300 shadow-lg">
+        <div className="flex gap-3">
           <textarea
             value={currentInput}
             onChange={(e) => setCurrentInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Ask about sizing, fit, or anything else..."
-            style={{
-              flex: 1,
-              padding: "12px 16px",
-              fontSize: "14px",
-              backgroundColor: "#F8F7F4",
-              border: "1px solid #D8D6D5",
-              borderRadius: "8px",
-              outline: "none",
-              resize: "vertical",
-              minHeight: "44px",
-              maxHeight: "120px",
-              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            }}
+            className="flex-1 p-3 px-4 text-sm bg-stone-50 border border-stone-300 rounded-lg outline-none resize-y min-h-11 max-h-30 font-inter focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
           <button
             onClick={onSendMessage}
             disabled={!currentInput.trim()}
-            style={{
-              padding: "12px 20px",
-              fontSize: "14px",
-              fontWeight: "600",
-              color: currentInput.trim() ? "#FFFFFF" : "#9CA3AF",
-              backgroundColor: currentInput.trim() ? "#DC2626" : "#E5E7EB",
-              border: "none",
-              borderRadius: "8px",
-              cursor: currentInput.trim() ? "pointer" : "not-allowed",
-              transition: "all 0.2s",
-              alignSelf: "flex-end",
-            }}
+            className={`px-5 py-3 text-sm font-semibold border-none rounded-lg transition-all duration-200 self-end ${
+              currentInput.trim()
+                ? "text-white bg-red-600 hover:bg-red-700 cursor-pointer"
+                : "text-gray-400 bg-gray-200 cursor-not-allowed"
+            }`}
           >
             Send
           </button>

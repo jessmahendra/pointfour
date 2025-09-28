@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { formatTextWithStyling } from "../../utils/textFormatting";
 
 interface UserProfile {
   bodyShape: string;
@@ -253,56 +254,9 @@ Please provide a specific answer to this follow-up question about these recommen
     });
   };
 
-  // Format message content (same as analyze page)
+  // Format message content using React Markdown
   const formatMessageContent = (content: string) => {
-    const lines = content.split("\n");
-    return (
-      <div>
-        {lines.map((line, index) => {
-          const trimmedLine = line.trim();
-          if (!trimmedLine) return null;
-
-          const formatBoldText = (text: string) => {
-            const parts = text.split(/(\*\*.*?\*\*|".*?")/g);
-            return parts.map((part, i) => {
-              if (part.startsWith("**") && part.endsWith("**")) {
-                return <strong key={i}>{part.slice(2, -2)}</strong>;
-              }
-              if (part.startsWith('"') && part.endsWith('"')) {
-                return (
-                  <span
-                    key={i}
-                    style={{
-                      fontStyle: "italic",
-                      backgroundColor: "#F8F7F4",
-                      padding: "2px 4px",
-                      borderRadius: "3px",
-                    }}
-                  >
-                    {part}
-                  </span>
-                );
-              }
-              return part;
-            });
-          };
-
-          return (
-            <p
-              key={index}
-              style={{
-                fontSize: "14px",
-                color: "#4E4B4B",
-                lineHeight: "1.6",
-                margin: "0 0 12px 0",
-              }}
-            >
-              {formatBoldText(trimmedLine)}
-            </p>
-          );
-        })}
-      </div>
-    );
+    return formatTextWithStyling(content);
   };
 
   if (currentStep === "form") {

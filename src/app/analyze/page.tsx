@@ -237,11 +237,9 @@ function BrandAnalysisContent() {
 
   return (
     <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#F8F7F4",
-        padding: currentStep === "form" ? "40px 24px" : "0",
-      }}
+      className={`min-h-screen bg-stone-50 ${
+        currentStep === "form" ? "p-10 px-6" : ""
+      }`}
     >
       {currentStep === "form" && (
         <UserProfileForm
@@ -280,7 +278,7 @@ function BrandAnalysisContent() {
 
 export default function BrandAnalysisPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="p-4">Loading...</div>}>
       <BrandAnalysisContent />
     </Suspense>
   );
