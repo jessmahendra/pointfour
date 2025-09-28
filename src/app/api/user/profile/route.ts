@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { UserMeasurements, validateMeasurements } from '@/lib/user-profile';
+import { validateMeasurements } from '@/lib/user-profile';
+import { UserMeasurements } from '@/types/user';
 
 /**
  * GET /api/user/profile - Get current user's profile and measurements

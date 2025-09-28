@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ProductRecommendations } from "./ProductRecommendations";
+import { ProductRecommendations } from "@/app/products/[id]/ProductRecommendations";
 
 interface ProductPageProps {
   params: Promise<{

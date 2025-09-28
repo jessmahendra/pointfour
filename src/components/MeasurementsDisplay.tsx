@@ -34,7 +34,7 @@ export default function MeasurementsDisplay({
       } else {
         setError("Failed to load measurements");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to load measurements");
     } finally {
       setLoading(false);
@@ -60,7 +60,7 @@ export default function MeasurementsDisplay({
     return `${height} cm (${feet}'${inches}")`;
   };
 
-  const formatBodyMeasurements = (measurements: any) => {
+  const formatBodyMeasurements = (measurements: Record<string, unknown>) => {
     if (!measurements) return null;
     const { bust, waist, hips, unit } = measurements;
     const parts = [];
