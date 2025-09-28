@@ -70,7 +70,7 @@ async function clearAllBrands(supabase: ReturnType<typeof createClient>): Promis
     }
     
     console.log('\n📝 Sample brands that will be deleted:');
-    existingBrands?.forEach((brand, index) => {
+    existingBrands?.forEach((brand: { name: string; slug: string }, index: number) => {
       console.log(`   ${index + 1}. ${brand.name} (${brand.slug})`);
     });
     
