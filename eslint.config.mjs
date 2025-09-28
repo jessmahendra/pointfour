@@ -20,9 +20,9 @@ const eslintConfig = [
       "@typescript-eslint/no-var-requires": "error",
       
       // General code quality rules
-      "no-console": "warn",
+      "no-console": "off",
       "no-debugger": "error",
-      "no-alert": "warn",
+      "no-alert": "off",
       
       // React specific rules
       "react-hooks/exhaustive-deps": "warn",

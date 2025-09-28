@@ -9,7 +9,7 @@ export default function NotFound() {
           Brand Not Found
         </h2>
         <p className="text-gray-600 mb-8 max-w-md">
-          The brand you're looking for doesn't exist or may have been removed.
+          The brand you&apos;re looking for doesn&apos;t exist or may have been removed.
         </p>
         <div className="space-x-4">
           <Link

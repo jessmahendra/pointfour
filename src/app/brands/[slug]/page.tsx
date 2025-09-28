@@ -2,22 +2,24 @@ import { createClient } from '@/utils/supabase/server'
 import { createStaticClient } from '@/utils/supabase/static'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Metadata } from 'next'
 
 interface BrandPageProps {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 // Generate metadata for individual brand pages
 export async function generateMetadata({ params }: BrandPageProps): Promise<Metadata> {
   const supabase = createStaticClient()
+  const { slug } = await params
   
   const { data: brand } = await supabase
     .from('brands')
     .select('name, description, url')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .single()
 
   if (!brand) {
@@ -56,11 +58,12 @@ export async function generateMetadata({ params }: BrandPageProps): Promise<Meta
 
 export default async function BrandPage({ params }: BrandPageProps) {
   const supabase = await createClient()
+  const { slug } = await params
   
   const { data: brand, error } = await supabase
     .from('brands')
     .select('*')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .single()
 
   if (error || !brand) {
@@ -121,9 +124,11 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
             {brand.logo_url && (
               <div className="ml-8">
-                <img
+                <Image
                   src={brand.logo_url}
                   alt={`${brand.name} logo`}
+                  width={128}
+                  height={128}
                   className="w-32 h-32 object-contain"
                 />
               </div>
