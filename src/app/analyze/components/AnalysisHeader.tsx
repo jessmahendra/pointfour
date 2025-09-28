@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { UserProfile } from "../types/analysis";
+import { UserProfile } from "../../../types/analysis";
 import { ContentSection } from "../../../components/ContentSection";
 
 interface AnalysisHeaderProps {

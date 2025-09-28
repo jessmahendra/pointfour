@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { AnalysisResult, UserProfile } from "../types/analysis";
+import { AnalysisResult, UserProfile } from "../../../types/analysis";
 import { parseAnalysisData } from "../../../utils/analysisParsing";
 import { AnalysisHeader } from "./AnalysisHeader";
 import { ContentSection } from "../../../components/ContentSection";

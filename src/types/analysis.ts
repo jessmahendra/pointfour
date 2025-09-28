@@ -69,7 +69,7 @@ export interface BrandFitSummary {
       confidence: "high" | "medium" | "low";
     };
     // Legacy sections for backward compatibility
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 

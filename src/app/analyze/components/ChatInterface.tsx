@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { AnalysisResult, UserProfile } from "../types/analysis";
+import { UserProfile } from "../../../types/analysis";
 import { MarkdownText } from "../../../components/MarkdownText";
 
 interface ChatMessage {
@@ -14,7 +14,6 @@ interface ChatInterfaceProps {
   currentInput: string;
   setCurrentInput: React.Dispatch<React.SetStateAction<string>>;
   onSendMessage: () => void;
-  analysisResult: AnalysisResult;
   userProfile: UserProfile;
   brandQuery: string;
   onBackToAnalysis: () => void;
@@ -25,7 +24,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentInput,
   setCurrentInput,
   onSendMessage,
-  analysisResult,
   userProfile,
   brandQuery,
   onBackToAnalysis,

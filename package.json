@@ -8,6 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "type-check": "tsc --noEmit",
+    "check": "npm run type-check && npm run lint",
     "build:extension": "node build-extension.js",
     "build:bundle": "node build-extension-bundle.js",
     "friend": "node build-extension.js"

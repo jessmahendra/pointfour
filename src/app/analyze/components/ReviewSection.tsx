@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { GroupedReviews } from "../types/analysis";
+import { GroupedReviews } from "../../../types/analysis";
 import { SectionHeader } from "../../../components/SectionHeader";
 import { ReviewCard } from "./ReviewCard";
 

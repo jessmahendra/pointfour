@@ -29,7 +29,6 @@ function BrandAnalysisContent() {
   );
   const [loading, setLoading] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
-  const [isSharedView, setIsSharedView] = useState(false);
 
   const searchParams = useSearchParams();
 
@@ -89,7 +88,6 @@ function BrandAnalysisContent() {
   const loadSharedAnalysis = async (shareId: string) => {
     try {
       setLoading(true);
-      setIsSharedView(true);
 
       const response = await fetch(`/api/share?id=${shareId}`);
       const data = await response.json();
@@ -266,7 +264,6 @@ function BrandAnalysisContent() {
           currentInput={currentInput}
           setCurrentInput={setCurrentInput}
           onSendMessage={handleSendMessage}
-          analysisResult={analysisResult}
           userProfile={userProfile}
           brandQuery={brandQuery}
           onBackToAnalysis={() => setCurrentStep("analysis")}

@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { UserProfile } from "../types/analysis";
+import { UserProfile } from "../../../types/analysis";
 
 interface UserProfileFormProps {
   userProfile: UserProfile;
