@@ -9,6 +9,7 @@ export default function GlobalNavigation() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [email, setEmail] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -67,6 +68,23 @@ export default function GlobalNavigation() {
       setAuthLoading(false);
     }
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showUserDropdown) {
+        const target = event.target as Element;
+        if (!target.closest(".user-dropdown")) {
+          setShowUserDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showUserDropdown]);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -130,14 +148,6 @@ export default function GlobalNavigation() {
             >
               Directory
             </Link>
-            {user && (
-              <Link
-                href="/measurements"
-                className="text-stone-600 hover:text-stone-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                My Measurements
-              </Link>
-            )}
           </div>
 
           {/* Auth Section */}
@@ -145,14 +155,60 @@ export default function GlobalNavigation() {
             {loading ? (
               <div className="w-20 h-8 bg-stone-200 animate-pulse rounded"></div>
             ) : user ? (
-              <div className="flex items-center space-x-3">
-                <span className="text-sm text-stone-600">{user.email}</span>
+              <div className="relative user-dropdown">
                 <button
-                  onClick={handleSignOut}
-                  className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                  className="flex items-center space-x-2 text-sm text-stone-600 hover:text-stone-900 transition-colors"
                 >
-                  Sign Out
+                  <div className="w-8 h-8 bg-stone-200 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-medium text-stone-600">
+                      {user.email?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <span>{user.email}</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${
+                      showUserDropdown ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
                 </button>
+
+                {/* Dropdown Menu */}
+                {showUserDropdown && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-stone-200 py-2 z-50">
+                    <div className="px-4 py-2 border-b border-stone-100">
+                      <p className="text-sm font-medium text-stone-900">
+                        {user.email}
+                      </p>
+                    </div>
+                    <Link
+                      href="/measurements"
+                      className="block px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors"
+                      onClick={() => setShowUserDropdown(false)}
+                    >
+                      Measurements
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleSignOut();
+                        setShowUserDropdown(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <button

@@ -86,10 +86,14 @@ export default function MeasurementsDisplay({
 
   if (loading) {
     return (
-      <div className={`${compact ? "p-3" : "p-4"} bg-gray-50 rounded-lg`}>
+      <div
+        className={`${
+          compact ? "p-3" : "p-4"
+        } bg-white rounded-lg border border-stone-200`}
+      >
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-          <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-4 bg-stone-200 rounded w-1/3 mb-2"></div>
+          <div className="h-3 bg-stone-200 rounded w-1/2"></div>
         </div>
       </div>
     );
@@ -100,13 +104,13 @@ export default function MeasurementsDisplay({
       <div
         className={`${
           compact ? "p-3" : "p-4"
-        } bg-red-50 border border-red-200 rounded-lg`}
+        } bg-white rounded-lg border border-red-200`}
       >
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm font-medium text-red-600">{error}</p>
         {showEditButton && (
           <Link
             href="/measurements"
-            className="text-sm text-red-600 hover:text-red-800 underline mt-1 inline-block"
+            className="text-sm text-red-600 hover:text-red-800 underline mt-1 inline-block transition-colors"
           >
             Set up measurements
           </Link>
@@ -130,9 +134,11 @@ export default function MeasurementsDisplay({
       <div
         className={`${
           compact ? "p-3" : "p-4"
-        } bg-blue-50 border border-blue-200 rounded-lg`}
+        } bg-white rounded-lg border border-blue-200`}
       >
-        <p className="text-sm text-blue-600 mb-2">No measurements saved yet</p>
+        <p className="text-sm font-medium text-blue-600 mb-2">
+          No measurements saved yet
+        </p>
         <p className="text-xs text-blue-500 mb-3">
           Add your measurements to get better size recommendations
         </p>
@@ -152,30 +158,34 @@ export default function MeasurementsDisplay({
     <div
       className={`${
         compact ? "p-3" : "p-4"
-      } bg-white border border-gray-200 rounded-lg`}
+      } bg-white rounded-lg border border-stone-200`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <h3
             className={`${
               compact ? "text-sm" : "text-base"
-            } font-medium text-gray-900 mb-2`}
+            } font-semibold mb-3 text-stone-900`}
           >
             Your Measurements
           </h3>
 
           <div className="space-y-2">
             {measurements.DOB && (
-              <div className="flex items-center text-sm text-gray-600">
-                <span className="font-medium mr-2">DOB:</span>
-                <span>{formatDate(measurements.DOB)}</span>
+              <div className="flex items-center text-sm">
+                <span className="font-medium mr-2 text-stone-900">DOB:</span>
+                <span className="text-stone-600">
+                  {formatDate(measurements.DOB)}
+                </span>
               </div>
             )}
 
             {measurements.height && (
-              <div className="flex items-center text-sm text-gray-600">
-                <span className="font-medium mr-2">Height:</span>
-                <span>{formatHeight(measurements.height)}</span>
+              <div className="flex items-center text-sm">
+                <span className="font-medium mr-2 text-stone-900">Height:</span>
+                <span className="text-stone-600">
+                  {formatHeight(measurements.height)}
+                </span>
               </div>
             )}
 
@@ -184,25 +194,35 @@ export default function MeasurementsDisplay({
               <>
                 {measurements.usualSize.tops &&
                   measurements.usualSize.tops.length > 0 && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <span className="font-medium mr-2">Tops:</span>
-                      <span>{formatSizes(measurements.usualSize.tops)}</span>
+                    <div className="flex items-center text-sm">
+                      <span className="font-medium mr-2 text-stone-900">
+                        Tops:
+                      </span>
+                      <span className="text-stone-600">
+                        {formatSizes(measurements.usualSize.tops)}
+                      </span>
                     </div>
                   )}
 
                 {measurements.usualSize.bottoms &&
                   measurements.usualSize.bottoms.length > 0 && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <span className="font-medium mr-2">Bottoms:</span>
-                      <span>{formatSizes(measurements.usualSize.bottoms)}</span>
+                    <div className="flex items-center text-sm">
+                      <span className="font-medium mr-2 text-stone-900">
+                        Bottoms:
+                      </span>
+                      <span className="text-stone-600">
+                        {formatSizes(measurements.usualSize.bottoms)}
+                      </span>
                     </div>
                   )}
 
                 {measurements.usualSize.shoes &&
                   measurements.usualSize.shoes.length > 0 && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <span className="font-medium mr-2">Shoes:</span>
-                      <span>
+                    <div className="flex items-center text-sm">
+                      <span className="font-medium mr-2 text-stone-900">
+                        Shoes:
+                      </span>
+                      <span className="text-stone-600">
                         {formatSizes(measurements.usualSize.shoes)} (EU)
                       </span>
                     </div>
@@ -214,18 +234,22 @@ export default function MeasurementsDisplay({
             {measurements.fitPreference && (
               <>
                 {measurements.fitPreference.tops && (
-                  <div className="flex items-center text-sm text-gray-600">
-                    <span className="font-medium mr-2">Tops Fit:</span>
-                    <span>
+                  <div className="flex items-center text-sm">
+                    <span className="font-medium mr-2 text-stone-900">
+                      Tops Fit:
+                    </span>
+                    <span className="text-stone-600">
                       {formatFitPreference(measurements.fitPreference.tops)}
                     </span>
                   </div>
                 )}
 
                 {measurements.fitPreference.bottoms && (
-                  <div className="flex items-center text-sm text-gray-600">
-                    <span className="font-medium mr-2">Bottoms Fit:</span>
-                    <span>
+                  <div className="flex items-center text-sm">
+                    <span className="font-medium mr-2 text-stone-900">
+                      Bottoms Fit:
+                    </span>
+                    <span className="text-stone-600">
                       {formatFitPreference(measurements.fitPreference.bottoms)}
                     </span>
                   </div>
@@ -236,9 +260,11 @@ export default function MeasurementsDisplay({
             {/* Body Measurements */}
             {measurements.bodyMeasurements &&
               formatBodyMeasurements(measurements.bodyMeasurements) && (
-                <div className="flex items-center text-sm text-gray-600">
-                  <span className="font-medium mr-2">Measurements:</span>
-                  <span>
+                <div className="flex items-center text-sm">
+                  <span className="font-medium mr-2 text-stone-900">
+                    Measurements:
+                  </span>
+                  <span className="text-stone-600">
                     {formatBodyMeasurements(measurements.bodyMeasurements)}
                   </span>
                 </div>
@@ -251,7 +277,7 @@ export default function MeasurementsDisplay({
             href="/measurements"
             className={`${
               compact ? "text-xs" : "text-sm"
-            } text-blue-600 hover:text-blue-800 underline ml-2`}
+            } text-blue-600 hover:text-blue-800 underline ml-2 transition-colors`}
           >
             Edit
           </Link>
@@ -259,8 +285,8 @@ export default function MeasurementsDisplay({
       </div>
 
       {!compact && (
-        <div className="mt-3 pt-3 border-t border-gray-100">
-          <p className="text-xs text-gray-500">
+        <div className="mt-4 pt-3 border-t border-stone-200">
+          <p className="text-xs text-stone-500">
             These measurements help us provide better size recommendations for
             you.
           </p>

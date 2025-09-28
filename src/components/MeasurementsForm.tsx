@@ -5,7 +5,6 @@ import { UserMeasurements } from "@/types/user";
 
 interface MeasurementsFormProps {
   onSave?: (measurements: UserMeasurements) => void;
-  onCancel?: () => void;
 }
 
 // Size options for UK women's sizing
@@ -66,10 +65,9 @@ const FIT_PREFERENCES = [
   { value: "tight-fitting", label: "Tight-fitting" },
 ] as const;
 
-export default function MeasurementsForm({
-  onSave,
-  onCancel,
-}: MeasurementsFormProps) {
+type Step = "basic" | "sizes" | "preferences" | "body" | "complete";
+
+export default function MeasurementsForm({ onSave }: MeasurementsFormProps) {
   const [measurements, setMeasurements] = useState<UserMeasurements>({
     DOB: "",
     height: undefined,
@@ -89,6 +87,7 @@ export default function MeasurementsForm({
       unit: "cm",
     },
   });
+  const [currentStep, setCurrentStep] = useState<Step>("basic");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,8 +139,7 @@ export default function MeasurementsForm({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -160,6 +158,7 @@ export default function MeasurementsForm({
       if (response.ok) {
         setSuccess("Measurements saved successfully!");
         onSave?.(measurements);
+        setCurrentStep("complete");
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(null), 3000);
       } else {
@@ -246,56 +245,106 @@ export default function MeasurementsForm({
     }));
   };
 
+  const nextStep = () => {
+    const steps: Step[] = ["basic", "sizes", "preferences", "body", "complete"];
+    const currentIndex = steps.indexOf(currentStep);
+    if (currentIndex < steps.length - 1) {
+      setCurrentStep(steps[currentIndex + 1]);
+    }
+  };
+
+  const prevStep = () => {
+    const steps: Step[] = ["basic", "sizes", "preferences", "body", "complete"];
+    const currentIndex = steps.indexOf(currentStep);
+    if (currentIndex > 0) {
+      setCurrentStep(steps[currentIndex - 1]);
+    }
+  };
+
+  const canProceedFromBasic = measurements.DOB && measurements.height;
+  const canProceedFromSizes =
+    (measurements.usualSize?.tops?.length || 0) > 0 ||
+    (measurements.usualSize?.bottoms?.length || 0) > 0 ||
+    (measurements.usualSize?.shoes?.length || 0) > 0;
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600">Loading measurements...</span>
+      <div className="flex items-center justify-center p-12">
+        <div className="text-center">
+          <div
+            className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4"
+            style={{ borderColor: "#EBE6E2" }}
+          ></div>
+          <span style={{ color: "#6C6A68" }}>Loading measurements...</span>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        Your Measurements & Sizing
-      </h2>
+  const stepProgress = {
+    basic: 1,
+    sizes: 2,
+    preferences: 3,
+    body: 4,
+    complete: 5,
+  };
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Basic Information */}
-        <div className="border-b border-gray-200 pb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Basic Information
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  return (
+    <div className="max-w-md mx-auto bg-white p-8 rounded-2xl border border-stone-300 shadow-lg">
+      {/* Progress Indicator - Hidden on complete step */}
+      {currentStep !== "complete" && (
+        <div className="mb-2">
+          <span className="text-sm font-medium" style={{ color: "#6C6A68" }}>
+            Step {stepProgress[currentStep]} of 4
+          </span>
+        </div>
+      )}
+
+      {/* Step Content */}
+      {currentStep === "basic" && (
+        <div className="space-y-6">
+          <div className="mb-6">
+            <h3
+              className="text-xl font-semibold mb-2"
+              style={{ color: "#4E4B4B" }}
+            >
+              Your details
+            </h3>
+          </div>
+
+          <div className="space-y-6">
             {/* Date of Birth */}
             <div>
               <label
                 htmlFor="dob"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium mb-2"
+                style={{ color: "#4E4B4B" }}
               >
-                Date of Birth
+                Date of birth
               </label>
               <input
                 type="date"
                 id="dob"
                 value={measurements.DOB || ""}
                 onChange={(e) => handleInputChange("DOB", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 rounded border transition-colors focus:outline-none"
+                style={{
+                  backgroundColor: "#F8F7F4",
+                  borderColor: "#E9DED5",
+                  color: "#4E4B4B",
+                }}
                 max={new Date().toISOString().split("T")[0]}
               />
-              <p className="mt-1 text-xs text-gray-500">
-                Helps us provide age-appropriate recommendations
-              </p>
             </div>
 
             {/* Height */}
             <div>
               <label
                 htmlFor="height"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-sm font-medium mb-2"
+                style={{ color: "#4E4B4B" }}
               >
-                Height (cm)
+                Height
               </label>
               <input
                 type="number"
@@ -310,121 +359,171 @@ export default function MeasurementsForm({
                 min="50"
                 max="300"
                 step="0.1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your height in centimeters"
+                className="w-full px-3 py-2 rounded border transition-colors focus:outline-none"
+                style={{
+                  backgroundColor: "#F8F7F4",
+                  borderColor: "#E9DED5",
+                  color: "#4E4B4B",
+                }}
+                placeholder="166 cm"
               />
-              <p className="mt-1 text-xs text-gray-500">
-                Height range: 50-300 cm
-              </p>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Usual Sizes */}
-        <div className="border-b border-gray-200 pb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Usual Sizes (UK Women&apos;s)
-          </h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Select all sizes that fit you (you can be between sizes)
-          </p>
+      {currentStep === "sizes" && (
+        <div className="space-y-6">
+          <div className="mb-6">
+            <h3
+              className="text-xl font-semibold mb-2"
+              style={{ color: "#4E4B4B" }}
+            >
+              Your Usual Sizes
+            </h3>
+            <p className="text-sm" style={{ color: "#6C6A68" }}>
+              Click on the sizes that fit you well (you can select multiple
+              sizes)
+            </p>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-8">
             {/* Tops Size */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Tops Size
+              <label
+                className="block text-sm font-semibold mb-4"
+                style={{ color: "#4E4B4B" }}
+              >
+                Tops Size (UK)
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {UK_TOPS_SIZES.map((size) => (
-                  <label key={size} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={
-                        measurements.usualSize?.tops?.includes(size) || false
-                      }
-                      onChange={(e) =>
-                        handleMultiSelectChange("tops", size, e.target.checked)
-                      }
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{size}</span>
-                  </label>
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      const isSelected =
+                        measurements.usualSize?.tops?.includes(size) || false;
+                      handleMultiSelectChange("tops", size, !isSelected);
+                    }}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      measurements.usualSize?.tops?.includes(size)
+                        ? "bg-stone-200 text-stone-800"
+                        : "bg-stone-100 text-stone-600 hover:bg-stone-150"
+                    }`}
+                  >
+                    {size}
+                  </button>
                 ))}
               </div>
             </div>
 
             {/* Bottoms Size */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Bottoms Size
+              <label
+                className="block text-sm font-semibold mb-4"
+                style={{ color: "#4E4B4B" }}
+              >
+                Bottoms Size (UK)
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {UK_BOTTOMS_SIZES.map((size) => (
-                  <label key={size} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={
-                        measurements.usualSize?.bottoms?.includes(size) || false
-                      }
-                      onChange={(e) =>
-                        handleMultiSelectChange(
-                          "bottoms",
-                          size,
-                          e.target.checked
-                        )
-                      }
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{size}</span>
-                  </label>
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      const isSelected =
+                        measurements.usualSize?.bottoms?.includes(size) ||
+                        false;
+                      handleMultiSelectChange("bottoms", size, !isSelected);
+                    }}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      measurements.usualSize?.bottoms?.includes(size)
+                        ? "bg-stone-200 text-stone-800"
+                        : "bg-stone-100 text-stone-600 hover:bg-stone-150"
+                    }`}
+                  >
+                    {size}
+                  </button>
                 ))}
               </div>
             </div>
 
             {/* Shoe Size */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label
+                className="block text-sm font-semibold mb-4"
+                style={{ color: "#4E4B4B" }}
+              >
                 Shoe Size (EU)
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {EU_SHOE_SIZES.map((size) => (
-                  <label key={size} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={
-                        measurements.usualSize?.shoes?.includes(size) || false
-                      }
-                      onChange={(e) =>
-                        handleMultiSelectChange("shoes", size, e.target.checked)
-                      }
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">{size}</span>
-                  </label>
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      const isSelected =
+                        measurements.usualSize?.shoes?.includes(size) || false;
+                      handleMultiSelectChange("shoes", size, !isSelected);
+                    }}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      measurements.usualSize?.shoes?.includes(size)
+                        ? "bg-stone-200 text-stone-800"
+                        : "bg-stone-100 text-stone-600 hover:bg-stone-150"
+                    }`}
+                  >
+                    {size}
+                  </button>
                 ))}
               </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Fit Preferences */}
-        <div className="border-b border-gray-200 pb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Fit Preferences (Optional)
-          </h3>
+      {currentStep === "preferences" && (
+        <div className="space-y-6">
+          <div className="mb-6">
+            <h3
+              className="text-xl font-semibold mb-2"
+              style={{ color: "#4E4B4B" }}
+            >
+              Fit Preferences (Optional)
+            </h3>
+            <p className="text-sm" style={{ color: "#6C6A68" }}>
+              Tell us about your preferred fit style
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Tops Fit Preference */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                className="block text-sm font-semibold mb-3"
+                style={{ color: "#4E4B4B" }}
+              >
                 Tops Fit Preference
               </label>
               <select
                 value={measurements.fitPreference?.tops || ""}
                 onChange={(e) =>
-                  handleFitPreferenceChange("tops", e.target.value as "true-to-size" | "loose-relaxed" | "tight-fitting")
+                  handleFitPreferenceChange(
+                    "tops",
+                    e.target.value as
+                      | "true-to-size"
+                      | "loose-relaxed"
+                      | "tight-fitting"
+                  )
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 rounded-lg border-2 transition-colors focus:outline-none"
+                style={{
+                  backgroundColor: "#F8F7F4",
+                  borderColor: measurements.fitPreference?.tops
+                    ? "#EBE6E2"
+                    : "#E9DED5",
+                  color: "#4E4B4B",
+                }}
               >
                 <option value="">Select preference</option>
                 {FIT_PREFERENCES.map((pref) => (
@@ -437,15 +536,31 @@ export default function MeasurementsForm({
 
             {/* Bottoms Fit Preference */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                className="block text-sm font-semibold mb-3"
+                style={{ color: "#4E4B4B" }}
+              >
                 Bottoms Fit Preference
               </label>
               <select
                 value={measurements.fitPreference?.bottoms || ""}
                 onChange={(e) =>
-                  handleFitPreferenceChange("bottoms", e.target.value as "true-to-size" | "loose-relaxed" | "tight-fitting")
+                  handleFitPreferenceChange(
+                    "bottoms",
+                    e.target.value as
+                      | "true-to-size"
+                      | "loose-relaxed"
+                      | "tight-fitting"
+                  )
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 rounded-lg border-2 transition-colors focus:outline-none"
+                style={{
+                  backgroundColor: "#F8F7F4",
+                  borderColor: measurements.fitPreference?.bottoms
+                    ? "#EBE6E2"
+                    : "#E9DED5",
+                  color: "#4E4B4B",
+                }}
               >
                 <option value="">Select preference</option>
                 {FIT_PREFERENCES.map((pref) => (
@@ -457,33 +572,67 @@ export default function MeasurementsForm({
             </div>
           </div>
         </div>
+      )}
 
-        {/* Body Measurements */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
+      {currentStep === "body" && (
+        <div className="space-y-6">
+          <div className="mb-6">
+            <h3
+              className="text-xl font-semibold mb-2"
+              style={{ color: "#4E4B4B" }}
+            >
               Body Measurements (Optional)
             </h3>
-            <button
-              type="button"
-              onClick={toggleMeasurementUnit}
-              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-            >
-              {measurements.bodyMeasurements?.unit === "cm"
-                ? "Switch to inches"
-                : "Switch to cm"}
-            </button>
+            <p className="text-sm" style={{ color: "#6C6A68" }}>
+              These measurements help us provide more accurate size
+              recommendations
+            </p>
           </div>
-          <p className="text-sm text-gray-600 mb-4">
-            These measurements help us provide more accurate size
-            recommendations
-          </p>
+
+          <div className="flex items-center mb-6">
+            <div className="flex items-center space-x-3">
+              <span
+                className="text-sm font-medium"
+                style={{ color: "#4E4B4B" }}
+              >
+                cm
+              </span>
+              <button
+                type="button"
+                onClick={toggleMeasurementUnit}
+                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+                style={{
+                  backgroundColor:
+                    measurements.bodyMeasurements?.unit === "cm"
+                      ? "#EBE6E2"
+                      : "#E9DED5",
+                }}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    measurements.bodyMeasurements?.unit === "cm"
+                      ? "translate-x-6"
+                      : "translate-x-1"
+                  }`}
+                />
+              </button>
+              <span
+                className="text-sm font-medium"
+                style={{ color: "#4E4B4B" }}
+              >
+                in
+              </span>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Bust */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Bust
+              <label
+                className="block text-sm font-semibold mb-3"
+                style={{ color: "#4E4B4B" }}
+              >
+                Bust ({measurements.bodyMeasurements?.unit || "cm"})
               </label>
               <input
                 type="number"
@@ -496,7 +645,14 @@ export default function MeasurementsForm({
                 }
                 min="0"
                 step="0.1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 rounded-lg border-2 transition-colors focus:outline-none"
+                style={{
+                  backgroundColor: "#F8F7F4",
+                  borderColor: measurements.bodyMeasurements?.bust
+                    ? "#EBE6E2"
+                    : "#E9DED5",
+                  color: "#4E4B4B",
+                }}
                 placeholder={`Enter bust measurement in ${
                   measurements.bodyMeasurements?.unit || "cm"
                 }`}
@@ -505,8 +661,11 @@ export default function MeasurementsForm({
 
             {/* Waist */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Waist
+              <label
+                className="block text-sm font-semibold mb-3"
+                style={{ color: "#4E4B4B" }}
+              >
+                Waist ({measurements.bodyMeasurements?.unit || "cm"})
               </label>
               <input
                 type="number"
@@ -519,7 +678,14 @@ export default function MeasurementsForm({
                 }
                 min="0"
                 step="0.1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 rounded-lg border-2 transition-colors focus:outline-none"
+                style={{
+                  backgroundColor: "#F8F7F4",
+                  borderColor: measurements.bodyMeasurements?.waist
+                    ? "#EBE6E2"
+                    : "#E9DED5",
+                  color: "#4E4B4B",
+                }}
                 placeholder={`Enter waist measurement in ${
                   measurements.bodyMeasurements?.unit || "cm"
                 }`}
@@ -528,8 +694,11 @@ export default function MeasurementsForm({
 
             {/* Hips */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Hips
+              <label
+                className="block text-sm font-semibold mb-3"
+                style={{ color: "#4E4B4B" }}
+              >
+                Hips ({measurements.bodyMeasurements?.unit || "cm"})
               </label>
               <input
                 type="number"
@@ -542,7 +711,14 @@ export default function MeasurementsForm({
                 }
                 min="0"
                 step="0.1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 rounded-lg border-2 transition-colors focus:outline-none"
+                style={{
+                  backgroundColor: "#F8F7F4",
+                  borderColor: measurements.bodyMeasurements?.hips
+                    ? "#EBE6E2"
+                    : "#E9DED5",
+                  color: "#4E4B4B",
+                }}
                 placeholder={`Enter hips measurement in ${
                   measurements.bodyMeasurements?.unit || "cm"
                 }`}
@@ -550,57 +726,145 @@ export default function MeasurementsForm({
             </div>
           </div>
         </div>
+      )}
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3">
-            <p className="text-sm text-red-600">{error}</p>
+      {currentStep === "complete" && (
+        <div className="text-center space-y-8">
+          <div className="mb-8">
+            <div
+              className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: "#EBE6E2" }}
+            >
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="black"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </div>
+            <h3
+              className="text-2xl font-semibold mb-3"
+              style={{ color: "#4E4B4B" }}
+            >
+              All Set!
+            </h3>
+            <p className="text-sm" style={{ color: "#6C6A68" }}>
+              Your measurements have been saved successfully. We&apos;ll use
+              this information to provide better size recommendations.
+            </p>
           </div>
-        )}
 
-        {/* Success Message */}
-        {success && (
-          <div className="bg-green-50 border border-green-200 rounded-md p-3">
-            <p className="text-sm text-green-600">{success}</p>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex space-x-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? (
-              <span className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Saving...
-              </span>
-            ) : (
-              "Save Measurements"
-            )}
-          </button>
-
-          {onCancel && (
+          <div className="flex justify-center">
             <button
               type="button"
-              onClick={onCancel}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              onClick={() => (window.location.href = "/analyze")}
+              className="px-8 py-3 rounded-lg text-sm font-semibold transition-colors bg-black hover:bg-stone-800 text-white"
             >
-              Cancel
+              Start New Search
             </button>
-          )}
+          </div>
         </div>
-      </form>
+      )}
 
-      {/* Future measurements note */}
-      <div className="mt-6 p-4 bg-blue-50 rounded-md">
-        <h3 className="text-sm font-medium text-blue-900 mb-2">Coming Soon</h3>
-        <p className="text-xs text-blue-700">
-          We&apos;re working on adding more measurement fields like weight, chest,
-          waist, and hips to provide even better size recommendations.
-        </p>
+      {/* Error Message */}
+      {error && (
+        <div
+          className="rounded-lg p-4 mb-6"
+          style={{
+            backgroundColor: "#F8F7F4",
+            border: "1px solid #9F513A",
+          }}
+        >
+          <p className="text-sm font-medium" style={{ color: "#9F513A" }}>
+            {error}
+          </p>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="pt-6">
+        {currentStep === "basic" && (
+          <button
+            type="button"
+            onClick={nextStep}
+            disabled={!canProceedFromBasic}
+            className="w-full px-8 py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-black hover:bg-stone-800 text-white disabled:bg-stone-400"
+          >
+            Continue
+          </button>
+        )}
+
+        {currentStep === "sizes" && (
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={prevStep}
+              className="px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-stone-100 hover:bg-stone-200 text-stone-700"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={nextStep}
+              disabled={!canProceedFromSizes}
+              className="flex-1 ml-4 px-8 py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-black hover:bg-stone-800 text-white disabled:bg-stone-400"
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {currentStep === "preferences" && (
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={prevStep}
+              className="px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-stone-100 hover:bg-stone-200 text-stone-700"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={nextStep}
+              className="flex-1 ml-4 px-8 py-3 rounded-lg text-sm font-semibold transition-colors bg-black hover:bg-stone-800 text-white"
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {currentStep === "body" && (
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={prevStep}
+              className="px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-stone-100 hover:bg-stone-200 text-stone-700"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={saving}
+              className="flex-1 ml-4 px-8 py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-black hover:bg-stone-800 text-white disabled:bg-stone-400"
+            >
+              {saving ? (
+                <span className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Saving...
+                </span>
+              ) : (
+                "Save Measurements"
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

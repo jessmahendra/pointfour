@@ -8,14 +8,17 @@ export const metadata: Metadata = {
 
 export default function MeasurementsPage() {
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-stone-50">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold mb-6" style={{ color: "#4E4B4B" }}>
             My Measurements
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p
+            className="text-sm max-w-2xl mx-auto leading-relaxed"
+            style={{ color: "#6C6A68" }}
+          >
             Help us provide better size recommendations by sharing your
             measurements. This information is stored securely and only used to
             improve your shopping experience.
@@ -26,16 +29,39 @@ export default function MeasurementsPage() {
         <MeasurementsForm />
 
         {/* Privacy Notice */}
-        <div className="mt-8 max-w-md mx-auto">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-2">
+        <div className="mt-12 max-w-md mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border border-stone-200 p-6">
+            <h3
+              className="text-sm font-semibold mb-3"
+              style={{ color: "#4E4B4B" }}
+            >
               Privacy & Security
             </h3>
-            <ul className="text-xs text-gray-600 space-y-1">
-              <li>• Your measurements are encrypted and stored securely</li>
-              <li>• Only you can view and edit your data</li>
-              <li>• We never share your personal information</li>
-              <li>• You can delete your data anytime</li>
+            <ul className="text-xs space-y-2" style={{ color: "#6C6A68" }}>
+              <li className="flex items-start">
+                <span className="mr-2" style={{ color: "#EBE6E2" }}>
+                  •
+                </span>
+                Your measurements are encrypted and stored securely
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2" style={{ color: "#EBE6E2" }}>
+                  •
+                </span>
+                Only you can view and edit your data
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2" style={{ color: "#EBE6E2" }}>
+                  •
+                </span>
+                We never share your personal information
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2" style={{ color: "#EBE6E2" }}>
+                  •
+                </span>
+                You can delete your data anytime
+              </li>
             </ul>
           </div>
         </div>
