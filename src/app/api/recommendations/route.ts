@@ -218,7 +218,14 @@ export async function POST(request: NextRequest) {
     
     if (!AIRTABLE_BASE_ID || !AIRTABLE_API_KEY) {
       console.log('Missing Airtable config - BASE_ID:', !!AIRTABLE_BASE_ID, 'API_KEY:', !!AIRTABLE_API_KEY);
-      throw new Error(`Missing Airtable configuration. BASE_ID: ${!!AIRTABLE_BASE_ID}, API_KEY: ${!!AIRTABLE_API_KEY}`);
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Airtable configuration missing',
+          recommendation: "Airtable configuration is missing. Please check your environment variables for AIRTABLE_BASE_ID and AIRTABLE_API_KEY."
+        },
+        { status: 500 }
+      );
     }
     
     // Extract brand name and item name from query for external search
@@ -415,8 +422,10 @@ export async function POST(request: NextRequest) {
           // Direct Serper API call for external search
           const serperApiKey = process.env.SERPER_API_KEY;
           if (!serperApiKey) {
-            throw new Error('SERPER_API_KEY not configured');
-          }
+            console.log('SERPER_API_KEY not configured, skipping external search');
+            externalSearchError = 'SERPER_API_KEY not configured';
+            // Continue without external search instead of throwing
+          } else {
         
           // Create search queries for the brand
           const searchQueries = [
@@ -469,6 +478,7 @@ export async function POST(request: NextRequest) {
           // Cache the Serper results
           setCachedData(serperCache, serperCacheKey, allResults);
           console.log(`💾 CACHED: Serper results for ${brandName} ${itemName}`);
+          }
         }
         
         // Group reviews by source type
