@@ -13,6 +13,14 @@ interface UserProfileFormProps {
   onSubmit: () => void;
   userMeasurements: UserMeasurements | null;
   measurementsLoading: boolean;
+  simpleQuery: string;
+  setSimpleQuery: React.Dispatch<React.SetStateAction<string>>;
+  parsedData: string | null;
+  parsingLoading: boolean;
+  navigating: boolean;
+  handleSimpleFormSubmit: () => void;
+  router: any;
+  setNavigating: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const UserProfileForm: React.FC<UserProfileFormProps> = ({
@@ -24,6 +32,14 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
   onSubmit,
   userMeasurements,
   measurementsLoading,
+  simpleQuery,
+  setSimpleQuery,
+  parsedData,
+  parsingLoading,
+  navigating,
+  handleSimpleFormSubmit,
+  router,
+  setNavigating,
 }) => {
   const isFootwear = userProfile.category === "footwear";
   const showSpecificFields = userProfile.category !== "";
@@ -75,6 +91,178 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
         <p className="text-base text-gray-600 m-0 leading-snug">
           Get personalized sizing and fit advice
         </p>
+      </div>
+
+      {/* Simple Product Parser Form */}
+      <div className="mb-8">
+        <div className="bg-white p-8 rounded-2xl border border-stone-300 shadow-lg">
+          <h2 className="text-base font-medium text-gray-800 mb-2">
+            Brand or item you&apos;re interested in
+          </h2>
+          <p className="text-gray-600 mb-6 text-sm">
+            Enter a product name you&apos;re interested in. Don&apos;t worry
+            about typos!
+          </p>
+          <div className="space-y-4">
+            <input
+              type="text"
+              value={simpleQuery}
+              onChange={(e) => setSimpleQuery(e.target.value)}
+              placeholder="e.g., khaite danielle jeans, frame le slim palazzo"
+              className="w-full p-3 text-sm bg-stone-50 border border-stone-300 rounded-lg outline-none focus:ring-1 focus:ring-stone-400 focus:border-stone-400"
+              onKeyPress={(e) => e.key === "Enter" && handleSimpleFormSubmit()}
+            />
+            <button
+              onClick={handleSimpleFormSubmit}
+              disabled={parsingLoading || navigating || !simpleQuery.trim()}
+              className={`w-full p-4 text-base font-semibold border-none rounded-lg transition-all duration-200 ${
+                !parsingLoading && !navigating && simpleQuery.trim()
+                  ? "text-white bg-black hover:bg-gray-800 cursor-pointer"
+                  : "text-gray-400 bg-gray-200 cursor-not-allowed"
+              }`}
+            >
+              {parsingLoading
+                ? "Parsing..."
+                : navigating
+                ? "Navigating..."
+                : "Parse"}
+            </button>
+          </div>
+        </div>
+        {parsedData && (
+          <div className="mt-4 space-y-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+              <h3 className="text-sm font-medium text-green-800 mb-3">
+                ✅ Enhanced Parsing Results
+              </h3>
+              <div className="text-xs text-green-700 space-y-2">
+                {(() => {
+                  try {
+                    const result = JSON.parse(parsedData);
+                    return (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="font-semibold text-green-800 mb-1">
+                              Parsed Information:
+                            </div>
+                            <div>
+                              <strong>Brand:</strong>{" "}
+                              {result.parsedData?.brandName || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Product:</strong>{" "}
+                              {result.parsedData?.productName || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Brand Website:</strong>{" "}
+                              {result.parsedData?.brandWebsite || "N/A"}
+                            </div>
+                            <div>
+                              <strong>Product URL:</strong>{" "}
+                              {result.parsedData?.productUrl || "N/A"}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="font-semibold text-green-800 mb-1">
+                              Database Operations:
+                            </div>
+                            <div
+                              className={`flex items-center gap-1 ${
+                                result.wasBrandCreated
+                                  ? "text-green-600"
+                                  : "text-blue-600"
+                              }`}
+                            >
+                              {result.wasBrandCreated ? "🆕" : "🔍"}
+                              Brand{" "}
+                              {result.wasBrandCreated
+                                ? "created"
+                                : "found"}{" "}
+                              (Slug: {result.brand?.slug || "N/A"})
+                            </div>
+                            <div
+                              className={`flex items-center gap-1 ${
+                                result.wasProductCreated
+                                  ? "text-green-600"
+                                  : "text-blue-600"
+                              }`}
+                            >
+                              {result.wasProductCreated ? "🆕" : "🔍"}
+                              Product{" "}
+                              {result.wasProductCreated
+                                ? "created"
+                                : "found"}{" "}
+                              (ID: {result.product?.id || "N/A"})
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-green-300">
+                          <div className="font-semibold text-green-800 mb-1">
+                            Summary:
+                          </div>
+                          <div className="text-xs mb-2">
+                            {result.wasBrandCreated &&
+                            result.wasProductCreated ? (
+                              <span className="text-green-600">
+                                🆕 Both brand and product were created in the
+                                database
+                              </span>
+                            ) : result.wasBrandCreated ? (
+                              <span className="text-green-600">
+                                🆕 Brand was created, product already existed
+                              </span>
+                            ) : result.wasProductCreated ? (
+                              <span className="text-green-600">
+                                🆕 Product was created, brand already existed
+                              </span>
+                            ) : (
+                              <span className="text-blue-600">
+                                🔍 Both brand and product already existed in the
+                                database
+                              </span>
+                            )}
+                          </div>
+                          {result.product?.id && (
+                            <div className="flex items-center gap-2">
+                              {navigating ? (
+                                <span className="text-blue-600 text-xs">
+                                  🚀 Navigating to product page...
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setNavigating(true);
+                                    router.push(
+                                      `/products/${result.product.id}`
+                                    );
+                                  }}
+                                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                                >
+                                  View Product Page →
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  } catch {
+                    return <div>Error parsing results</div>;
+                  }
+                })()}
+              </div>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-md">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Full Response:
+              </h3>
+              <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto max-h-64">
+                {parsedData}
+              </pre>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-white p-8 rounded-2xl border border-stone-300 shadow-lg">
