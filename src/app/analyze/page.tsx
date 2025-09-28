@@ -29,6 +29,9 @@ function BrandAnalysisContent() {
   );
   const [loading, setLoading] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
+  const [simpleQuery, setSimpleQuery] = useState("");
+  const [parsedData, setParsedData] = useState<string | null>(null);
+  const [parsingLoading, setParsingLoading] = useState(false);
 
   const searchParams = useSearchParams();
 
@@ -146,6 +149,39 @@ function BrandAnalysisContent() {
     }
   };
 
+  const handleSimpleFormSubmit = async () => {
+    if (!simpleQuery.trim()) return;
+
+    try {
+      setParsingLoading(true);
+      setParsedData(null);
+
+      const response = await fetch("/api/llm-interactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: `Parse this product query and identify the brand name and product name. The user may have made typos, used incomplete names, or provided vague descriptions. Use web search to verify and correct any information, find the most likely brand and product they're referring to, and return accurate data. Be forgiving of typos and incomplete information - use your knowledge and web search to fill in the gaps and find the correct brand and product. Always return the official brand website and specific product URL when available. Query: "${simpleQuery}"`,
+          type: "object",
+          systemPrompt: "You are an expert at parsing product queries and identifying brand and product information. Users may make typos, use incomplete names, or provide vague descriptions. You MUST use web search to verify and correct any information, find the most likely brand and product they're referring to, and return accurate data. Be forgiving of typos and incomplete information - use your knowledge and web search to fill in the gaps and find the correct brand and product. Always return the official brand website and specific product URL when available. Return structured JSON data with brand name, brand website, product name, and product URL.",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setParsedData(JSON.stringify(data.data, null, 2));
+      } else {
+        console.error("Parsing failed:", data.error);
+        setParsedData(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error during parsing:", error);
+      setParsedData(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setParsingLoading(false);
+    }
+  };
+
   const handleFormSubmit = async () => {
     if (!brandQuery.trim() || !userProfile.category) return;
 
@@ -239,6 +275,42 @@ function BrandAnalysisContent() {
         currentStep === "form" ? "p-10 px-6" : ""
       }`}
     >
+      {/* Simple Product Parser Form */}
+      <div className="max-w-4xl mx-auto mb-8 p-6 bg-white rounded-lg shadow-sm border">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Quick Product Parser
+        </h2>
+        <p className="text-gray-600 mb-4">
+          Enter a product query like &quot;nike air max 270&quot; to parse brand and product information. 
+          Don&apos;t worry about typos or incomplete names - we&apos;ll use web search to find the correct information.
+        </p>
+        <div className="flex gap-4">
+          <input
+            type="text"
+            value={simpleQuery}
+            onChange={(e) => setSimpleQuery(e.target.value)}
+            placeholder="e.g., nike air max 270, adidas stan smith, nike air max (typos ok!)"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onKeyPress={(e) => e.key === 'Enter' && handleSimpleFormSubmit()}
+          />
+          <button
+            onClick={handleSimpleFormSubmit}
+            disabled={parsingLoading || !simpleQuery.trim()}
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {parsingLoading ? "Parsing..." : "Parse"}
+          </button>
+        </div>
+        {parsedData && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-md">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Parsed Data:</h3>
+            <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto max-h-64">
+              {parsedData}
+            </pre>
+          </div>
+        )}
+      </div>
+
       {currentStep === "form" && (
         <UserProfileForm
           userProfile={userProfile}
