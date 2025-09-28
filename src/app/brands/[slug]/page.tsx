@@ -1,10 +1,56 @@
 import { createClient } from '@/utils/supabase/server'
+import { createStaticClient } from '@/utils/supabase/static'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { Metadata } from 'next'
 
 interface BrandPageProps {
   params: {
     slug: string
+  }
+}
+
+// Generate metadata for individual brand pages
+export async function generateMetadata({ params }: BrandPageProps): Promise<Metadata> {
+  const supabase = createStaticClient()
+  
+  const { data: brand } = await supabase
+    .from('brands')
+    .select('name, description, url')
+    .eq('slug', params.slug)
+    .single()
+
+  if (!brand) {
+    return {
+      title: 'Brand Not Found | PointFour',
+      description: 'The requested brand could not be found.',
+    }
+  }
+
+  const title = `${brand.name} | Fashion Brand | PointFour`
+  const description = brand.description 
+    ? `${brand.description} - Learn more about ${brand.name} and visit their official website.`
+    : `Discover ${brand.name} - a leading fashion brand. Learn more about their products and visit their official website.`
+
+  return {
+    title,
+    description,
+    keywords: `${brand.name}, fashion brand, clothing, ${brand.name} official website, fashion directory`,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      url: brand.url,
+      siteName: 'PointFour',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+    alternates: {
+      canonical: brand.url,
+    },
   }
 }
 
@@ -142,7 +188,7 @@ export default async function BrandPage({ params }: BrandPageProps) {
 
 // Generate static params for all brands (optional - for static generation)
 export async function generateStaticParams() {
-  const supabase = await createClient()
+  const supabase = createStaticClient()
   
   const { data: brands } = await supabase
     .from('brands')

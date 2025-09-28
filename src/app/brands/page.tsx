@@ -1,5 +1,17 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Fashion Brands | PointFour',
+  description: 'Discover top fashion brands including Nike, Adidas, Zara, H&M, and Uniqlo. Explore brand details, descriptions, and official websites.',
+  keywords: 'fashion brands, clothing brands, Nike, Adidas, Zara, H&M, Uniqlo, fashion directory',
+  openGraph: {
+    title: 'Fashion Brands | PointFour',
+    description: 'Discover top fashion brands including Nike, Adidas, Zara, H&M, and Uniqlo. Explore brand details, descriptions, and official websites.',
+    type: 'website',
+  },
+}
 
 export default async function BrandsPage() {
   const supabase = await createClient()
