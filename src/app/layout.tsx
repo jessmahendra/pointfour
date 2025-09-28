@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import PlausibleProvider from "next-plausible";
 import GlobalNavigation from "@/components/GlobalNavigation";
 import "./globals.css";
+import { AiInspector } from "@/components/AiInspector";
 
 // GPT-5 Testing Configuration
 const ENABLE_GPT5_TESTING = process.env.ENABLE_GPT5_TESTING === "true";
@@ -52,6 +53,7 @@ export default function RootLayout({
         <PlausibleProvider domain="pointfour.in">
           <GlobalNavigation />
           {children}
+          <AiInspector />
         </PlausibleProvider>
       </body>
     </html>

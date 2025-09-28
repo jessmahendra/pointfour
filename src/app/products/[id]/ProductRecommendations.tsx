@@ -16,6 +16,7 @@ export function ProductRecommendations({
   brandName, 
   brandUrl 
 }: ProductRecommendationsProps) {
+  // Use the legacy API (now the best one)
   const { analysisResult, loading, error, getRecommendations } = useRecommendations();
   const [hasRun, setHasRun] = useState(false);
 
@@ -24,6 +25,7 @@ export function ProductRecommendations({
 
   const handleGetRecommendations = async () => {
     setHasRun(true);
+    console.log('🤖 ProductRecommendations: Using legacy API');
     await getRecommendations(llmQuery);
   };
 
