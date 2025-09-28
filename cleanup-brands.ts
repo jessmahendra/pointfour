@@ -52,9 +52,9 @@ async function clearAllBrands(supabase: ReturnType<typeof createClient>): Promis
       throw countError;
     }
     
-    console.log(`📊 Found ${beforeCount} existing brands to clear`);
+    console.log(`📊 Found ${beforeCount || 0} existing brands to clear`);
     
-    if (beforeCount === 0) {
+    if (!beforeCount || beforeCount === 0) {
       console.log('✅ No existing brands to clear');
       return;
     }
@@ -74,7 +74,7 @@ async function clearAllBrands(supabase: ReturnType<typeof createClient>): Promis
       console.log(`   ${index + 1}. ${brand.name} (${brand.slug})`);
     });
     
-    if (beforeCount > 10) {
+    if (beforeCount && beforeCount > 10) {
       console.log(`   ... and ${beforeCount - 10} more`);
     }
     
@@ -101,7 +101,7 @@ async function clearAllBrands(supabase: ReturnType<typeof createClient>): Promis
       throw verifyError;
     }
     
-    console.log(`\n✅ Successfully cleared all brands (${beforeCount} → ${afterCount})`);
+    console.log(`\n✅ Successfully cleared all brands (${beforeCount || 0} → ${afterCount || 0})`);
     console.log('🚀 You can now run the migration: npm run migrate:brands');
     
   } catch (error) {
