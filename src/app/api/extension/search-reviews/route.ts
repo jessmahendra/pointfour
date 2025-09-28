@@ -1,18 +1,13 @@
 import { NextRequest } from 'next/server';
-import OpenAI from 'openai';
+import { llmService } from '@/lib/llm-service';
 
 // TEMPORARY: Bypass SSL certificate validation for google.serper.dev DNS issue
 // Remove this once Serper fixes their DNS/certificate configuration
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: 30000, // 30 second timeout
-});
+// OpenAI client is now handled by the centralized LLM service
 
-// GPT-5 Testing Configuration
-const ENABLE_GPT5_TESTING = process.env.ENABLE_GPT5_TESTING === 'true';
-const GPT5_TEST_PERCENTAGE = parseInt(process.env.GPT5_TEST_PERCENTAGE || '10') || 10;
+// GPT-5 testing is now handled by the centralized LLM service
 
 // Debug: Log all environment variables to see what's loaded
 console.log('🔍 ENVIRONMENT DEBUG:', {
@@ -1127,21 +1122,17 @@ Format as bullet points like:
 
 Focus on concrete experiences like comfort, durability, functionality, value, etc. If insufficient information, return just the title without "Review of" prefix.`;
 
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini", // Keep using mini for snippet processing (cost optimization)
-          messages: [{
-            role: "system",
-            content: "You are an expert at extracting specific pros/cons from product reviews. Provide concrete bullet points about user experiences."
-          }, {
-            role: "user", 
-            content: prompt
-          }],
-          max_completion_tokens: 2000,
-          temperature: 1
-          // Note: GPT-5 models only support default temperature (1)
+        const { text: summary } = await llmService.generateText(prompt, {
+          systemPrompt: "You are an expert at extracting specific pros/cons from product reviews. Provide concrete bullet points about user experiences.",
+          temperature: 1,
+          maxTokens: 2000,
+          metadata: { 
+            function: 'generateMeaningfulSummary',
+            brand: brand,
+            title: title.substring(0, 100)
+          },
+          source: 'search-reviews-snippet-processing'
         });
-
-        const summary = completion.choices[0]?.message?.content?.trim();
         if (summary && summary.length > 10 && !summary.includes('insufficient')) {
           return summary;
         }
@@ -2437,30 +2428,29 @@ IMPORTANT GUIDELINES:
 - Return valid JSON only, no other text`;
 
   try {
-    // Use higher quality model (gpt-4o) for final analysis and recommendations
-    // This provides better insight extraction and more nuanced analysis
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Temporarily using gpt-4o while debugging GPT-5 issues
-      messages: [
-        {
-          role: "system",
-          content: "You are a fashion expert who analyzes customer reviews to provide structured insights. Always return valid JSON and be specific and actionable in your analysis."
-        },
-        {
-          role: "user", 
-          content: prompt
-        }
-      ],
-      max_tokens: 2000,
-      temperature: 0.3
+    // Use the centralized LLM service for analysis
+    console.log('🤖 GPT-4o-mini: Using centralized LLM service for analysis');
+    
+    const { text: aiResponse, interaction } = await llmService.generateText(prompt, {
+      systemPrompt: "You are a fashion expert who analyzes customer reviews to provide structured insights. Always return valid JSON and be specific and actionable in your analysis.",
+      temperature: 0.3,
+      maxTokens: 2000,
+      metadata: { 
+        function: 'analyzeResultsWithGPT4o',
+        brand: brand,
+        category: category,
+        itemName: itemName,
+        resultsCount: results.length,
+        isSpecificItem: isSpecificItem
+      },
+      source: 'search-reviews-gpt4o-analysis'
     });
 
     // Debug: Log key completion info 
-    console.log('🔍 GPT-5 DEBUG: Message content length:', (completion.choices?.[0]?.message?.content || '').length);
-    console.log('🔍 GPT-5 DEBUG: Finish reason:', completion.choices?.[0]?.finish_reason);
-    console.log('🔍 GPT-5 DEBUG: Reasoning tokens:', completion.usage?.completion_tokens_details?.reasoning_tokens || 0);
-    
-    const aiResponse = completion.choices[0]?.message?.content;
+    console.log('🔍 LLM Service DEBUG: Message content length:', aiResponse.length);
+    console.log('🔍 LLM Service DEBUG: Model used:', interaction.model);
+    console.log('🔍 LLM Service DEBUG: Duration:', interaction.duration, 'ms');
+    console.log('🔍 LLM Service DEBUG: Tokens used:', interaction.tokens?.total || 'unknown');
     if (!aiResponse) {
       console.log('🤖 GPT-5 ANALYSIS: No response from GPT-5');
       return {};
@@ -2657,26 +2647,29 @@ IMPORTANT GUIDELINES:
 - Return valid JSON only, no other text`;
 
   try {
-    // ACTUAL GPT-5 API call
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini", // ACTUAL GPT-5 model
-      messages: [
-        {
-          role: "system",
-          content: "You are a fashion expert who analyzes customer reviews to provide structured insights. Always return valid JSON and be specific and actionable in your analysis."
-        },
-        {
-          role: "user", 
-          content: prompt
-        }
-      ],
-      max_completion_tokens: 1500 // Reduced for testing - GPT-5 uses max_completion_tokens
-      // Note: GPT-5 only supports default temperature (1), no custom temperature
+    // Use the centralized LLM service with GPT-5 testing
+    console.log('🚀 GPT-5: Using centralized LLM service with GPT-5 testing');
+    
+    const { text: aiResponse, interaction } = await llmService.generateText(prompt, {
+      systemPrompt: "You are a fashion expert who analyzes customer reviews to provide structured insights. Always return valid JSON and be specific and actionable in your analysis.",
+      temperature: 1, // GPT-5 uses default temperature
+      maxTokens: 1500,
+      metadata: { 
+        function: 'analyzeResultsWithGPT5Test',
+        brand: brand,
+        category: category,
+        itemName: itemName,
+        resultsCount: results.length,
+        isSpecificItem: isSpecificItem,
+        isGPT5Test: true
+      },
+      source: 'search-reviews-gpt5-test'
     });
 
-    console.log(`🚀 GPT-5: Response received, content length: ${completion.choices?.[0]?.message?.content?.length || 0}`);
-    
-    const aiResponse = completion.choices[0]?.message?.content;
+    console.log(`🚀 LLM Service: Response received, content length: ${aiResponse.length}`);
+    console.log(`🚀 LLM Service: Model used: ${interaction.model}`);
+    console.log(`🚀 LLM Service: Duration: ${interaction.duration}ms`);
+    console.log(`🚀 LLM Service: Tokens: ${interaction.tokens?.total || 'unknown'}`);
     if (!aiResponse) {
       console.log('🚀 GPT-5: No response content received');
       return {};
