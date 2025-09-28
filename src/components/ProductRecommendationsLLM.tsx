@@ -1,38 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { useRecommendations } from "@/lib/useRecommendations";
 import { useRecommendationsLLM } from "@/lib/useRecommendationsLLM";
 import { RecommendationDisplay } from "@/components/RecommendationDisplay";
-import { ReviewSection } from "../../analyze/components/ReviewSection";
+import { ReviewSection } from "../app/analyze/components/ReviewSection";
 
-interface ProductRecommendationsProps {
+interface ProductRecommendationsLLMProps {
   productName: string;
   brandName: string;
   brandUrl?: string;
 }
 
-export function ProductRecommendations({ 
+export function ProductRecommendationsLLM({ 
   productName, 
   brandName, 
   brandUrl 
-}: ProductRecommendationsProps) {
-  // Use the new LLM service by default
+}: ProductRecommendationsLLMProps) {
   const { analysisResult, loading, error, getRecommendations } = useRecommendationsLLM();
   const [hasRun, setHasRun] = useState(false);
-  const [useLegacyAPI, setUseLegacyAPI] = useState(false);
-  
-  // Fallback to legacy API if needed
-  const legacyHook = useRecommendations();
-  const activeHook = useLegacyAPI ? legacyHook : { analysisResult, loading, error, getRecommendations };
 
   // Generate the LLM query using the same format as the analyze page
   const llmQuery = `${productName} from ${brandName}${brandUrl ? ` (${brandUrl})` : ''}`;
 
   const handleGetRecommendations = async () => {
     setHasRun(true);
-    console.log('🤖 ProductRecommendations: Using', useLegacyAPI ? 'legacy API' : 'LLM service');
-    await activeHook.getRecommendations(llmQuery);
+    console.log('🤖 ProductRecommendationsLLM: Starting recommendation request for:', llmQuery);
+    await getRecommendations(llmQuery);
   };
 
   return (
@@ -41,22 +34,11 @@ export function ProductRecommendations({
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              AI Fit Recommendations {useLegacyAPI ? '(Legacy API)' : '(LLM Service)'}
+              AI Fit Recommendations (LLM Service)
             </h2>
             <p className="text-gray-600 mb-6">
-              Get personalized fit recommendations and reviews for this product
+              Get personalized fit recommendations using our centralized LLM service
             </p>
-            <div className="mb-4">
-              <label className="flex items-center text-sm text-gray-600">
-                <input
-                  type="checkbox"
-                  checked={useLegacyAPI}
-                  onChange={(e) => setUseLegacyAPI(e.target.checked)}
-                  className="mr-2"
-                />
-                Use legacy API (with external search)
-              </label>
-            </div>
             <button
               onClick={handleGetRecommendations}
               disabled={loading}
@@ -84,29 +66,29 @@ export function ProductRecommendations({
       ) : (
         <div className="space-y-6">
           <RecommendationDisplay 
-            analysisResult={activeHook.analysisResult}
-            loading={activeHook.loading}
-            error={activeHook.error}
+            analysisResult={analysisResult}
+            loading={loading}
+            error={error}
           />
           
-          {/* Show LLM interaction details if using LLM service */}
-          {!useLegacyAPI && activeHook.analysisResult?.llmInteraction && (
+          {/* Show LLM interaction details if available */}
+          {analysisResult?.llmInteraction && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="text-sm font-medium text-blue-800 mb-2">LLM Service Details</h3>
               <div className="text-xs text-blue-700 space-y-1">
-                <div>Model: {activeHook.analysisResult.llmInteraction.model}</div>
-                <div>Duration: {activeHook.analysisResult.llmInteraction.duration}ms</div>
-                <div>Tokens: {activeHook.analysisResult.llmInteraction.tokens?.total || 0}</div>
-                <div>Time: {new Date(activeHook.analysisResult.llmInteraction.timestamp).toLocaleString()}</div>
+                <div>Model: {analysisResult.llmInteraction.model}</div>
+                <div>Duration: {analysisResult.llmInteraction.duration}ms</div>
+                <div>Tokens: {analysisResult.llmInteraction.tokens?.total || 0}</div>
+                <div>Time: {new Date(analysisResult.llmInteraction.timestamp).toLocaleString()}</div>
               </div>
             </div>
           )}
           
-          {/* Reviews Section */}
-          {activeHook.analysisResult?.externalSearchResults?.groupedReviews && (
+          {/* Reviews Section - Note: LLM service doesn't provide external search results */}
+          {analysisResult?.externalSearchResults?.groupedReviews && (
             <div className="bg-white rounded-lg shadow-sm p-6">
               <ReviewSection
-                groupedReviews={activeHook.analysisResult.externalSearchResults.groupedReviews}
+                groupedReviews={analysisResult.externalSearchResults.groupedReviews}
               />
             </div>
           )}

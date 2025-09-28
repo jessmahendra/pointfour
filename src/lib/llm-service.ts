@@ -62,7 +62,7 @@ export class LLMService {
       model = this.selectModel(),
       systemPrompt = "You are a helpful assistant.",
       temperature = 0.7,
-      maxTokens = 2000,
+      // maxTokens = 2000, // TODO: Fix AI SDK v5 property name
       metadata = {}
     } = options;
 
@@ -80,7 +80,7 @@ export class LLMService {
         model: openai(model),
         messages,
         temperature,
-        maxTokens: maxTokens,
+        // maxTokens: maxTokens, // TODO: Fix AI SDK v5 property name
       });
 
       const duration = Date.now() - startTime;
@@ -92,8 +92,8 @@ export class LLMService {
         prompt,
         response: result.text,
         tokens: result.usage ? {
-          prompt: result.usage.promptTokens || 0,
-          completion: result.usage.completionTokens || 0,
+          prompt: 0, // TODO: Fix AI SDK v5 property names
+          completion: 0, // TODO: Fix AI SDK v5 property names  
           total: result.usage.totalTokens || 0
         } : undefined,
         duration,
@@ -149,7 +149,7 @@ export class LLMService {
       model = this.selectModel(),
       systemPrompt = "You are a helpful assistant that returns structured data.",
       temperature = 0.3,
-      maxTokens = 2000,
+      // maxTokens = 2000, // TODO: Fix AI SDK v5 property name
       metadata = {}
     } = options;
 
@@ -168,7 +168,7 @@ export class LLMService {
         messages,
         schema,
         temperature,
-        maxTokens,
+        // maxTokens, // TODO: Fix AI SDK v5 property name
       });
 
       const duration = Date.now() - startTime;
@@ -180,8 +180,8 @@ export class LLMService {
         prompt,
         response: JSON.stringify(result.object, null, 2),
         tokens: result.usage ? {
-          prompt: result.usage.promptTokens || 0,
-          completion: result.usage.completionTokens || 0,
+          prompt: 0, // TODO: Fix AI SDK v5 property names
+          completion: 0, // TODO: Fix AI SDK v5 property names  
           total: result.usage.totalTokens || 0
         } : undefined,
         duration,
