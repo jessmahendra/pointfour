@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import { UserProfile } from "../../../types/analysis";
 import { MarkdownText } from "../../../components/MarkdownText";
 
 interface ChatMessage {
@@ -14,8 +13,6 @@ interface ChatInterfaceProps {
   currentInput: string;
   setCurrentInput: React.Dispatch<React.SetStateAction<string>>;
   onSendMessage: () => void;
-  userProfile: UserProfile;
-  brandQuery: string;
   onBackToAnalysis: () => void;
 }
 
@@ -24,8 +21,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentInput,
   setCurrentInput,
   onSendMessage,
-  userProfile,
-  brandQuery,
   onBackToAnalysis,
 }) => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -47,21 +42,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Header */}
       <div className="bg-white p-6 rounded-2xl border border-stone-300 shadow-lg mb-6">
         <h2 className="text-xl font-bold text-gray-800 m-0 mb-3">
-          Analysis for: {brandQuery}
+          Chat with Analysis
         </h2>
-        <div className="flex gap-2 mb-3">
-          <span className="text-xs bg-stone-50 px-2 py-1 rounded">
-            {userProfile.category}
-          </span>
-          <span className="text-xs bg-stone-50 px-2 py-1 rounded">
-            {userProfile.category === "footwear"
-              ? userProfile.footType
-              : userProfile.bodyShape}
-          </span>
-          <span className="text-xs bg-stone-50 px-2 py-1 rounded">
-            {userProfile.fitPreference}
-          </span>
-        </div>
         <button
           onClick={onBackToAnalysis}
           className="text-xs text-stone-600 bg-transparent border-none cursor-pointer underline hover:text-stone-800"
@@ -91,7 +73,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {messages.length === 0 && (
         <div className="bg-stone-50 p-5 rounded-xl mb-6">
           <p className="text-sm font-medium text-gray-800 m-0 mb-3">
-            Ask me anything about {brandQuery} sizing and fit:
+            Ask me anything about sizing and fit:
           </p>
           <div className="flex flex-col gap-2">
             {suggestedQuestions.map((question, index) => (

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { UserProfile, AnalysisResult } from "../../types/analysis";
+import { AnalysisResult } from "../../types/analysis";
 import { UserMeasurements } from "../../types/user";
 import { UserProfileForm } from "./components/UserProfileForm";
 import { AnalysisResults } from "./components/AnalysisResults";
@@ -18,20 +18,9 @@ function BrandAnalysisContent() {
     Array<{ type: "user" | "assistant"; content: string; timestamp: number }>
   >([]);
   const [currentInput, setCurrentInput] = useState("");
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    ukClothingSize: "",
-    ukShoeSize: "",
-    bodyShape: "",
-    height: "",
-    fitPreference: "",
-    footType: "",
-    category: "",
-  });
-  const [brandQuery, setBrandQuery] = useState("");
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
     null
   );
-  const [loading, setLoading] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [userMeasurements, setUserMeasurements] =
     useState<UserMeasurements | null>(null);
@@ -158,15 +147,11 @@ function BrandAnalysisContent() {
 
   const loadSharedAnalysis = async (shareId: string) => {
     try {
-      setLoading(true);
-
       const response = await fetch(`/api/share?id=${shareId}`);
       const data = await response.json();
 
       if (data.success) {
         setAnalysisResult(data.data.analysisResult);
-        setUserProfile(data.data.userProfile);
-        setBrandQuery(data.data.brandQuery);
         setCurrentStep("analysis");
       } else {
         console.error("Failed to load shared analysis:", data.error);
@@ -175,8 +160,6 @@ function BrandAnalysisContent() {
     } catch (error) {
       console.error("Error loading shared analysis:", error);
       alert("Error loading shared analysis");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -188,8 +171,6 @@ function BrandAnalysisContent() {
 
       const shareData = {
         analysisResult,
-        userProfile,
-        brandQuery,
         sharedAt: new Date().toISOString(),
       };
 
@@ -287,58 +268,6 @@ function BrandAnalysisContent() {
     }
   };
 
-  const handleFormSubmit = async () => {
-    if (!brandQuery.trim() || !userProfile.category) return;
-
-    try {
-      setLoading(true);
-
-      // Use saved measurements if available, otherwise use form data
-      const profileToSubmit = userMeasurements
-        ? {
-            ...userProfile,
-            // Map saved measurements to the expected format
-            ukClothingSize:
-              userMeasurements.usualSize?.tops?.[0] ||
-              userProfile.ukClothingSize,
-            ukShoeSize:
-              userMeasurements.usualSize?.shoes?.[0] || userProfile.ukShoeSize,
-            height: userMeasurements.height
-              ? `${Math.floor(userMeasurements.height / 30.48)}'${Math.round(
-                  (userMeasurements.height % 30.48) / 2.54
-                )}"`
-              : userProfile.height,
-            fitPreference:
-              userMeasurements.fitPreference?.tops || userProfile.fitPreference,
-          }
-        : userProfile;
-
-      const response = await fetch("/api/recommendations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: brandQuery,
-          userProfile: profileToSubmit,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setAnalysisResult(data.data);
-        setCurrentStep("analysis");
-      } else {
-        console.error("Analysis failed:", data.error);
-        alert("Analysis failed. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error during analysis:", error);
-      alert("Error during analysis. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleMeasurementsComplete = (measurements: UserMeasurements) => {
     // Store measurements temporarily for this session
     setUserMeasurements(measurements);
@@ -372,8 +301,6 @@ function BrandAnalysisContent() {
         body: JSON.stringify({
           message: userMessage,
           analysisResult,
-          userProfile,
-          brandQuery,
         }),
       });
 
@@ -425,14 +352,6 @@ function BrandAnalysisContent() {
     >
       {currentStep === "form" && (
         <UserProfileForm
-          userProfile={userProfile}
-          setUserProfile={setUserProfile}
-          brandQuery={brandQuery}
-          setBrandQuery={setBrandQuery}
-          loading={loading}
-          onSubmit={handleFormSubmit}
-          userMeasurements={userMeasurements}
-          measurementsLoading={measurementsLoading}
           simpleQuery={simpleQuery}
           setSimpleQuery={setSimpleQuery}
           parsedData={parsedData}
@@ -473,8 +392,6 @@ function BrandAnalysisContent() {
       {currentStep === "analysis" && analysisResult && (
         <AnalysisResults
           analysisResult={analysisResult}
-          userProfile={userProfile}
-          brandQuery={brandQuery}
           onShare={handleShare}
           shareLoading={shareLoading}
         />
@@ -485,8 +402,6 @@ function BrandAnalysisContent() {
           currentInput={currentInput}
           setCurrentInput={setCurrentInput}
           onSendMessage={handleSendMessage}
-          userProfile={userProfile}
-          brandQuery={brandQuery}
           onBackToAnalysis={() => setCurrentStep("analysis")}
         />
       )}

@@ -46,9 +46,12 @@ export function ProductRecommendations({
       const response = await fetch("/api/user/profile");
       if (response.ok) {
         const { profile } = await response.json();
+        console.log("🔍 DEBUG: Loaded user profile:", profile);
+        console.log("🔍 DEBUG: User measurements:", profile?.measurements);
         setSavedMeasurements(profile?.measurements || null);
       } else if (response.status === 401) {
         // User not authenticated, that's fine
+        console.log("🔍 DEBUG: User not authenticated");
         setSavedMeasurements(null);
       } else {
         console.error("Failed to load user measurements");
@@ -66,28 +69,69 @@ export function ProductRecommendations({
   const convertMeasurementsToProfile = (
     measurements: UserMeasurements
   ): UserProfile => {
+    console.log("🔍 DEBUG: Converting measurements to profile:", measurements);
+
     // Determine category based on product type (this will be enhanced later)
     const category = "clothing"; // Default to clothing, can be enhanced based on product analysis
 
-    return {
-      ukClothingSize:
-        measurements.usualSize?.tops?.[0] ||
-        measurements.usualSize?.bottoms?.[0] ||
-        "",
-      ukShoeSize: measurements.usualSize?.shoes?.[0] || "",
-      bodyShape: "", // Not directly available in new measurement system
+    // Extract comprehensive size information
+    const clothingSizes = [
+      ...(measurements.usualSize?.tops || []),
+      ...(measurements.usualSize?.bottoms || []),
+    ];
+    const shoeSizes = measurements.usualSize?.shoes || [];
+
+    // Create comprehensive fit preference string
+    const fitPreferences = [];
+    if (measurements.fitPreference?.tops) {
+      fitPreferences.push(`Tops: ${measurements.fitPreference.tops}`);
+    }
+    if (measurements.fitPreference?.bottoms) {
+      fitPreferences.push(`Bottoms: ${measurements.fitPreference.bottoms}`);
+    }
+
+    // Create body shape description from measurements
+    let bodyShapeDescription = "";
+    if (measurements.bodyMeasurements) {
+      const { bust, waist, hips } = measurements.bodyMeasurements;
+      if (bust && waist && hips) {
+        // Basic body shape determination
+        const bustWaistDiff = bust - waist;
+        const waistHipDiff = hips - waist;
+
+        if (bustWaistDiff > 5 && waistHipDiff > 5) {
+          bodyShapeDescription = "Hourglass";
+        } else if (bustWaistDiff < 2 && waistHipDiff < 2) {
+          bodyShapeDescription = "Rectangle";
+        } else if (waistHipDiff > bustWaistDiff) {
+          bodyShapeDescription = "Pear";
+        } else if (bustWaistDiff > waistHipDiff) {
+          bodyShapeDescription = "Apple";
+        } else {
+          bodyShapeDescription = "Balanced";
+        }
+
+        // Add measurements to description
+        bodyShapeDescription += ` (Bust: ${bust}cm, Waist: ${waist}cm, Hips: ${hips}cm)`;
+      }
+    }
+
+    const convertedProfile = {
+      ukClothingSize: clothingSizes.join(", ") || "",
+      ukShoeSize: shoeSizes.join(", ") || "",
+      bodyShape: bodyShapeDescription,
       height: measurements.height
         ? `${Math.floor(measurements.height / 30.48)}'${Math.round(
             (measurements.height % 30.48) / 2.54
-          )}"`
+          )}" (${measurements.height}cm)`
         : "",
-      fitPreference:
-        measurements.fitPreference?.tops ||
-        measurements.fitPreference?.bottoms ||
-        "",
+      fitPreference: fitPreferences.join(", ") || "",
       footType: "", // Not available in new measurement system
       category: category,
     };
+
+    console.log("🔍 DEBUG: Converted profile:", convertedProfile);
+    return convertedProfile;
   };
 
   // Check for temporary measurements from session storage
@@ -116,9 +160,13 @@ export function ProductRecommendations({
 
     // Use saved measurements for logged-in users, or temporary measurements for non-logged-in users
     const measurements = savedMeasurements || tempMeasurements;
+    console.log("🔍 DEBUG: Using measurements:", measurements);
+
     const userProfile = measurements
       ? convertMeasurementsToProfile(measurements)
       : undefined;
+
+    console.log("🔍 DEBUG: Final user profile for LLM:", userProfile);
 
     await getRecommendations(llmQuery, userProfile);
   }, [getRecommendations, llmQuery, savedMeasurements, tempMeasurements]);
@@ -133,9 +181,13 @@ export function ProductRecommendations({
 
     // Use saved measurements for logged-in users, or temporary measurements for non-logged-in users
     const measurements = savedMeasurements || tempMeasurements;
+    console.log("🔍 DEBUG: Refresh - Using measurements:", measurements);
+
     const userProfile = measurements
       ? convertMeasurementsToProfile(measurements)
       : undefined;
+
+    console.log("🔍 DEBUG: Refresh - Final user profile for LLM:", userProfile);
 
     await getRecommendations(llmQuery, userProfile);
     setIsRefreshing(false);
