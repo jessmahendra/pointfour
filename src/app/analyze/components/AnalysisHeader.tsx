@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { UserProfile } from "../types/analysis";
-import { ContentSection } from "./ContentSection";
+import { ContentSection } from "../../../components/ContentSection";
 
 interface AnalysisHeaderProps {
   brandQuery: string;

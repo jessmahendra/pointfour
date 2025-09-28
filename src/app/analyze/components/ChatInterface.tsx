@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { AnalysisResult, UserProfile } from "../types/analysis";
+import { MarkdownText } from "../../../components/MarkdownText";
 
 interface ChatMessage {
   type: "user" | "assistant";
@@ -82,7 +83,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           ) : (
             <div className="bg-white p-6 rounded-2xl border border-stone-300 shadow-lg">
-              {formatTextWithStyling(message.content)}
+              <MarkdownText text={message.content} />
             </div>
           )}
         </div>

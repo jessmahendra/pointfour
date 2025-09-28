@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { formatTextWithStyling } from "../../utils/textFormatting";
+import { MarkdownText } from "../../components/MarkdownText";
 
 interface UserProfile {
   bodyShape: string;
@@ -256,7 +256,7 @@ Please provide a specific answer to this follow-up question about these recommen
 
   // Format message content using React Markdown
   const formatMessageContent = (content: string) => {
-    return formatTextWithStyling(content);
+    return <MarkdownText text={content} />;
   };
 
   if (currentStep === "form") {

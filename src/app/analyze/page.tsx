@@ -2,9 +2,9 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { UserProfile, AnalysisResult } from "../../types/analysis";
-import { UserProfileForm } from "../../components/UserProfileForm";
-import { AnalysisResults } from "../../components/AnalysisResults";
-import { ChatInterface } from "../../components/ChatInterface";
+import { UserProfileForm } from "./components/UserProfileForm";
+import { AnalysisResults } from "./components/AnalysisResults";
+import { ChatInterface } from "./components/ChatInterface";
 
 function BrandAnalysisContent() {
   const [currentStep, setCurrentStep] = useState<"form" | "analysis" | "chat">(

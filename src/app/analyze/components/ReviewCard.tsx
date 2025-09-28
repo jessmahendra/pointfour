@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { ExternalSearchReview } from "../types/analysis";
-import { getConfidenceColor, getConfidenceLabel } from "../utils/analysisParsing";
+import { getConfidenceColor, getConfidenceLabel } from "../../../utils/analysisParsing";
 
 interface ReviewCardProps {
   review: ExternalSearchReview;

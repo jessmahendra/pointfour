@@ -1,13 +1,13 @@
 "use client";
 import React from "react";
 import { AnalysisResult, UserProfile } from "../types/analysis";
-import { parseAnalysisData } from "../utils/analysisParsing";
+import { parseAnalysisData } from "../../../utils/analysisParsing";
 import { AnalysisHeader } from "./AnalysisHeader";
-import { ContentSection } from "./ContentSection";
+import { ContentSection } from "../../../components/ContentSection";
 import { LimitedDataWarning } from "./LimitedDataWarning";
-import { MarkdownText } from "./MarkdownText";
+import { MarkdownText } from "../../../components/MarkdownText";
 import { ReviewSection } from "./ReviewSection";
-import { SectionHeader } from "./SectionHeader";
+import { SectionHeader } from "../../../components/SectionHeader";
 
 interface AnalysisResultsProps {
   analysisResult: AnalysisResult;
