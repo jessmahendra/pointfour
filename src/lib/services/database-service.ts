@@ -1,4 +1,5 @@
 import { createClient } from '../../utils/supabase/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Database types
 export interface Brand {
@@ -44,11 +45,11 @@ export interface ProductInsert {
 
 export class DatabaseService {
   private static instance: DatabaseService;
-  private supabase;
+  private supabase: SupabaseClient | null;
 
   private constructor() {
     // Note: This will be initialized when first used
-    this.supabase = null as any;
+    this.supabase = null;
   }
 
   private async getSupabaseClient() {

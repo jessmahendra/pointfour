@@ -13,7 +13,7 @@ async function testEnhancedParsing() {
     console.log('Result 1:', {
       brandName: result1.parsedData.brandName,
       productName: result1.parsedData.productName,
-      brandId: result1.brand.id,
+      brandSlug: result1.brand.slug,
       productId: result1.product.id,
       wasBrandCreated: result1.wasBrandCreated,
       wasProductCreated: result1.wasProductCreated
@@ -28,7 +28,7 @@ async function testEnhancedParsing() {
     console.log('Result 2:', {
       brandName: result2.parsedData.brandName,
       productName: result2.parsedData.productName,
-      brandId: result2.brand.id,
+      brandSlug: result2.brand.slug,
       productId: result2.product.id,
       wasBrandCreated: result2.wasBrandCreated,
       wasProductCreated: result2.wasProductCreated
@@ -43,7 +43,7 @@ async function testEnhancedParsing() {
     console.log('Result 3:', {
       brandName: result3.parsedData.brandName,
       productName: result3.parsedData.productName,
-      brandId: result3.brand.id,
+      brandSlug: result3.brand.slug,
       productId: result3.product.id,
       wasBrandCreated: result3.wasBrandCreated,
       wasProductCreated: result3.wasProductCreated
@@ -58,7 +58,7 @@ async function testEnhancedParsing() {
     console.log('Result 4:', {
       brandName: result4.parsedData.brandName,
       productName: result4.parsedData.productName,
-      brandId: result4.brand.id,
+      brandSlug: result4.brand.slug,
       productId: result4.product.id,
       wasBrandCreated: result4.wasBrandCreated,
       wasProductCreated: result4.wasProductCreated

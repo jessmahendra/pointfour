@@ -23,7 +23,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ groupedReviews }) 
             </h5>
             <div className="flex flex-col gap-3">
               {reviews.slice(0, 3).map((review: ExternalSearchReview, index: number) => (
-                <ReviewCard key={`${category}-${index}-${review.id || review.title || review.content?.slice(0, 20)}`} review={review} />
+                <ReviewCard key={`${category}-${index}-${review.title || review.snippet?.slice(0, 20)}`} review={review} />
               ))}
             </div>
           </div>
