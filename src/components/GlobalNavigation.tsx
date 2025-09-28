@@ -17,7 +17,9 @@ export default function GlobalNavigation() {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       setLoading(false);
     };
@@ -25,17 +27,17 @@ export default function GlobalNavigation() {
     getInitialSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-        if (event === 'SIGNED_IN') {
-          setShowAuthModal(false);
-          setMessage("");
-          setEmail("");
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+      if (event === "SIGNED_IN") {
+        setShowAuthModal(false);
+        setMessage("");
+        setEmail("");
       }
-    );
+    });
 
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
@@ -46,16 +48,21 @@ export default function GlobalNavigation() {
     setMessage("");
 
     try {
+      // Use environment variable for base URL, fallback to current origin
+      const baseUrl =
+        process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+      const redirectUrl = `${baseUrl}/auth/callback`;
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        }
+          emailRedirectTo: redirectUrl,
+        },
       });
       if (error) throw error;
       setMessage("Check your email for the magic link!");
     } catch (error: unknown) {
-      setMessage(error instanceof Error ? error.message : 'An error occurred');
+      setMessage(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setAuthLoading(false);
     }
@@ -64,10 +71,9 @@ export default function GlobalNavigation() {
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     }
   };
-
 
   return (
     <nav className="bg-white border-b border-stone-200 sticky top-0 z-50">
@@ -120,9 +126,7 @@ export default function GlobalNavigation() {
               <div className="w-20 h-8 bg-stone-200 animate-pulse rounded"></div>
             ) : user ? (
               <div className="flex items-center space-x-3">
-                <span className="text-sm text-stone-600">
-                  {user.email}
-                </span>
+                <span className="text-sm text-stone-600">{user.email}</span>
                 <button
                   onClick={handleSignOut}
                   className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -158,21 +162,35 @@ export default function GlobalNavigation() {
                 }}
                 className="text-stone-400 hover:text-stone-600"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
 
             <div className="mb-6">
               <p className="text-stone-600 text-sm">
-                Enter your email address and we&apos;ll send you a magic link to sign in. No password required!
+                Enter your email address and we&apos;ll send you a magic link to
+                sign in. No password required!
               </p>
             </div>
 
             <form onSubmit={handleMagicLink} className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-stone-700 mb-1">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-stone-700 mb-1"
+                >
                   Email address
                 </label>
                 <input
@@ -187,11 +205,14 @@ export default function GlobalNavigation() {
               </div>
 
               {message && (
-                <div className={`text-sm p-3 rounded-md ${
-                  message.includes('Check your email') || message.includes('success')
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-red-100 text-red-700'
-                }`}>
+                <div
+                  className={`text-sm p-3 rounded-md ${
+                    message.includes("Check your email") ||
+                    message.includes("success")
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
                   {message}
                 </div>
               )}
@@ -207,7 +228,8 @@ export default function GlobalNavigation() {
 
             <div className="mt-6 text-center">
               <p className="text-xs text-stone-500">
-                We&apos;ll create an account for you if you don&apos;t have one yet.
+                We&apos;ll create an account for you if you don&apos;t have one
+                yet.
               </p>
             </div>
           </div>
