@@ -107,6 +107,18 @@ export default function GlobalNavigation() {
               Recommendations
             </Link>
             <Link
+              href="/brands"
+              className="text-stone-600 hover:text-stone-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Brands
+            </Link>
+            <Link
+              href="/products"
+              className="text-stone-600 hover:text-stone-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Products
+            </Link>
+            <Link
               href="/directory"
               className="text-stone-600 hover:text-stone-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
             >
