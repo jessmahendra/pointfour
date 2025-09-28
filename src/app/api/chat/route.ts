@@ -36,7 +36,7 @@ interface ChatResponse {
 export async function POST(req: NextRequest) {
   try {
     const body: ChatRequest = await req.json();
-    const { message, conversationHistory = [], userProfile, recentQuery, recentRecommendations } = body;
+    const { message, conversationHistory = [], recentQuery, recentRecommendations } = body;
 
     if (!message?.trim()) {
       return NextResponse.json(
@@ -48,8 +48,6 @@ export async function POST(req: NextRequest) {
     // For now, let's create a simple response to test the endpoint
     const response = await generateSimpleResponse(
       message,
-      conversationHistory,
-      userProfile,
       recentQuery,
       recentRecommendations
     );
@@ -80,8 +78,6 @@ export async function POST(req: NextRequest) {
 // Simple response function for testing
 async function generateSimpleResponse(
   message: string,
-  conversationHistory: ChatMessage[],
-  userProfile?: ChatRequest['userProfile'],
   recentQuery?: string,
   recentRecommendations?: ChatRequest['recentRecommendations']
 ): Promise<string> {

@@ -90,8 +90,8 @@ export function detectBrandSizingSystem(brandName: string): string {
     
     const brandKey = brandName.toLowerCase().trim();
     
-    if (BRAND_SIZING_SYSTEMS[brandKey]) {
-        return BRAND_SIZING_SYSTEMS[brandKey];
+    if (brandKey in BRAND_SIZING_SYSTEMS) {
+        return BRAND_SIZING_SYSTEMS[brandKey as keyof typeof BRAND_SIZING_SYSTEMS];
     }
     
     return 'standard_us';
@@ -105,14 +105,14 @@ export function convertSize(size: number, fromSystem: string, toSystem: string):
         return size;
     }
     
-    const conversionKey = `${fromSystem}_to_${toSystem}`;
+    const conversionKey = `${fromSystem}_to_${toSystem}` as keyof typeof SIZE_CONVERSION_TABLES;
     const conversionTable = SIZE_CONVERSION_TABLES[conversionKey];
     
     if (!conversionTable) {
         return size;
     }
     
-    const convertedSize = conversionTable[size];
+    const convertedSize = conversionTable[size as keyof typeof conversionTable];
     
     if (convertedSize === undefined) {
         return size;
@@ -139,7 +139,7 @@ export function generateIntelligentSizeRecommendation(
     const userSystem = 'standard_us';
     
     const convertedSize = convertSize(userSize, userSystem, brandSystem);
-    const systemInfo = SIZE_SYSTEMS[brandSystem];
+    const systemInfo = SIZE_SYSTEMS[brandSystem as keyof typeof SIZE_SYSTEMS];
     
     let recommendation = '';
     
@@ -170,13 +170,13 @@ export function generateIntelligentSizeRecommendation(
  */
 export function getSizeConversionInfo(brandName: string) {
     const brandSystem = detectBrandSizingSystem(brandName);
-    const systemInfo = SIZE_SYSTEMS[brandSystem];
+    const systemInfo = SIZE_SYSTEMS[brandSystem as keyof typeof SIZE_SYSTEMS];
     
     return {
         brandSystem: brandSystem,
         systemName: systemInfo.name,
         description: systemInfo.description,
         availableSizes: systemInfo.sizes,
-        conversionTable: SIZE_CONVERSION_TABLES[`standard_us_to_${brandSystem}`] || null
+        conversionTable: SIZE_CONVERSION_TABLES[`standard_us_to_${brandSystem}` as keyof typeof SIZE_CONVERSION_TABLES] || null
     };
 }

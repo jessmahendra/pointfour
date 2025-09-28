@@ -449,7 +449,7 @@ export async function POST(request: Request) {
     });
 
     // 5. Extract from script tags with JSON data
-    $('script[type="application/json"]').each((scriptIndex, element) => {
+    $('script[type="application/json"]').each((_, element) => {
       try {
         const jsonData = JSON.parse($(element).html() || '{}');
         let imageCount = 0;

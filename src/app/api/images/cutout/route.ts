@@ -1,5 +1,4 @@
 import sharp from 'sharp';
-import { createBgRemoveProvider } from '@/lib/bgRemove';
 
 export async function POST(request: Request) {
   try {
@@ -35,12 +34,8 @@ export async function POST(request: Request) {
 
     const imageBuffer = Buffer.from(await response.arrayBuffer());
     
-    // Remove background (or no-op if no provider configured)
-    const bgRemoveProvider = createBgRemoveProvider();
-    const processedBuffer = await bgRemoveProvider.removeBackground(imageBuffer);
-    
     // Process with sharp: rotate, trim, resize, extend
-    let sharpInstance = sharp(processedBuffer);
+    let sharpInstance = sharp(imageBuffer);
     
     // Auto-rotate based on EXIF orientation
     sharpInstance = sharpInstance.rotate();
@@ -72,7 +67,7 @@ export async function POST(request: Request) {
     
     console.log('✅ Image processed successfully');
     
-    return new Response(outputBuffer, {
+    return new Response(new Uint8Array(outputBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'image/png',

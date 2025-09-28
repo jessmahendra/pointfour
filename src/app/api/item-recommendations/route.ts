@@ -204,7 +204,7 @@ async function generateRecommendationsWithRealData(
   // If no real data available, fall back to mock data
   if (allBrands.length === 0) {
     console.log('No brands data available, using fallback recommendations');
-    return generateFallbackRecommendations(itemQuery, userProfile, isFootwear);
+    return generateFallbackRecommendations(itemQuery, isFootwear);
   }
 
   // Filter brands by item type and category
@@ -215,7 +215,7 @@ async function generateRecommendationsWithRealData(
   
   if (topBrands.length === 0) {
     console.log('No matching brands found, using fallback recommendations');
-    return generateFallbackRecommendations(itemQuery, userProfile, isFootwear);
+    return generateFallbackRecommendations(itemQuery, isFootwear);
   }
 
   // Generate recommendations for each brand
@@ -760,7 +760,6 @@ function generateRealReviewSummary(
 // Fallback to mock recommendations if no real data
 function generateFallbackRecommendations(
   itemQuery: string,
-  userProfile: UserProfile,
   isFootwear: boolean
 ): BrandRecommendation[] {
   

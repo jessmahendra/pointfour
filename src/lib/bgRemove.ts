@@ -16,16 +16,16 @@ export class NoOpBgRemoveProvider implements BgRemoveProvider {
 }
 
 export class RealBgRemoveProvider implements BgRemoveProvider {
-  constructor(private apiKey?: string, private endpoint?: string) {}
+  constructor() {}
 
   async removeBackground(buffer: Buffer): Promise<Buffer> {
     // TODO: Implement real background removal
     // Example with rembg API:
     // const formData = new FormData();
     // formData.append('image', new Blob([buffer]));
-    // const response = await fetch(this.endpoint || 'https://api.rembg.io/v1.0/remove', {
+    // const response = await fetch(this._endpoint || 'https://api.rembg.io/v1.0/remove', {
     //   method: 'POST',
-    //   headers: { 'X-API-Key': this.apiKey || '' },
+    //   headers: { 'X-API-Key': this._apiKey || '' },
     //   body: formData
     // });
     // return Buffer.from(await response.arrayBuffer());
@@ -44,7 +44,7 @@ export function createBgRemoveProvider(): BgRemoveProvider {
   const endpoint = process.env.BG_REMOVE_ENDPOINT;
   
   if (apiKey && endpoint) {
-    return new RealBgRemoveProvider(apiKey, endpoint);
+    return new RealBgRemoveProvider();
   }
   
   return defaultBgRemoveProvider;

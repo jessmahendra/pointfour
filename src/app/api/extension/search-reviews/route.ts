@@ -581,7 +581,7 @@ function filterReviewsByRelevance(reviews: Review[], filterParams: FilterParams)
   return relevantReviews;
 }
 
-function determineRelevanceLevel(filteredReviews: ReviewWithScore[], originalReviews: Review[], filterParams: FilterParams): string {
+function determineRelevanceLevel(filteredReviews: ReviewWithScore[], filterParams: FilterParams): string {
   const { productLine, productType } = filterParams;
   
   const exactProductMatches = filteredReviews.filter((r: ReviewWithScore) => r.relevanceScore >= 15).length;
@@ -1633,7 +1633,7 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
       };
       
       const categoryFilteredReviews = filterReviewsByRelevance(prioritizedReviews, filterParams);
-      relevanceLevel = determineRelevanceLevel(categoryFilteredReviews, prioritizedReviews, filterParams);
+      relevanceLevel = determineRelevanceLevel(categoryFilteredReviews, filterParams);
       
       // Enforce minimum threshold of 3 reviews
       if (categoryFilteredReviews.length >= 3) {
@@ -3529,42 +3529,6 @@ function generateDetailedSummary(analysis: AnalysisResult, results: Review[], br
     return sizingMentions;
   };
   
-  // Generate brand reputation context
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const generateBrandReputation = (brandName: string) => {
-    const brandLower = brandName.toLowerCase();
-    
-    // Brand reputation data based on common knowledge
-    const brandProfiles: { [key: string]: { description: string; positioning: string; heritage: string } } = {
-      'uniqlo': {
-        description: 'UNIQLO is a Japanese fast-fashion retailer known for affordable basics and innovative fabrics',
-        positioning: 'Mid-range fast fashion with emphasis on functional clothing and accessible pricing',
-        heritage: 'Founded in Japan in 1984, focuses on "LifeWear" - clothing designed for daily life'
-      },
-      'zara': {
-        description: 'Spanish fast-fashion brand known for trend-driven clothing and quick turnaround',
-        positioning: 'Fast fashion with contemporary European styling',
-        heritage: 'Founded in Spain in 1975, part of Inditex group'
-      },
-      'h&m': {
-        description: 'Swedish multinational clothing retailer known for affordable fashion',
-        positioning: 'Budget-friendly fast fashion with trend-conscious designs',
-        heritage: 'Founded in Sweden in 1947, focus on sustainability and accessibility'
-      },
-      'cos': {
-        description: 'Minimalist fashion brand offering modern, architectural designs',
-        positioning: 'Contemporary fashion with clean lines and quality materials',
-        heritage: 'H&M premium brand launched in 2007, focus on timeless design'
-      },
-      'everlane': {
-        description: 'Direct-to-consumer brand focused on ethical manufacturing and transparency',
-        positioning: 'Premium basics with emphasis on sustainability and fair pricing',
-        heritage: 'Founded in 2010, known for "radical transparency" in pricing and production'
-      }
-    };
-    
-    return brandProfiles[brandLower] || null;
-  };
   
   // Generate conversational summary in personal summary style
   const summaryParts: string[] = [];

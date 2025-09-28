@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { GroupedReviews } from "../../../types/analysis";
+import { GroupedReviews, ExternalSearchReview } from "../../../types/analysis";
 import { SectionHeader } from "../../../components/SectionHeader";
 import { ReviewCard } from "./ReviewCard";
 
@@ -22,7 +22,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ groupedReviews }) 
               {category} Reviews ({reviews.length})
             </h5>
             <div className="flex flex-col gap-3">
-              {reviews.slice(0, 3).map((review, index) => (
+              {reviews.slice(0, 3).map((review: ExternalSearchReview, index: number) => (
                 <ReviewCard key={index} review={review} />
               ))}
             </div>
