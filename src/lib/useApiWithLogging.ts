@@ -21,12 +21,10 @@ export function useApiWithLogging() {
   ) => {
     const { source, logInProgress = false, prompt, type = 'text' } = loggingOptions;
     const requestId = `${source}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    console.log(`🔄 API Logging: Generated requestId: ${requestId}`);
 
     try {
       // Log in-progress if requested
       if (logInProgress && prompt) {
-        console.log(`🔄 API Logging: Logging in-progress interaction ${requestId}`);
         LLMLogging.logInProgress(
           requestId,
           type,
@@ -43,7 +41,6 @@ export function useApiWithLogging() {
       if (logInProgress) {
         // Handle different API response structures
         const llmInteraction = data?.data?.llmInteraction || data?.llmInteraction || data?.interaction;
-        console.log('🔄 API Logging: Updating interaction', requestId, 'with data:', llmInteraction);
         
         if (llmInteraction) {
           LLMLogging.updateInteraction(requestId, {
@@ -56,7 +53,6 @@ export function useApiWithLogging() {
           });
         } else {
           // Fallback: update with basic completion info if no interaction data
-          console.log('🔄 API Logging: No interaction data found, using fallback');
           LLMLogging.updateInteraction(requestId, {
             response: typeof data.result === 'string' ? data.result : JSON.stringify(data.result, null, 2),
             status: 'completed'

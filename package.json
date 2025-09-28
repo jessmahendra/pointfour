@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.38",
+    "@base-ui-components/react": "^1.0.0-beta.3",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.58.0",
     "@types/airtable": "^0.10.0",

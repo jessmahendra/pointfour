@@ -73,9 +73,7 @@ export class LLMLogging {
    */
   static updateInteraction(id: string, updates: Partial<LLMInteraction>): void {
     try {
-      console.log(`🔄 LLM Logging: Updating interaction ${id} with:`, updates);
       this.getStore().updateInteraction(id, updates);
-      console.log(`✅ LLM Logging: Successfully updated interaction ${id}`);
     } catch (error) {
       console.error('❌ LLM Logging: Failed to update interaction:', error);
     }
