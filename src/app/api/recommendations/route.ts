@@ -169,8 +169,9 @@ export async function POST(request: NextRequest) {
     console.log('OpenAI API Key exists:', !!process.env.OPENAI_API_KEY);
     
     // Generate cache key early for potential cache hits
+    // Handle both "Brand/Item: text" format and direct brand query format
     const brandMatch = query.match(/Brand\/Item:\s*([^\n]+)/);
-    const brandItemText = brandMatch ? brandMatch[1].trim() : '';
+    const brandItemText = brandMatch ? brandMatch[1].trim() : query.trim();
     const cacheKey = generateCacheKey(brandItemText, '', query);
     
     // Check full response cache first (includes external search results)
@@ -178,17 +179,20 @@ export async function POST(request: NextRequest) {
     if (cachedFullResponse) {
       console.log('🎯 CACHE HIT: Returning cached full response with external search results');
       return NextResponse.json({
-        ...cachedFullResponse,
-        query: query,
-        totalBrands: 0,
-        hasDatabaseData: false,
-        cacheHit: true,
-        cacheStats: {
-          aiResponseCacheSize: aiResponseCache.size,
-          serperCacheSize: serperCache.size,
-          brandDataCacheSize: brandDataCache.size,
-          fullResponseCacheSize: fullResponseCache.size,
-          cacheHit: true
+        success: true,
+        data: {
+          ...cachedFullResponse,
+          query: query,
+          totalBrands: 0,
+          hasDatabaseData: false,
+          cacheHit: true,
+          cacheStats: {
+            aiResponseCacheSize: aiResponseCache.size,
+            serperCacheSize: serperCache.size,
+            brandDataCacheSize: brandDataCache.size,
+            fullResponseCacheSize: fullResponseCache.size,
+            cacheHit: true
+          }
         }
       });
     }
@@ -197,6 +201,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ OPENAI_API_KEY is missing!');
       return NextResponse.json(
         { 
+          success: false,
           error: 'OpenAI API key not configured',
           recommendation: "OpenAI API key is missing. Please check your environment configuration."
         },
@@ -229,7 +234,8 @@ export async function POST(request: NextRequest) {
         "le monde beryl", "me+em", "cos", "arket", "& other stories", "ganni", 
         "isabel marant", "acne studios", "jil sander", "lemaire", "toteme",
         "the row", "khaite", "bottega veneta", "saint laurent", "celine", "zara",
-        "h&m", "uniqlo", "massimo dutti", "mango", "reformation", "everlane"
+        "h&m", "uniqlo", "massimo dutti", "mango", "reformation", "everlane",
+        "vollebak", "vollebak jacket", "vollebak clothing"
       ];
       
       const textLower = brandItemText.toLowerCase();
@@ -797,7 +803,10 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
     console.log('Data source:', enhancedResult.dataSource);
     console.log('Has external data:', enhancedResult.hasExternalData);
     
-    return NextResponse.json(enhancedResult);
+    return NextResponse.json({
+      success: true,
+      data: enhancedResult
+    });
     
   } catch (error) {
     console.error('=== DEBUG: Error occurred ===');
@@ -805,6 +814,7 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
     
     return NextResponse.json(
       { 
+        success: false,
         error: 'Failed to process recommendation request',
         details: error instanceof Error ? error.message : 'Unknown error',
         recommendation: "Sorry, I couldn't process your request. Please try again or check if the brand name is correct."

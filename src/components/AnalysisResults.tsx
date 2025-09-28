@@ -119,7 +119,7 @@ export const AnalysisResults: React.FC<AnalysisResultsProps> = ({
                     {category} Reviews ({reviews.length})
                   </h5>
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    {reviews.slice(0, 3).map((review, index) => (
+                    {reviews.slice(0, 3).map((review: any, index: number) => (
                       <div
                         key={index}
                         style={{
