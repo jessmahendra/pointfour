@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { AnalysisResult, UserProfile } from "@/types/analysis";
+import { useApiWithLogging } from "./useApiWithLogging";
 
 interface UseRecommendationsLLMOptions {
   onSuccess?: (result: AnalysisResult) => void;
@@ -20,6 +21,7 @@ export function useRecommendationsLLM(options: UseRecommendationsLLMOptions = {}
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { callApiWithLogging } = useApiWithLogging();
 
   const getRecommendations = useCallback(async (query: string, userProfile?: UserProfile) => {
     if (!query.trim()) {
@@ -33,24 +35,30 @@ export function useRecommendationsLLM(options: UseRecommendationsLLMOptions = {}
 
       console.log('🤖 LLM Recommendations: Starting request for query:', query);
 
-      const response = await fetch("/api/recommendations-llm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query,
-          userProfile: userProfile || {
-            ukClothingSize: "",
-            ukShoeSize: "",
-            bodyShape: "",
-            height: "",
-            fitPreference: "",
-            footType: "",
-            category: "",
-          },
-        }),
-      });
-
-      const data = await response.json();
+      const data = await callApiWithLogging(
+        "/api/recommendations-llm",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query,
+            userProfile: userProfile || {
+              ukClothingSize: "",
+              ukShoeSize: "",
+              bodyShape: "",
+              height: "",
+              fitPreference: "",
+              footType: "",
+              category: "",
+            },
+          }),
+        },
+        {
+          source: 'recommendations-llm',
+          logInProgress: true,
+          prompt: query
+        }
+      );
 
       console.log('🤖 LLM Recommendations: Response received:', {
         success: data.success,

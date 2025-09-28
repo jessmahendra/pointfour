@@ -17,6 +17,7 @@ export interface LLMInteraction {
   error?: string;
   metadata?: Record<string, unknown>;
   source?: string; // Track which component/API made the call
+  status?: 'in-progress' | 'completed' | 'error'; // Track interaction status
 }
 
 export interface LLMStats {
@@ -32,6 +33,7 @@ export interface LLMStats {
 interface LLMStore {
   interactions: LLMInteraction[];
   addInteraction: (interaction: LLMInteraction) => void;
+  updateInteraction: (id: string, updates: Partial<LLMInteraction>) => void;
   clearInteractions: () => void;
   getInteractionsBySource: (source: string) => LLMInteraction[];
   getInteractionsByModel: (model: string) => LLMInteraction[];
@@ -53,6 +55,24 @@ export const useLLMStore = create<LLMStore>()(
           if (newInteractions.length > 1000) {
             newInteractions.shift();
           }
+          
+          return { interactions: newInteractions };
+        });
+      },
+
+      updateInteraction: (id: string, updates: Partial<LLMInteraction>) => {
+        set((state) => {
+          console.log(`🔄 Store: Updating interaction ${id} in store with ${state.interactions.length} total interactions`);
+          const newInteractions = state.interactions.map(interaction => {
+            if (interaction.id === id) {
+              console.log(`🔄 Store: Found interaction ${id}, updating:`, { ...interaction, ...updates });
+              return { ...interaction, ...updates };
+            }
+            return interaction;
+          });
+          
+          const found = newInteractions.find(i => i.id === id);
+          console.log(`🔄 Store: After update, interaction ${id} exists:`, !!found);
           
           return { interactions: newInteractions };
         });

@@ -62,6 +62,22 @@ export class LLMService {
     console.log(`🤖 Model: ${model}`);
     console.log(`🤖 Prompt length: ${prompt.length} characters`);
 
+    // Log interaction in progress
+    const inProgressInteraction: LLMInteraction = {
+      id: interactionId,
+      timestamp: new Date(),
+      type: 'text',
+      model,
+      prompt,
+      response: '',
+      duration: 0,
+      metadata,
+      source,
+      status: 'in-progress'
+    };
+    
+    getStore().addInteraction(inProgressInteraction);
+
     try {
       const result = await generateText({
         model: openai(model),
@@ -71,6 +87,19 @@ export class LLMService {
       });
 
       const duration = Date.now() - startTime;
+      
+      // Update the existing interaction with completion data
+      getStore().updateInteraction(interactionId, {
+        response: result.text,
+        tokens: result.usage ? {
+          prompt: 0, // TODO: Fix AI SDK v5 property names
+          completion: 0, // TODO: Fix AI SDK v5 property names  
+          total: result.usage.totalTokens || 0
+        } : undefined,
+        duration,
+        status: 'completed'
+      });
+
       const interaction: LLMInteraction = {
         id: interactionId,
         timestamp: new Date(),
@@ -85,11 +114,9 @@ export class LLMService {
         } : undefined,
         duration,
         metadata,
-        source
+        source,
+        status: 'completed'
       };
-
-      // Log the interaction to Zustand store
-      getStore().addInteraction(interaction);
 
       console.log(`✅ LLM Service: Text generation completed (ID: ${interactionId})`);
       console.log(`✅ Duration: ${duration}ms`);
@@ -98,20 +125,15 @@ export class LLMService {
       return { text: result.text, interaction };
     } catch (error) {
       const duration = Date.now() - startTime;
-      const interaction: LLMInteraction = {
-        id: interactionId,
-        timestamp: new Date(),
-        type: 'text',
-        model,
-        prompt,
+      
+      // Update the existing interaction with error data
+      getStore().updateInteraction(interactionId, {
         response: '',
         duration,
         error: error instanceof Error ? error.message : 'Unknown error',
-        metadata,
-        source
-      };
+        status: 'error'
+      });
 
-      getStore().addInteraction(interaction);
       console.error(`❌ LLM Service: Text generation failed (ID: ${interactionId})`, error);
       throw error;
     }
@@ -153,6 +175,22 @@ export class LLMService {
     console.log(`🤖 Model: ${model}`);
     console.log(`🤖 Prompt length: ${prompt.length} characters`);
 
+    // Log interaction in progress
+    const inProgressInteraction: LLMInteraction = {
+      id: interactionId,
+      timestamp: new Date(),
+      type: 'object',
+      model,
+      prompt,
+      response: '',
+      duration: 0,
+      metadata,
+      source,
+      status: 'in-progress'
+    };
+    
+    getStore().addInteraction(inProgressInteraction);
+
     try {
       const result = await generateObject({
         model: openai(model),
@@ -163,6 +201,19 @@ export class LLMService {
       });
 
       const duration = Date.now() - startTime;
+      
+      // Update the existing interaction with completion data
+      getStore().updateInteraction(interactionId, {
+        response: JSON.stringify(result.object, null, 2),
+        tokens: result.usage ? {
+          prompt: 0, // TODO: Fix AI SDK v5 property names
+          completion: 0, // TODO: Fix AI SDK v5 property names  
+          total: result.usage.totalTokens || 0
+        } : undefined,
+        duration,
+        status: 'completed'
+      });
+
       const interaction: LLMInteraction = {
         id: interactionId,
         timestamp: new Date(),
@@ -177,11 +228,9 @@ export class LLMService {
         } : undefined,
         duration,
         metadata,
-        source
+        source,
+        status: 'completed'
       };
-
-      // Log the interaction to Zustand store
-      getStore().addInteraction(interaction);
 
       console.log(`✅ LLM Service: Object generation completed (ID: ${interactionId})`);
       console.log(`✅ Duration: ${duration}ms`);
@@ -190,20 +239,15 @@ export class LLMService {
       return { object: result.object, interaction };
     } catch (error) {
       const duration = Date.now() - startTime;
-      const interaction: LLMInteraction = {
-        id: interactionId,
-        timestamp: new Date(),
-        type: 'object',
-        model,
-        prompt,
+      
+      // Update the existing interaction with error data
+      getStore().updateInteraction(interactionId, {
         response: '',
         duration,
         error: error instanceof Error ? error.message : 'Unknown error',
-        metadata,
-        source
-      };
+        status: 'error'
+      });
 
-      getStore().addInteraction(interaction);
       console.error(`❌ LLM Service: Object generation failed (ID: ${interactionId})`, error);
       throw error;
     }

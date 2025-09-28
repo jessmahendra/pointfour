@@ -2,29 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { LLMInteraction, useLLMStore } from "@/lib/llm-store";
+import { useApiWithLogging } from "@/lib/useApiWithLogging";
 
-interface LLMTestResult {
-  success: boolean;
-  result: string | object;
-  interaction: {
-    id: string;
-    model: string;
-    duration: number;
-    tokens?: {
-      prompt: number;
-      completion: number;
-      total: number;
-    };
-    timestamp: string;
-  };
-}
 
 // LLMInteraction and LLMStats interfaces are now imported from llm-store
 
 export function AiInspector() {
   const [isOpen, setIsOpen] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
-  const [testResult, setTestResult] = useState<LLMTestResult | null>(null);
   const [testQuery, setTestQuery] = useState("");
   const [testType, setTestType] = useState<"text" | "object">("text");
   const [selectedInteraction, setSelectedInteraction] =
@@ -33,6 +18,7 @@ export function AiInspector() {
   // Use Zustand store for interactions
   const interactions = useLLMStore((state) => state.interactions);
   const clearInteractions = useLLMStore((state) => state.clearInteractions);
+  const { callApiWithLogging } = useApiWithLogging();
 
   // Poll for server updates every 5 seconds as fallback
   useEffect(() => {
@@ -64,49 +50,57 @@ export function AiInspector() {
 
     try {
       setTestLoading(true);
-      setTestResult(null);
+      
 
       console.log("🤖 AI Inspector: Running test via API");
 
-      const response = await fetch("/api/ai-inspector", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      await callApiWithLogging(
+        "/api/ai-inspector",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: testQuery,
+            type: testType,
+          }),
         },
-        body: JSON.stringify({
-          query: testQuery,
-          type: testType,
-        }),
-      });
+        {
+          source: 'ai-inspector-test',
+          logInProgress: true,
+          prompt: testQuery,
+          type: testType
+        }
+      );
 
-      const data = await response.json();
-
-      setTestResult({
-        success: data.success,
-        result: data.result,
-        interaction: data.interaction,
-      });
-
-      // Interactions will be automatically updated via the store
+     
 
       console.log("✅ AI Inspector: Test completed successfully");
     } catch (error) {
       console.error("❌ AI Inspector: Test failed:", error);
 
-      setTestResult({
-        success: false,
-        result: `Error: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-        interaction: {
-          id: "error",
-          model: "unknown",
-          duration: 0,
-          timestamp: new Date().toISOString(),
-        },
-      });
+     
     } finally {
       setTestLoading(false);
+    }
+  };
+
+  const refreshInteractions = async () => {
+    try {
+      const response = await fetch("/api/llm-interactions?limit=100");
+      const data = await response.json();
+      
+      if (data.success) {
+        // Clear current interactions and add server interactions
+        clearInteractions();
+        data.interactions.forEach((interaction: LLMInteraction) => {
+          useLLMStore.getState().addInteraction(interaction);
+        });
+        console.log("🔄 AI Inspector: Refreshed interactions from server");
+      }
+    } catch (error) {
+      console.error("❌ AI Inspector: Failed to refresh interactions:", error);
     }
   };
 
@@ -121,7 +115,6 @@ export function AiInspector() {
       if (data.success) {
         // Clear from store
         clearInteractions();
-        setTestResult(null);
         console.log("🧹 AI Inspector: Cleared all interactions");
       }
     } catch (error) {
@@ -143,7 +136,7 @@ export function AiInspector() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 w-full max-w-2xl h-[80vh] shadow-lg border border-gray-200 rounded-lg bg-white z-50 flex flex-col">
+    <div className="fixed bottom-4 right-4 w-full max-w-2xl h-[80vh] shadow-lg border border-gray-200 rounded-lg bg-white z-50 flex flex-col text-sm">
       {/* Header */}
       <div className="py-2 px-4 border-b border-gray-200 flex justify-end items-center">
         <button
@@ -155,7 +148,7 @@ export function AiInspector() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto space-y-6">
+      <div className="flex-1 overflow-y-auto space-y-4">
         {/* Test Section */}
         <div className="space-y-4">
           {/* Test Controls */}
@@ -190,64 +183,29 @@ export function AiInspector() {
             </div>
           </div>
 
-          {/* Test Results */}
-          {testResult && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    testResult.success ? "bg-green-500" : "bg-red-500"
-                  }`}
-                ></div>
-                <span className="text-sm font-medium">
-                  {testResult.success ? "Success" : "Failed"}
-                </span>
-              </div>
-
-              {testResult.interaction && (
-                <div className="text-xs text-gray-600 space-y-1">
-                  <div>Model: {testResult.interaction.model}</div>
-                  <div>Duration: {testResult.interaction.duration}ms</div>
-                  {testResult.interaction.tokens && (
-                    <div>Tokens: {testResult.interaction.tokens.total}</div>
-                  )}
-                  <div>
-                    Time:{" "}
-                    {new Date(
-                      testResult.interaction.timestamp
-                    ).toLocaleTimeString()}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Result
-                </label>
-                <div className="bg-gray-50 p-3 rounded-md text-sm max-h-40 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap">
-                    {typeof testResult.result === "string"
-                      ? testResult.result
-                      : JSON.stringify(testResult.result, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            </div>
-          )}
+        
         </div>
 
         {/* Interactions Section */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h4 className="text-lg font-medium">
+        <div className="space-y-4 px-4">
+          <div className="flex justify-between items-center border-b border-stone-200 pb-2">
+            <h4 className="font-medium">
               Recent Interactions ({interactions.length})
             </h4>
-            <button
-              onClick={clearLogs}
-              className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-            >
-              Clear All
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={refreshInteractions}
+                className="px-3 py-1 text-blue-600 rounded text-sm hover:bg-blue-50"
+              >
+                Refresh
+              </button>
+              <button
+                onClick={clearLogs}
+                className="px-3 py-1 text-red-600 rounded text-sm hover:bg-red-50"
+              >
+                Clear All
+              </button>
+            </div>
           </div>
 
           {interactions.length === 0 ? (
@@ -283,6 +241,11 @@ export function AiInspector() {
                             {interaction.source}
                           </span>
                         )}
+                        {interaction.status === 'in-progress' && (
+                          <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded animate-pulse">
+                            In Progress
+                          </span>
+                        )}
                         {interaction.error && (
                           <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">
                             Error
@@ -295,7 +258,7 @@ export function AiInspector() {
                       </div>
                       <div className="text-xs text-gray-500">
                         {new Date(interaction.timestamp).toLocaleString()} •
-                        {interaction.duration}ms •
+                        {interaction.status === 'in-progress' ? 'In progress...' : `${interaction.duration}ms`} •
                         {interaction.tokens?.total || 0} tokens
                       </div>
                     </div>
