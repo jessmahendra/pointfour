@@ -11,28 +11,32 @@ export class LLMLogging {
   /**
    * Log an interaction from an API response
    */
-  static logFromApiResponse(apiResponse: any, source: string, prompt?: string): void {
+  static logFromApiResponse(apiResponse: unknown, source: string, prompt?: string): void {
     try {
       // Check if the response has LLM interaction data
-      const llmInteraction = apiResponse?.llmInteraction || apiResponse?.interaction;
+      const response = apiResponse as Record<string, unknown>;
+      const llmInteraction = response?.llmInteraction || response?.interaction;
       
       if (!llmInteraction) {
         console.warn('LLM Logging: No interaction data found in API response');
         return;
       }
 
+      // Type the interaction data properly
+      const interactionData = llmInteraction as Record<string, unknown>;
+
       const interaction: LLMInteraction = {
-        id: llmInteraction.id,
-        timestamp: new Date(llmInteraction.timestamp),
-        type: llmInteraction.type || 'text',
-        model: llmInteraction.model,
-        prompt: llmInteraction.prompt || prompt || '',
-        response: llmInteraction.response || '',
-        tokens: llmInteraction.tokens,
-        duration: llmInteraction.duration,
-        error: llmInteraction.error,
-        metadata: llmInteraction.metadata || {},
-        source: llmInteraction.source || source,
+        id: interactionData.id as string,
+        timestamp: new Date(interactionData.timestamp as string),
+        type: (interactionData.type as 'text' | 'object') || 'text',
+        model: interactionData.model as string,
+        prompt: (interactionData.prompt as string) || prompt || '',
+        response: (interactionData.response as string) || '',
+        tokens: interactionData.tokens as { prompt: number; completion: number; total: number } | undefined,
+        duration: interactionData.duration as number,
+        error: interactionData.error as string | undefined,
+        metadata: (interactionData.metadata as Record<string, unknown>) || {},
+        source: (interactionData.source as string) || source,
         status: 'completed'
       };
 

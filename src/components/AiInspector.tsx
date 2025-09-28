@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { LLMInteraction, useLLMStore } from "@/lib/llm-store";
-import { useApiWithLogging } from "@/lib/useApiWithLogging";
 import { Popover } from '@base-ui-components/react/popover';
 
 
@@ -10,16 +9,12 @@ import { Popover } from '@base-ui-components/react/popover';
 
 export function AiInspector() {
   const [isOpen, setIsOpen] = useState(false);
-  const [testLoading, setTestLoading] = useState(false);
-  const [testQuery, setTestQuery] = useState("");
-  const [testType, setTestType] = useState<"text" | "object">("text");
   const [selectedInteraction, setSelectedInteraction] =
     useState<LLMInteraction | null>(null);
 
   // Use Zustand store for interactions
   const interactions = useLLMStore((state) => state.interactions);
   const clearInteractions = useLLMStore((state) => state.clearInteractions);
-  const { callApiWithLogging } = useApiWithLogging();
 
   // Poll for server updates every 5 seconds as fallback
   useEffect(() => {
@@ -46,46 +41,6 @@ export function AiInspector() {
     return () => clearInterval(pollInterval);
   }, [interactions.length]);
 
-  const runTest = async () => {
-    if (!testQuery.trim()) return;
-
-    try {
-      setTestLoading(true);
-      
-
-      console.log("🤖 AI Inspector: Running test via API");
-
-      await callApiWithLogging(
-        "/api/ai-inspector",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            query: testQuery,
-            type: testType,
-          }),
-        },
-        {
-          source: 'ai-inspector-test',
-          logInProgress: true,
-          prompt: testQuery,
-          type: testType
-        }
-      );
-
-     
-
-      console.log("✅ AI Inspector: Test completed successfully");
-    } catch (error) {
-      console.error("❌ AI Inspector: Test failed:", error);
-
-     
-    } finally {
-      setTestLoading(false);
-    }
-  };
 
   const refreshInteractions = async () => {
     try {

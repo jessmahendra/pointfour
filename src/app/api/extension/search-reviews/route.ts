@@ -17,11 +17,7 @@ console.log('🔍 ENVIRONMENT DEBUG:', {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'SET' : 'NOT SET'
 });
 
-console.log('🧪 GPT-5 TESTING CONFIG:', {
-  enabled: ENABLE_GPT5_TESTING,
-  testPercentage: GPT5_TEST_PERCENTAGE,
-  model: 'gpt-5-mini'
-});
+// GPT-5 testing is now handled by the centralized LLM service
 
 interface SerperResult {
   title?: string;
@@ -664,16 +660,10 @@ export async function GET(request: NextRequest) {
       let modelUsed = 'gpt-4o-mini'; // Default
       let isGPT5Test = false;
       
-      // Check if this was a GPT-5 test by looking at the logs
-      if (ENABLE_GPT5_TESTING && Math.random() * 100 < GPT5_TEST_PERCENTAGE) {
-        console.log(`🧪 GET REQUEST: This would have used GPT-5 (${GPT5_TEST_PERCENTAGE}% chance)`);
-        modelUsed = 'gpt-5-mini';
-        isGPT5Test = true;
-      } else {
-        console.log(`🤖 GET REQUEST: This used GPT-4o-mini`);
-        modelUsed = 'gpt-4o-mini';
-        isGPT5Test = false;
-      }
+      // GPT-5 testing is now handled by the centralized LLM service
+      console.log(`🧪 GET REQUEST: GPT-5 testing handled by LLM service`);
+      modelUsed = 'llm-service';
+      isGPT5Test = false;
       
       // Log GPT model summary for GET requests
       console.log('\n' + '='.repeat(80));
@@ -1041,24 +1031,14 @@ export async function POST(request: NextRequest) {
     const directFitAdvice = extractDirectFitAdvice(extractedData);
     
     // Analyze results for patterns based on product category using enhanced data
-    let analysis: AnalysisResult;
-    
     let modelUsed = '';
     let isGPT5Test = false;
     
-    if (ENABLE_GPT5_TESTING && Math.random() * 100 < GPT5_TEST_PERCENTAGE) {
-      // Use GPT-5 test function for a percentage of requests
-      console.log(`🧪 GPT-5 TESTING: Using GPT-5 test function for ${enhancedBrand} (${GPT5_TEST_PERCENTAGE}% chance)`);
-      modelUsed = 'gpt-5-mini';
-      isGPT5Test = true;
-      analysis = await analyzeResultsWithGPT5Test(prioritizedForGPT, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem, directFitAdvice);
-    } else {
-      // Use existing GPT-4o-mini function (legacy function)
-      console.log(`🤖 GPT-4o-mini: Using existing GPT-4o-mini function for ${enhancedBrand}`);
-      modelUsed = 'gpt-4o-mini';
-      isGPT5Test = false;
-      analysis = await analyzeResultsWithGPT4o(prioritizedForGPT, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem, directFitAdvice);
-    }
+    // GPT-5 testing is now handled by the centralized LLM service
+    console.log(`🧪 GPT-5 TESTING: Using LLM service for ${enhancedBrand} (GPT-5 testing handled centrally)`);
+    modelUsed = 'llm-service';
+    isGPT5Test = false;
+    const analysis = await analyzeResultsWithGPT5Test(prioritizedForGPT, enhancedBrand, productCategory, enhancedItemName, finalIsSpecificItem, directFitAdvice);
     
     // Debug: Log the analysis object
     console.log('🔍 ANALYSIS DEBUG: Full analysis object:', JSON.stringify(analysis, null, 2));
@@ -1860,9 +1840,9 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
         modelUsed: modelUsed,
         isGPT5Test: isGPT5Test,
         gpt5Config: {
-          enabled: ENABLE_GPT5_TESTING,
-          testPercentage: GPT5_TEST_PERCENTAGE,
-          model: 'gpt-5-mini'
+          enabled: 'handled-by-llm-service',
+          testPercentage: 'centralized',
+          model: 'llm-service'
         }
       }
     });
