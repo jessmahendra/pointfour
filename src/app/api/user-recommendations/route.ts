@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     
     if (existingRecommendation) {
       // Update existing recommendation (only for authenticated users)
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         recommendation_data: recommendationData,
         user_profile: userProfile || null,
         updated_at: new Date().toISOString()
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       recommendationId = updatedRecommendation.id;
     } else {
       // Create new recommendation (works for both authenticated and anonymous users)
-      const insertData: any = {
+      const insertData: Record<string, unknown> = {
         user_id: user?.id || null, // Can be null for anonymous users
         product_id: parseInt(productId),
         query: query,
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
 
 // GET /api/user-recommendations/[token] - Get a shared recommendation by token
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {

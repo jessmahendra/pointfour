@@ -28,50 +28,9 @@ interface ProductPageClientProps {
 }
 
 export function ProductPageClient({ product }: ProductPageClientProps) {
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [isMakingShareable, setIsMakingShareable] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   const shareFunctionRef = useRef<(() => Promise<void>) | null>(null);
-
-  // Simple clipboard copy function
-  const copyToClipboard = async (text: string): Promise<boolean> => {
-    console.log("📋 Attempting to copy to clipboard:", text);
-
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        console.log("✅ Clipboard API success");
-        return true;
-      }
-
-      console.log("⚠️ Using fallback clipboard method");
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";
-      textArea.style.left = "-999999px";
-      textArea.style.top = "-999999px";
-      textArea.style.opacity = "0";
-      textArea.style.pointerEvents = "none";
-      textArea.style.zIndex = "-1";
-
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-
-      const successful = document.execCommand("copy");
-      document.body.removeChild(textArea);
-
-      console.log(
-        successful
-          ? "✅ Fallback clipboard success"
-          : "❌ Fallback clipboard failed"
-      );
-      return successful;
-    } catch (error) {
-      console.error("❌ Clipboard copy failed:", error);
-      return false;
-    }
-  };
 
   const handleShareClick = async () => {
     if (shareFunctionRef.current) {
@@ -87,10 +46,6 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
         setIsMakingShareable(false);
       }
     }
-  };
-
-  const handleShareUrlGenerated = (url: string | null) => {
-    setShareUrl(url);
   };
 
   const handleShareStateChange = (
@@ -281,7 +236,6 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
           brandName={product.brand.name}
           brandUrl={product.brand.url}
           productId={product.id}
-          onShareUrlGenerated={handleShareUrlGenerated}
           onShareClick={handleShareFunctionReady}
           onShareStateChange={handleShareStateChange}
         />

@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 
 // GET /api/shared-recommendations/[token] - Get a shared recommendation by token
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {

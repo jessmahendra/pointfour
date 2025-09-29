@@ -43,7 +43,7 @@ export async function generateMetadata({
         images: product.image_url ? [product.image_url] : [],
       },
     };
-  } catch (error) {
+  } catch {
     return {
       title: "Shared Recommendation | PointFour",
     };
@@ -73,15 +73,7 @@ export default async function SharedPage({ params }: SharedPageProps) {
     notFound();
   }
 
-  const {
-    recommendation,
-    product,
-    userProfile,
-    productQuery,
-    createdAt,
-    viewCount,
-    expiresAt,
-  } = sharedData;
+  const { recommendation, product, productQuery, createdAt } = sharedData;
 
   // Debug logging
   console.log("🔍 Shared page received data:", {
