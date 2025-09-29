@@ -309,23 +309,11 @@ export class DatabaseServiceServiceRole {
         return existingProduct;
       }
 
-      // Get the brand ID from the brand slug
-      const { data: brand, error: brandError } = await this.supabase
-        .from('brands')
-        .select('id')
-        .eq('slug', productData.brandSlug)
-        .single();
-
-      if (brandError || !brand) {
-        console.error('Error finding brand by slug:', brandError);
-        throw new Error(`Brand not found: ${productData.brandSlug}`);
-      }
-
-      // Create new product
+      // Create new product - use brand slug directly as brand_id
       const productInsert: ProductInsert = {
         name: productData.name,
         url: productData.url,
-        brand_id: brand.id.toString(),
+        brand_id: productData.brandSlug, // Use slug directly instead of numeric ID
         description: productData.description,
         image_url: productData.image_url,
         price: productData.price,
