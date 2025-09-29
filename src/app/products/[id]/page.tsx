@@ -123,8 +123,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
         {/* Product Header */}
         <div className="bg-white rounded-lg shadow-sm p-8 mb-8 border border-stone-200">
-          <div className="grid gap-8 md:grid-cols-2">
-            {/* Product Image */}
+          <div className="max-w-2xl">
+            {/* Product Image - Hidden for now until image functionality is implemented */}
+            {/* 
             <div className="aspect-square relative overflow-hidden rounded-lg">
               {product.image_url ? (
                 <Image
@@ -151,9 +152,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 </div>
               )}
             </div>
+            */}
 
             {/* Product Details */}
-            <div className="space-y-6">
+            <div className="space-y-2">
               {/* Brand */}
               <div className="flex items-center">
                 {product.brand.logo_url && (
@@ -187,22 +189,22 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
               {/* Description */}
               {product.description && (
-                <p className="text-stone-600 text-base leading-relaxed">
+                <p className="text-stone-600 text-sm leading-relaxed">
                   {product.description}
                 </p>
               )}
 
               {/* Action Buttons */}
-              <div className="flex space-x-4">
+              <div className="flex space-x-4 mt-4">
                 <a
                   href={product.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-black text-white font-semibold rounded-lg hover:bg-stone-800 transition-colors"
+                  className="inline-flex items-center px-4 py-2 text-sm text-stone-600 hover:text-stone-800 transition-colors border border-stone-300 rounded-md hover:border-stone-400"
                 >
                   View Product
                   <svg
-                    className="ml-2 w-4 h-4"
+                    className="ml-1.5 w-3.5 h-3.5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -215,12 +217,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
                     />
                   </svg>
                 </a>
+                {/* More from Brand button - Hidden for now */}
+                {/* 
                 <Link
                   href={`/brands/${product.brand.slug}`}
                   className="inline-flex items-center px-6 py-3 bg-stone-100 text-stone-700 font-semibold rounded-lg hover:bg-stone-200 hover:text-[#928704] transition-colors"
                 >
                   More from {product.brand.name}
                 </Link>
+                */}
               </div>
             </div>
           </div>

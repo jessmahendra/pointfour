@@ -63,12 +63,6 @@ export function RecommendationDisplay({
 
   return (
     <div className={`bg-white rounded-lg shadow-sm p-6 ${className}`}>
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Your recommendations
-        </h2>
-      </div>
-
       <div className="prose prose-sm max-w-none">
         <MarkdownText text={analysisResult.recommendation} />
       </div>

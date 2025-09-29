@@ -302,7 +302,7 @@ export function ProductRecommendations({
         <div className="bg-white rounded-lg shadow-sm p-6 border border-stone-200">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-stone-900 mb-4">
-              AI Fit Recommendations
+              Your Recommendations
             </h2>
             <p className="text-gray-600 mb-6">
               {loading
@@ -343,7 +343,7 @@ export function ProductRecommendations({
           {/* Header with refresh button */}
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">
-              AI Fit Recommendations
+              Your Recommendations
             </h2>
             <button
               onClick={handleRefresh}
