@@ -704,14 +704,13 @@ User Query: ${query}
 
 **MANDATORY: You MUST include ALL of the following sections in your response, even if data is limited:**
 
-**Summary**: Structure this section exactly as follows:
-[Brand name] is a [1-2 sentence concise brand description]. [NO user-specific information]
+Start your response with: "Found [X] reviews and discussions from [Y] sources."
 
-**Fit summary**
-[1-2 sentences about fit for this specific user based on available data and their measurements]
+**Summary**: [Brand name] is a [1-2 sentence concise brand description]. [NO user-specific information]
 
-**Quality**  
-[1-2 sentences about brand quality and materials - ALWAYS include this section, even if you must state "Quality information is limited based on available reviews"]
+**Fit summary**: [1-2 sentences about fit for this specific user based on available data and their measurements]
+
+**Quality**: [1-2 sentences about brand quality and materials - ALWAYS include this section, even if you must state "Quality information is limited based on available reviews"]
 
 **Sizing**: Include all sizing advice, fit considerations, and specific guidance (runs small/large, true to size, etc.) based on customer reviews AND the user's specific measurements. This should contain all the detailed sizing information and fit considerations tailored to their size and preferences.
 

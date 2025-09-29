@@ -1,40 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ShareButtonProps {
-  url: string;
+  url?: string;
   title?: string;
   className?: string;
 }
 
 export function ShareButton({ url, title, className = "" }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
+  const [shareUrl, setShareUrl] = useState(url || "");
+
+  // If no URL is provided, use the current page URL
+  useEffect(() => {
+    if (!url && typeof window !== "undefined") {
+      setShareUrl(window.location.href);
+    }
+  }, [url]);
 
   const handleShare = async () => {
     try {
-      // Try to use the Web Share API if available (mobile devices)
-      if (navigator.share) {
-        await navigator.share({
-          title: title || "Check out this product",
-          url: url,
-        });
-      } else {
-        // Fallback to clipboard API
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+      // Always try clipboard first for better UX
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+
+      // If Web Share API is available and user is on mobile, also try to share
+      if (
+        navigator.share &&
+        /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        )
+      ) {
+        try {
+          await navigator.share({
+            title: title || "Check out this product",
+            url: shareUrl,
+          });
+        } catch {
+          // Web Share failed, but clipboard already succeeded
+          console.log("Web Share API failed, but URL was copied to clipboard");
+        }
       }
-    } catch {
-      // If Web Share API fails, fallback to clipboard
+    } catch (clipboardError) {
+      console.error("Failed to copy to clipboard:", clipboardError);
+
+      // Fallback: try to create a temporary text area and copy from it
       try {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (clipboardError) {
-        console.error("Failed to copy to clipboard:", clipboardError);
-        // Show a fallback message or modal
-        alert("Unable to copy link. Please copy manually: " + url);
+        const textArea = document.createElement("textarea");
+        textArea.value = shareUrl;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textArea);
+
+        if (successful) {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } else {
+          throw new Error("execCommand failed");
+        }
+      } catch (fallbackError) {
+        console.error("All copy methods failed:", fallbackError);
+        // Show a fallback message
+        alert(
+          "Unable to copy link automatically. Please copy manually: " + shareUrl
+        );
       }
     }
   };

@@ -10,11 +10,11 @@ interface RecommendationDisplayProps {
   className?: string;
 }
 
-export function RecommendationDisplay({ 
-  analysisResult, 
-  loading = false, 
+export function RecommendationDisplay({
+  analysisResult,
+  loading = false,
   error = null,
-  className = "" 
+  className = "",
 }: RecommendationDisplayProps) {
   if (loading) {
     return (
@@ -33,10 +33,22 @@ export function RecommendationDisplay({
 
   if (error) {
     return (
-      <div className={`bg-red-50 border border-red-200 rounded-lg p-6 ${className}`}>
+      <div
+        className={`bg-red-50 border border-red-200 rounded-lg p-6 ${className}`}
+      >
         <div className="flex items-center">
-          <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-5 h-5 text-red-400 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           <h3 className="text-lg font-medium text-red-800">Error</h3>
         </div>
@@ -53,28 +65,8 @@ export function RecommendationDisplay({
     <div className={`bg-white rounded-lg shadow-sm p-6 ${className}`}>
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          AI Fit Recommendations
+          Your recommendations
         </h2>
-        {analysisResult.searchType && (
-          <div className="flex items-center text-sm text-gray-500 mb-4">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              {analysisResult.searchType === "external" && "🌐 Web Search"}
-              {analysisResult.searchType === "database" && "📊 Database"}
-              {analysisResult.searchType === "hybrid" && "🔍 Hybrid"}
-              {analysisResult.searchType === "fallback" && "⚠️ Limited Data"}
-            </span>
-            {analysisResult.hasExternalData && (
-              <span className="ml-2 text-green-600">
-                ✓ External reviews found
-              </span>
-            )}
-            {analysisResult.hasDatabaseData && (
-              <span className="ml-2 text-blue-600">
-                ✓ Database data available
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
       <div className="prose prose-sm max-w-none">
@@ -88,16 +80,19 @@ export function RecommendationDisplay({
           </h3>
           <div className="text-sm text-gray-600">
             <p>
-              Found {analysisResult.externalSearchResults.totalResults} reviews and discussions
-              {analysisResult.externalSearchResults.brandFitSummary?.sources && 
-                ` from ${analysisResult.externalSearchResults.brandFitSummary.sources.length} sources`
-              }.
+              Found {analysisResult.externalSearchResults.totalResults} reviews
+              and discussions
+              {analysisResult.externalSearchResults.brandFitSummary?.sources &&
+                ` from ${analysisResult.externalSearchResults.brandFitSummary.sources.length} sources`}
+              .
             </p>
             {analysisResult.externalSearchResults.brandFitSummary?.sources && (
               <div className="mt-2">
                 <span className="font-medium">Sources: </span>
                 <span className="text-gray-500">
-                  {analysisResult.externalSearchResults.brandFitSummary.sources.join(", ")}
+                  {analysisResult.externalSearchResults.brandFitSummary.sources.join(
+                    ", "
+                  )}
                 </span>
               </div>
             )}

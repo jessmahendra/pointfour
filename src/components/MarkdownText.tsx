@@ -10,6 +10,15 @@ interface MarkdownTextProps {
 // Enhanced React Markdown components with better list styling
 const markdownComponents = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  h3: ({ children, ...props }: any) => (
+    <h3
+      className="text-base font-bold text-gray-900 mt-6 mb-3 first:mt-0"
+      {...props}
+    >
+      {children}
+    </h3>
+  ),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ol: ({ children, ...props }: any) => (
     <ol className="space-y-3" {...props}>
       {children}
@@ -43,9 +52,25 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
     return <span>{text}</span>;
   }
 
+  // Preprocess text to convert **Heading**: patterns to proper markdown headings
+  // Special handling for Summary section - remove heading, keep content
+  let processedText = text.replace(/\*\*Summary\*\*:\s*/g, "");
+
+  // Remove any "Your Recommendations" heading that might appear in content
+  processedText = processedText.replace(
+    /\*\*Your Recommendations\*\*:\s*/g,
+    ""
+  );
+  processedText = processedText.replace(/### Your Recommendations\s*/g, "");
+
+  // Convert other headings to proper markdown format
+  processedText = processedText.replace(/\*\*([^*]+)\*\*:\s*/g, "### $1\n\n");
+
   return (
     <div className={className}>
-      <ReactMarkdown components={markdownComponents}>{text}</ReactMarkdown>
+      <ReactMarkdown components={markdownComponents}>
+        {processedText}
+      </ReactMarkdown>
     </div>
   );
 };

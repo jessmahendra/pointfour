@@ -115,9 +115,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <div className="flex items-center gap-3">
               <SaveProfileButton />
               <ShareButton
-                url={`${
-                  process.env.NEXT_PUBLIC_BASE_URL || "https://pointfour.in"
-                }/products/${product.id}`}
                 title={`${product.name} from ${product.brand.name}`}
               />
             </div>
