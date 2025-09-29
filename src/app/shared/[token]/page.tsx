@@ -83,6 +83,15 @@ export default async function SharedPage({ params }: SharedPageProps) {
     expiresAt,
   } = sharedData;
 
+  // Debug logging
+  console.log("🔍 Shared page received data:", {
+    hasRecommendation: !!recommendation,
+    hasProduct: !!product,
+    productData: product,
+    productQuery,
+    createdAt,
+  });
+
   // Handle case where product data is missing
   const safeProduct = product || {
     id: "unknown",
@@ -172,7 +181,7 @@ export default async function SharedPage({ params }: SharedPageProps) {
 
               {/* Price */}
               {safeProduct.price && (
-                <div className="text-2xl font-bold text-stone-900">
+                <div className="text-sm text-stone-600">
                   {safeProduct.currency || "USD"} {safeProduct.price.toFixed(2)}
                 </div>
               )}
@@ -208,37 +217,6 @@ export default async function SharedPage({ params }: SharedPageProps) {
                   </svg>
                 </a>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Shared Recommendation Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-          <div className="flex items-start">
-            <svg
-              className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">
-                This is a shared recommendation
-              </p>
-              <p className="text-blue-700">
-                This recommendation was generated on{" "}
-                {new Date(createdAt).toLocaleDateString()}
-                and has been viewed {viewCount} times.
-                {userProfile &&
-                  " It was personalized based on the original user's measurements and preferences."}
-              </p>
             </div>
           </div>
         </div>

@@ -59,6 +59,16 @@ export function ProductRecommendations({
       generatedShareUrl
     );
   }, [generatedShareUrl]);
+
+  // Debug logging for productId
+  useEffect(() => {
+    console.log(
+      "🔍 DEBUG: ProductRecommendations received productId:",
+      productId,
+      "type:",
+      typeof productId
+    );
+  }, [productId]);
   const supabase = createClient();
   const initializationRef = useRef(false);
 
@@ -376,9 +386,19 @@ export function ProductRecommendations({
   };
 
   const makeRecommendationShareable = useCallback(async () => {
-    if (!analysisResult || !productId) return;
+    if (!analysisResult || !productId) {
+      console.log("❌ Cannot make shareable - missing data:", {
+        hasAnalysisResult: !!analysisResult,
+        hasProductId: !!productId,
+        productId: productId,
+      });
+      return;
+    }
 
-    console.log("🚀 Starting shareable generation...");
+    console.log("🚀 Starting shareable generation...", {
+      productId: productId,
+      productIdType: typeof productId,
+    });
 
     // Notify parent about state change
     if (onShareStateChange) {
