@@ -50,8 +50,16 @@ export default function GlobalNavigation() {
 
     try {
       // Use environment variable for base URL, fallback to current origin
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+      let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+
+      // Only fix localhost port in development
+      if (
+        process.env.NODE_ENV === "development" &&
+        baseUrl.includes("localhost:3000")
+      ) {
+        baseUrl = baseUrl.replace("localhost:3000", "localhost:3001");
+      }
+
       const redirectUrl = `${baseUrl}/auth/callback`;
 
       const { error } = await supabase.auth.signInWithOtp({
