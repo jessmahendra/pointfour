@@ -44,22 +44,47 @@ export interface ProductInsert {
 
 export class DatabaseServiceServiceRole {
   private static instance: DatabaseServiceServiceRole;
-  private supabase;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private supabase: any;
+  private initialized = false;
 
   private constructor() {
+    // Don't initialize here - use lazy initialization
+  }
+
+  private async initialize() {
+    if (this.initialized) return;
+    
+    console.log('🔍 DatabaseServiceServiceRole: Initializing...');
+    
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+    console.log('🔍 Environment variables:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceRoleKey: !!serviceRoleKey,
+      supabaseUrl: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'missing',
+      serviceRoleKey: serviceRoleKey ? `${serviceRoleKey.substring(0, 10)}...` : 'missing'
+    });
+
     if (!supabaseUrl || !serviceRoleKey) {
+      console.error('❌ Missing required environment variables');
       throw new Error('Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
     }
 
-    this.supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
+    try {
+      this.supabase = createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      });
+      this.initialized = true;
+      console.log('✅ DatabaseServiceServiceRole: Supabase client initialized successfully');
+    } catch (error) {
+      console.error('❌ DatabaseServiceServiceRole: Failed to initialize Supabase client:', error);
+      throw error;
+    }
   }
 
   static getInstance(): DatabaseServiceServiceRole {
@@ -122,6 +147,8 @@ export class DatabaseServiceServiceRole {
    */
   async findMatchingBrand(brandName: string, threshold: number = 0.7): Promise<Brand | null> {
     try {
+      await this.initialize();
+      
       // First try exact match (case insensitive)
       const { data: exactMatch, error: exactError } = await this.supabase
         .from('brands')
@@ -190,6 +217,7 @@ export class DatabaseServiceServiceRole {
     logo_url?: string;
   }): Promise<Brand> {
     try {
+      await this.initialize();
       // First check if brand already exists
       const existingBrand = await this.findMatchingBrand(brandData.name, 0.9); // Higher threshold for creation
       
@@ -235,6 +263,7 @@ export class DatabaseServiceServiceRole {
    */
   async findExistingProduct(productName: string, brandSlug: string): Promise<Product | null> {
     try {
+      await this.initialize();
       const { data: product, error } = await this.supabase
         .from('products')
         .select('*')
@@ -271,6 +300,7 @@ export class DatabaseServiceServiceRole {
     currency?: string;
   }): Promise<Product> {
     try {
+      await this.initialize();
       // First check if product already exists
       const existingProduct = await this.findExistingProduct(productData.name, productData.brandSlug);
       
@@ -329,6 +359,7 @@ export class DatabaseServiceServiceRole {
    */
   async getAllBrands(): Promise<Brand[]> {
     try {
+      await this.initialize();
       const { data: brands, error } = await this.supabase
         .from('brands')
         .select('*')
@@ -351,6 +382,7 @@ export class DatabaseServiceServiceRole {
    */
   async getAllProducts(): Promise<Product[]> {
     try {
+      await this.initialize();
       const { data: products, error } = await this.supabase
         .from('products')
         .select('*')

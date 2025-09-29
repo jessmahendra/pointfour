@@ -37,19 +37,26 @@ export class EnhancedProductParsingServiceServiceRole {
     prompt: string,
     options: EnhancedProductParsingOptions = {}
   ): Promise<EnhancedProductParsingResult> {
-    const {
-      fuzzyMatchThreshold = 0.7,
-      skipDatabaseOperations = false,
-      ...parsingOptions
-    } = options;
+    try {
+      const {
+        fuzzyMatchThreshold = 0.7,
+        skipDatabaseOperations = false,
+        ...parsingOptions
+      } = options;
 
-    console.log('🚀 EnhancedProductParsingService (Service Role): Starting enhanced product parsing...');
+      console.log('🚀 EnhancedProductParsingService (Service Role): Starting enhanced product parsing...');
+      console.log('🔍 Service environment check:', {
+        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+      });
 
-    // Step 1: Parse the product using the existing service
-    const { result: parsedData, interaction } = await productParsingService.parseProduct(
-      prompt,
-      parsingOptions
-    );
+      // Step 1: Parse the product using the existing service
+      console.log('📝 Step 1: Parsing product with LLM...');
+      const { result: parsedData, interaction } = await productParsingService.parseProduct(
+        prompt,
+        parsingOptions
+      );
 
     console.log('📝 Parsed data:', {
       brandName: parsedData.brandName,
@@ -75,9 +82,8 @@ export class EnhancedProductParsingServiceServiceRole {
       };
     }
 
-    try {
       // Step 2: Find or create brand
-      console.log('🔍 Looking for existing brand...');
+      console.log('🔍 Step 2: Looking for existing brand...');
       let brand = await databaseServiceServiceRole.findMatchingBrand(parsedData.brandName, fuzzyMatchThreshold);
       let wasBrandCreated = false;
 
@@ -94,7 +100,7 @@ export class EnhancedProductParsingServiceServiceRole {
       }
 
       // Step 3: Find or create product
-      console.log('🔍 Looking for existing product...');
+      console.log('🔍 Step 3: Looking for existing product...');
       let product = await databaseServiceServiceRole.findExistingProduct(parsedData.productName, brand.slug);
       let wasProductCreated = false;
 
@@ -124,6 +130,7 @@ export class EnhancedProductParsingServiceServiceRole {
       };
     } catch (error) {
       console.error('❌ Error in enhanced product parsing:', error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       throw new Error(`Enhanced product parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
