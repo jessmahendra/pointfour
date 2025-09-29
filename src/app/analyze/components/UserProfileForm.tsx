@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 interface UserProfileFormProps {
   simpleQuery: string;
@@ -9,7 +10,7 @@ interface UserProfileFormProps {
   parsingLoading: boolean;
   navigating: boolean;
   handleSimpleFormSubmit: () => void;
-  router: any;
+  router: AppRouterInstance;
   setNavigating: React.Dispatch<React.SetStateAction<boolean>>;
 }
 

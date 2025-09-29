@@ -154,23 +154,6 @@ export function ProductRecommendations({
     brandUrl ? ` (${brandUrl})` : ""
   }`;
 
-  const handleGetRecommendations = useCallback(async () => {
-    setHasRun(true);
-    console.log("🤖 ProductRecommendations: Using legacy API");
-
-    // Use saved measurements for logged-in users, or temporary measurements for non-logged-in users
-    const measurements = savedMeasurements || tempMeasurements;
-    console.log("🔍 DEBUG: Using measurements:", measurements);
-
-    const userProfile = measurements
-      ? convertMeasurementsToProfile(measurements)
-      : undefined;
-
-    console.log("🔍 DEBUG: Final user profile for LLM:", userProfile);
-
-    await getRecommendations(llmQuery, userProfile);
-  }, [getRecommendations, llmQuery, savedMeasurements, tempMeasurements]);
-
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     const cacheKey = `recommendations_${
@@ -195,7 +178,7 @@ export function ProductRecommendations({
     userEmail,
     productName,
     brandName,
-    handleGetRecommendations,
+    getRecommendations,
     llmQuery,
     savedMeasurements,
     tempMeasurements,

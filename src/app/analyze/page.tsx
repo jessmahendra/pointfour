@@ -22,15 +22,12 @@ function BrandAnalysisContent() {
     null
   );
   const [shareLoading, setShareLoading] = useState(false);
-  const [userMeasurements, setUserMeasurements] =
-    useState<UserMeasurements | null>(null);
   const [measurementsLoading, setMeasurementsLoading] = useState(true);
   const [simpleQuery, setSimpleQuery] = useState("");
   const [parsedData, setParsedData] = useState<string | null>(null);
   const [parsingLoading, setParsingLoading] = useState(false);
   const [navigating, setNavigating] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [pendingProductId, setPendingProductId] = useState<string | null>(null);
 
   const router = useRouter();
@@ -44,7 +41,6 @@ function BrandAnalysisContent() {
         data: { session },
       } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
-      setAuthLoading(false);
     };
 
     getInitialSession();
@@ -52,9 +48,8 @@ function BrandAnalysisContent() {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -65,10 +60,9 @@ function BrandAnalysisContent() {
     if (user && !measurementsLoading) {
       loadUserMeasurements();
     } else if (!user) {
-      setUserMeasurements(null);
       setMeasurementsLoading(false);
     }
-  }, [user]);
+  }, [user, measurementsLoading]);
 
   // Handle loading shared analysis from URL parameters
   useEffect(() => {
@@ -83,18 +77,15 @@ function BrandAnalysisContent() {
       setMeasurementsLoading(true);
       const response = await fetch("/api/user/profile");
       if (response.ok) {
-        const { profile } = await response.json();
-        setUserMeasurements(profile?.measurements || null);
+        await response.json();
+        // User measurements loaded successfully
       } else if (response.status === 401) {
         // User not authenticated, that's fine
-        setUserMeasurements(null);
       } else {
         console.error("Failed to load user measurements");
-        setUserMeasurements(null);
       }
     } catch (error) {
       console.error("Error loading user measurements:", error);
-      setUserMeasurements(null);
     } finally {
       setMeasurementsLoading(false);
     }
@@ -269,9 +260,6 @@ function BrandAnalysisContent() {
   };
 
   const handleMeasurementsComplete = (measurements: UserMeasurements) => {
-    // Store measurements temporarily for this session
-    setUserMeasurements(measurements);
-
     // Store measurements in session storage for the product page
     sessionStorage.setItem("tempMeasurements", JSON.stringify(measurements));
 
