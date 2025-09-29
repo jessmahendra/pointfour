@@ -12,7 +12,8 @@ interface UseRecommendationsReturn {
   analysisResult: AnalysisResult | null;
   loading: boolean;
   error: string | null;
-  getRecommendations: (query: string, userProfile?: UserProfile) => Promise<void>;
+  shareUrl: string | null;
+  getRecommendations: (query: string, userProfile?: UserProfile, productId?: string) => Promise<void>;
   clearResults: () => void;
   loadCachedResult: (result: AnalysisResult) => void;
 }
@@ -21,8 +22,9 @@ export function useRecommendations(options: UseRecommendationsOptions = {}): Use
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
-  const getRecommendations = useCallback(async (query: string, userProfile?: UserProfile) => {
+  const getRecommendations = useCallback(async (query: string, userProfile?: UserProfile, productId?: string) => {
     if (!query.trim()) {
       setError("Query cannot be empty");
       return;
@@ -46,6 +48,7 @@ export function useRecommendations(options: UseRecommendationsOptions = {}): Use
             footType: "",
             category: "",
           },
+          productId, // Include productId in the request
         }),
       });
 
@@ -53,6 +56,7 @@ export function useRecommendations(options: UseRecommendationsOptions = {}): Use
 
       if (data.success) {
         setAnalysisResult(data.data);
+        setShareUrl(data.shareUrl || null);
         options.onSuccess?.(data.data);
       } else {
         const errorMessage = data.error || "Analysis failed. Please try again.";
@@ -71,6 +75,7 @@ export function useRecommendations(options: UseRecommendationsOptions = {}): Use
   const clearResults = useCallback(() => {
     setAnalysisResult(null);
     setError(null);
+    setShareUrl(null);
   }, []);
 
   const loadCachedResult = useCallback((result: AnalysisResult) => {
@@ -83,6 +88,7 @@ export function useRecommendations(options: UseRecommendationsOptions = {}): Use
     analysisResult,
     loading,
     error,
+    shareUrl,
     getRecommendations,
     clearResults,
     loadCachedResult,

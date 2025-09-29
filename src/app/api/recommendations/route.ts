@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { llmService } from '@/lib/llm-service';
+import { createClient } from '@/utils/supabase/server';
 
 // Caching Configuration
 const CACHE_CONFIG = {
@@ -57,6 +58,90 @@ function setCachedData<T>(cache: Map<string, CacheEntry<T>>, key: string, data: 
 
 function generateCacheKey(brandName: string, itemName: string, query: string): string {
   return `${brandName.toLowerCase()}::${itemName.toLowerCase()}::${query.toLowerCase().slice(0, 100)}`;
+}
+
+// Function to generate a unique share token
+function generateShareToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 16; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// Function to save recommendation (works for both authenticated and anonymous users)
+async function saveRecommendation(
+  productId: string | null,
+  recommendationData: unknown,
+  userProfile: unknown,
+  productQuery: string,
+  isShared: boolean = false
+): Promise<string | null> {
+  if (!productId) {
+    return null; // No product ID, can't save recommendation
+  }
+  
+  try {
+    const supabase = await createClient();
+    
+    // Get the current user (can be null for anonymous users)
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Always save recommendations, even for anonymous users
+    // This ensures shared links work for non-users
+    const insertData: Record<string, unknown> = {
+      product_id: parseInt(productId),
+      query: productQuery,
+      recommendation_data: recommendationData,
+      user_profile: userProfile || null,
+      is_shared: isShared,
+      user_id: user?.id || null // Can be null for anonymous users
+    };
+    
+    if (isShared) {
+      insertData.expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      // Generate share token manually
+      insertData.share_token = generateShareToken();
+    }
+    
+    console.log('🔍 DEBUG: Saving recommendation with data:', {
+      productId: parseInt(productId),
+      isShared,
+      userId: user?.id || 'anonymous',
+      hasUserProfile: !!userProfile,
+      shareToken: isShared ? insertData.share_token : 'not shared'
+    });
+    
+    const { data: savedRecommendation, error } = await supabase
+      .from('user_recommendations')
+      .insert(insertData)
+      .select('share_token, id')
+      .single();
+    
+    if (error) {
+      console.error('❌ Error saving recommendation:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      return null;
+    }
+    
+    console.log('✅ Recommendation saved successfully:', {
+      id: savedRecommendation.id,
+      shareToken: savedRecommendation.share_token,
+      isShared,
+      userId: user?.id || 'anonymous'
+    });
+    
+    return savedRecommendation.share_token;
+  } catch (error) {
+    console.error('❌ Exception saving recommendation:', error);
+    return null;
+  }
 }
 
 // GPT-5 testing is now handled by the centralized LLM service
@@ -147,11 +232,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let query = '';
   let userProfile = null;
+  let productId = null;
+  let makeShareable = false;
   
   try {
     const body = await request.json();
     query = body.query;
     userProfile = body.userProfile;
+    productId = body.productId; // Optional product ID for saving recommendations
+    makeShareable = body.makeShareable || false; // Flag to make recommendation shareable
     // Remove enableExternalSearch parameter - we'll decide automatically
     
     console.log('=== DEBUG: Starting recommendation request ===');
@@ -163,12 +252,34 @@ export async function POST(request: NextRequest) {
     // Handle both "Brand/Item: text" format and direct brand query format
     const brandMatch = query.match(/Brand\/Item:\s*([^\n]+)/);
     const brandItemText = brandMatch ? brandMatch[1].trim() : query.trim();
+    // Use same cache key for both regular and shareable requests
     const cacheKey = generateCacheKey(brandItemText, '', query);
     
     // Check full response cache first (includes external search results)
+    // Use cache even for shareable requests - we'll just generate a new share token
     const cachedFullResponse = getCachedData(fullResponseCache, cacheKey, CACHE_CONFIG.aiResponseCacheTimeout);
     if (cachedFullResponse) {
       console.log('🎯 CACHE HIT: Returning cached full response with external search results');
+      
+      // If makeShareable is true, generate a share token and save to database
+      let shareToken = null;
+      let shareUrl = null;
+      
+      if (makeShareable) {
+        shareToken = generateShareToken();
+        const savedToken = await saveRecommendation(
+          productId,
+          cachedFullResponse,
+          userProfile,
+          query,
+          true // isShared = true
+        );
+        if (savedToken) {
+          shareToken = savedToken;
+          shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/shared/${shareToken}`;
+        }
+      }
+      
       return NextResponse.json({
         success: true,
         data: {
@@ -184,7 +295,9 @@ export async function POST(request: NextRequest) {
             fullResponseCacheSize: fullResponseCache.size,
             cacheHit: true
           }
-        }
+        },
+        shareToken,
+        shareUrl
       });
     }
     
@@ -832,9 +945,25 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
     console.log('Data source:', enhancedResult.dataSource);
     console.log('Has external data:', enhancedResult.hasExternalData);
     
+    // Save recommendation if productId is provided (works for both authenticated and anonymous users)
+    let shareToken = null;
+    if (productId) {
+      console.log('=== DEBUG: Saving recommendation ===');
+      shareToken = await saveRecommendation(
+        productId,
+        enhancedResult,
+        userProfile,
+        query,
+        makeShareable // Use the makeShareable flag
+      );
+      console.log('Recommendation saved, share token:', shareToken);
+    }
+    
     return NextResponse.json({
       success: true,
-      data: enhancedResult
+      data: enhancedResult,
+      shareToken: shareToken,
+      shareUrl: shareToken ? `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/shared/${shareToken}` : null
     });
     
   } catch (error) {

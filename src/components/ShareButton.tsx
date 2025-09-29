@@ -6,9 +6,15 @@ interface ShareButtonProps {
   url?: string;
   title?: string;
   className?: string;
+  onShareUrlGenerated?: (shareUrl: string) => void; // Callback for when share URL is generated
 }
 
-export function ShareButton({ url, title, className = "" }: ShareButtonProps) {
+export function ShareButton({
+  url,
+  title,
+  className = "",
+  onShareUrlGenerated,
+}: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState(url || "");
 
@@ -18,6 +24,13 @@ export function ShareButton({ url, title, className = "" }: ShareButtonProps) {
       setShareUrl(window.location.href);
     }
   }, [url]);
+
+  // Call the callback when shareUrl changes
+  useEffect(() => {
+    if (shareUrl && onShareUrlGenerated) {
+      onShareUrlGenerated(shareUrl);
+    }
+  }, [shareUrl, onShareUrlGenerated]);
 
   const handleShare = async () => {
     try {
