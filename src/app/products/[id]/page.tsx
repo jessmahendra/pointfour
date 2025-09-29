@@ -5,6 +5,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ProductRecommendations } from "@/app/products/[id]/ProductRecommendations";
 import { ShareButton } from "@/components/ShareButton";
+import { SaveProfileButton } from "@/components/SaveProfileButton";
 
 interface ProductPageProps {
   params: Promise<{
@@ -111,12 +112,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
               <span>/</span>
               <span className="text-stone-900">{product.name}</span>
             </div>
-            <ShareButton
-              url={`${
-                process.env.NEXT_PUBLIC_BASE_URL || "https://pointfour.in"
-              }/products/${product.id}`}
-              title={`${product.name} from ${product.brand.name}`}
-            />
+            <div className="flex items-center gap-3">
+              <SaveProfileButton />
+              <ShareButton
+                url={`${
+                  process.env.NEXT_PUBLIC_BASE_URL || "https://pointfour.in"
+                }/products/${product.id}`}
+                title={`${product.name} from ${product.brand.name}`}
+              />
+            </div>
           </div>
         </nav>
 
