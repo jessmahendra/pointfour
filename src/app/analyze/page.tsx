@@ -227,20 +227,20 @@ function BrandAnalysisContent() {
             productCreated: result.wasProductCreated,
           },
         };
-        setParsedData(JSON.stringify(enhancedResult, null, 2));
-
         // Check if user is logged in
         if (user) {
           // User is logged in, navigate directly to product page
           if (result.product?.id) {
             setNavigating(true);
+            // Don't set parsedData for signed-in users - go straight to navigation
             setTimeout(() => {
               router.push(`/products/${result.product.id}`);
-            }, 2000); // 2 second delay to let user see the results
+            }, 1000); // Reduced delay since we're not showing results
           }
         } else {
           // User is not logged in, store product ID and show measurements form
           if (result.product?.id) {
+            setParsedData(JSON.stringify(enhancedResult, null, 2));
             setPendingProductId(result.product.id);
             setCurrentStep("measurements");
           }

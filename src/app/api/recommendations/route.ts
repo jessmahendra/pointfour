@@ -715,11 +715,19 @@ User Query: ${query}
 
 **Sizing**: Include all sizing advice, fit considerations, and specific guidance (runs small/large, true to size, etc.) based on customer reviews AND the user's specific measurements. This should contain all the detailed sizing information and fit considerations tailored to their size and preferences.
 
-**Recommendations**: Provide 3-4 specific, actionable recommendations based on the available customer review data and the user's specific measurements and preferences. Include:
-- A summary of what customers say about this brand (comfort, fit, quality)
-- Specific advice tailored to the user's measurements, size, height, and fit preferences
-- Any important considerations or tips based on review patterns for users with similar measurements
-- Action items (e.g., "Order your usual size", "Size up/down", "Check return policy") based on their specific measurements
+**Recommendations**: Provide 3-4 specific, actionable recommendations based on the available customer review data and the user's specific measurements and preferences. Format each recommendation as a numbered list item with:
+
+1. **Customer Feedback**: What customers say about this brand/product (comfort, fit, quality) — include specific details from reviews
+2. **Specific Size Recommendation**: Exact size advice based on user's measurements and body shape — include specific size numbers and reasoning
+3. **Alternative Sizing/Fit Preference**: Options for different fit preferences or if unsure — include size up/down advice and comparison suggestions
+4. **Pre-Purchase Checks**: Actionable steps before buying — check size charts, return policies, length considerations, etc.
+
+Each recommendation should be:
+- Numbered (1, 2, 3, 4)
+- Start with a clear, direct statement
+- Include supporting context separated by em dashes (—) or semicolons
+- Be specific to the user's measurements and preferences
+- Provide actionable next steps
 
 **Warnings**: Any important fit or quality considerations (if none, state "No specific warnings identified")
 

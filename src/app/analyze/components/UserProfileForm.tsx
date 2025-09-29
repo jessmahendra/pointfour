@@ -86,138 +86,92 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
             </button>
           </div>
         </div>
-        {parsedData && (
-          <div className="mt-4 space-y-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-              <h3 className="text-sm font-medium text-green-800 mb-3">
-                ✅ Enhanced Parsing Results
-              </h3>
-              <div className="text-xs text-green-700 space-y-2">
-                {(() => {
-                  try {
-                    const result = JSON.parse(parsedData);
-                    return (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <div className="font-semibold text-green-800 mb-1">
-                              Parsed Information:
-                            </div>
-                            <div>
-                              <strong>Brand:</strong>{" "}
-                              {result.parsedData?.brandName || "N/A"}
-                            </div>
-                            <div>
-                              <strong>Product:</strong>{" "}
-                              {result.parsedData?.productName || "N/A"}
-                            </div>
-                            <div>
-                              <strong>Brand Website:</strong>{" "}
-                              {result.parsedData?.brandWebsite || "N/A"}
-                            </div>
-                            <div>
-                              <strong>Product URL:</strong>{" "}
-                              {result.parsedData?.productUrl || "N/A"}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="font-semibold text-green-800 mb-1">
-                              Database Operations:
-                            </div>
-                            <div
-                              className={`flex items-center gap-1 ${
-                                result.wasBrandCreated
-                                  ? "text-green-600"
-                                  : "text-blue-600"
-                              }`}
-                            >
-                              {result.wasBrandCreated ? "🆕" : "🔍"}
-                              Brand{" "}
-                              {result.wasBrandCreated
-                                ? "created"
-                                : "found"}{" "}
-                              (Slug: {result.brand?.slug || "N/A"})
-                            </div>
-                            <div
-                              className={`flex items-center gap-1 ${
-                                result.wasProductCreated
-                                  ? "text-green-600"
-                                  : "text-blue-600"
-                              }`}
-                            >
-                              {result.wasProductCreated ? "🆕" : "🔍"}
-                              Product{" "}
-                              {result.wasProductCreated
-                                ? "created"
-                                : "found"}{" "}
-                              (ID: {result.product?.id || "N/A"})
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-green-300">
-                          <div className="font-semibold text-green-800 mb-1">
-                            Summary:
-                          </div>
-                          <div className="text-xs mb-2">
-                            {result.wasBrandCreated &&
-                            result.wasProductCreated ? (
-                              <span className="text-green-600">
-                                🆕 Both brand and product were created in the
-                                database
-                              </span>
-                            ) : result.wasBrandCreated ? (
-                              <span className="text-green-600">
-                                🆕 Brand was created, product already existed
-                              </span>
-                            ) : result.wasProductCreated ? (
-                              <span className="text-green-600">
-                                🆕 Product was created, brand already existed
-                              </span>
-                            ) : (
-                              <span className="text-blue-600">
-                                🔍 Both brand and product already existed in the
-                                database
-                              </span>
-                            )}
-                          </div>
-                          {result.product?.id && (
-                            <div className="flex items-center gap-2">
-                              {navigating ? (
-                                <span className="text-blue-600 text-xs">
-                                  🚀 Navigating to product page...
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => {
-                                    setNavigating(true);
-                                    router.push(
-                                      `/products/${result.product.id}`
-                                    );
-                                  }}
-                                  className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
-                                >
-                                  View Product Page →
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    );
-                  } catch {
-                    return <div>Error parsing results</div>;
-                  }
-                })()}
-              </div>
+        {/* Loading State */}
+        {parsingLoading && (
+          <div className="mt-6 flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-stone-600 mx-auto mb-4"></div>
+              <p className="text-stone-600 text-sm">Finding your product...</p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-md">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Full Response:
-              </h3>
-              <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto max-h-64">
-                {parsedData}
-              </pre>
+          </div>
+        )}
+
+        {/* Navigation State for Signed-in Users */}
+        {navigating && !parsedData && (
+          <div className="mt-6 flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-blue-600 text-sm">
+                Taking you to the product page...
+              </p>
             </div>
+          </div>
+        )}
+
+        {/* Success State - Simple and Clean */}
+        {parsedData && !parsingLoading && (
+          <div className="mt-6">
+            {(() => {
+              try {
+                const result = JSON.parse(parsedData);
+                return (
+                  <div className="bg-white border border-stone-200 rounded-lg p-6 shadow-sm">
+                    <div className="text-center">
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg
+                          className="w-6 h-6 text-green-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-semibold text-stone-800 mb-2">
+                        Found your product!
+                      </h3>
+                      <p className="text-stone-600 mb-4">
+                        <span className="font-medium">
+                          {result.parsedData?.brandName}
+                        </span>{" "}
+                        - {result.parsedData?.productName}
+                      </p>
+                      {navigating ? (
+                        <div className="flex items-center justify-center gap-2 text-blue-600">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <span className="text-sm">
+                            Taking you to the product page...
+                          </span>
+                        </div>
+                      ) : result.product?.id ? (
+                        <button
+                          onClick={() => {
+                            setNavigating(true);
+                            router.push(`/products/${result.product.id}`);
+                          }}
+                          className="px-6 py-2 bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition-colors text-sm font-medium"
+                        >
+                          View Product Details →
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              } catch {
+                return (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-800 text-sm">
+                      Sorry, we couldn't find that product. Please try again.
+                    </p>
+                  </div>
+                );
+              }
+            })()}
           </div>
         )}
       </div>
