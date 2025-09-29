@@ -166,7 +166,8 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
                 return (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                     <p className="text-red-800 text-sm">
-                      Sorry, we couldn't find that product. Please try again.
+                      Sorry, we couldn&apos;t find that product. Please try
+                      again.
                     </p>
                   </div>
                 );
