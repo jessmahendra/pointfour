@@ -14,6 +14,11 @@ interface ProductRecommendationsProps {
   brandUrl?: string;
   productId?: string; // Add productId prop
   onShareUrlGenerated?: (shareUrl: string | null) => void; // Callback for share URL
+  onShareClick?: (shareFn: () => Promise<void>) => void; // Callback for share button click
+  onShareStateChange?: (
+    isMakingShareable: boolean,
+    copiedToClipboard: boolean
+  ) => void; // Callback for UI state
 }
 
 export function ProductRecommendations({
@@ -22,6 +27,8 @@ export function ProductRecommendations({
   brandUrl,
   productId,
   onShareUrlGenerated,
+  onShareClick,
+  onShareStateChange,
 }: ProductRecommendationsProps) {
   // Use the legacy API (now the best one)
   const {
@@ -41,11 +48,9 @@ export function ProductRecommendations({
   const [savedMeasurements, setSavedMeasurements] =
     useState<UserMeasurements | null>(null);
   const [measurementsLoading, setMeasurementsLoading] = useState(true);
-  const [isMakingShareable, setIsMakingShareable] = useState(false);
   const [generatedShareUrl, setGeneratedShareUrl] = useState<string | null>(
     null
   );
-  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
 
   // Debug logging for share URL state
   useEffect(() => {
@@ -179,6 +184,8 @@ export function ProductRecommendations({
     }_${productName}_${brandName}`;
     localStorage.removeItem(cacheKey); // Clear cache
     setHasRun(false);
+    setIsInitialized(false); // Reset initialization to trigger auto-run
+    initializationRef.current = false; // Reset the ref to allow auto-run again
 
     // Use saved measurements for logged-in users, or temporary measurements for non-logged-in users
     const measurements = savedMeasurements || tempMeasurements;
@@ -191,6 +198,8 @@ export function ProductRecommendations({
     console.log("🔍 DEBUG: Refresh - Final user profile for LLM:", userProfile);
 
     await getRecommendations(llmQuery, userProfile, productId);
+    setHasRun(true); // Mark as run after successful generation
+    setIsInitialized(true); // Mark as initialized
     setIsRefreshing(false);
   }, [
     userEmail,
@@ -366,12 +375,15 @@ export function ProductRecommendations({
     }
   };
 
-  const makeRecommendationShareable = async () => {
+  const makeRecommendationShareable = useCallback(async () => {
     if (!analysisResult || !productId) return;
 
     console.log("🚀 Starting shareable generation...");
-    setIsMakingShareable(true);
-    setCopiedToClipboard(false);
+
+    // Notify parent about state change
+    if (onShareStateChange) {
+      onShareStateChange(true, false);
+    }
 
     try {
       const response = await fetch("/api/recommendations", {
@@ -407,20 +419,50 @@ export function ProductRecommendations({
           console.log("📋 Attempting clipboard copy...");
           const copySuccess = await copyToClipboard(result.shareUrl);
           console.log("📋 Clipboard result:", copySuccess);
-          setCopiedToClipboard(copySuccess);
-          setTimeout(() => setCopiedToClipboard(false), 3000);
+
+          // Notify parent about state change
+          if (onShareStateChange) {
+            onShareStateChange(false, copySuccess);
+          }
+
+          setTimeout(() => {
+            if (onShareStateChange) {
+              onShareStateChange(false, false);
+            }
+          }, 3000);
         } else {
           console.log("❌ No shareUrl in response");
+          if (onShareStateChange) {
+            onShareStateChange(false, false);
+          }
         }
       } else {
         console.error("❌ API request failed:", response.status);
+        if (onShareStateChange) {
+          onShareStateChange(false, false);
+        }
       }
     } catch (error) {
       console.error("❌ Error making recommendation shareable:", error);
-    } finally {
-      setIsMakingShareable(false);
+      if (onShareStateChange) {
+        onShareStateChange(false, false);
+      }
     }
-  };
+  }, [
+    analysisResult,
+    productId,
+    llmQuery,
+    savedMeasurements,
+    onShareStateChange,
+    onShareUrlGenerated,
+  ]);
+
+  // Expose the share function to parent
+  useEffect(() => {
+    if (onShareClick) {
+      onShareClick(makeRecommendationShareable);
+    }
+  }, [onShareClick, makeRecommendationShareable]);
 
   return (
     <div className="mb-8">
@@ -472,75 +514,6 @@ export function ProductRecommendations({
               Your Recommendations
             </h2>
             <div className="flex items-center gap-2">
-              <button
-                onClick={makeRecommendationShareable}
-                disabled={isMakingShareable || loading}
-                className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  copiedToClipboard
-                    ? "text-green-600 bg-green-50 border border-green-200"
-                    : "text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:text-blue-700"
-                }`}
-              >
-                {isMakingShareable ? (
-                  <>
-                    <svg
-                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Creating Share Link...
-                  </>
-                ) : copiedToClipboard ? (
-                  <>
-                    <svg
-                      className="mr-1.5 w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    Link Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
-                      />
-                    </svg>
-                    Create & Copy Share Link
-                  </>
-                )}
-              </button>
               <button
                 onClick={handleRefresh}
                 disabled={isRefreshing || loading}
