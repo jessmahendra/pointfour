@@ -65,20 +65,33 @@ export function SaveProfileButton({ className = "" }: SaveProfileButtonProps) {
     setSignupMessage("");
 
     try {
-      // Use environment variable for base URL, fallback to current origin
-      let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+      // Determine the correct base URL for magic link redirects
+      let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-      // Only fix localhost port in development
-      if (
-        process.env.NODE_ENV === "development" &&
-        baseUrl.includes("localhost:3000")
-      ) {
-        baseUrl = baseUrl.replace("localhost:3000", "localhost:3001");
+      // If NEXT_PUBLIC_BASE_URL is not set, determine it based on environment
+      if (!baseUrl) {
+        if (process.env.NODE_ENV === "development") {
+          // Development: use localhost:3001
+          baseUrl = "http://localhost:3001";
+        } else {
+          // Production: use the actual domain from window.location
+          const currentOrigin = window.location.origin;
+          if (currentOrigin.includes("localhost")) {
+            // Fallback if somehow still localhost in production
+            baseUrl = "https://pointfour.in";
+          } else {
+            baseUrl = currentOrigin;
+          }
+        }
       }
 
       const redirectUrl = `${baseUrl}/auth/callback?next=${window.location.pathname}`;
 
-      console.log("SaveProfileButton: Sending magic link", {
+      console.log("SaveProfileButton: Environment debug", {
+        NODE_ENV: process.env.NODE_ENV,
+        NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+        windowOrigin: window.location.origin,
+        finalBaseUrl: baseUrl,
         email: signupEmail.trim(),
         redirectUrl,
       });
