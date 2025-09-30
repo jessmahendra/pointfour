@@ -142,27 +142,30 @@ export async function GET(
         console.log('🔍 Attempting to extract brand info from recommendation data');
         
         // Look for brand information in the recommendation data
-        const brandInfo = (recommendationData as any)?.brand || 
-                         (recommendationData as any)?.product?.brand ||
-                         (recommendationData as any)?.analysisResult?.brand;
+        const data = recommendationData as Record<string, unknown>;
+        const brandInfo = data?.brand || 
+                         (data?.product as Record<string, unknown>)?.brand ||
+                         (data?.analysisResult as Record<string, unknown>)?.brand;
         
-        if (brandInfo) {
-          console.log('✅ Found brand info in recommendation data:', brandInfo);
+        if (brandInfo && typeof brandInfo === 'object') {
+          const brand = brandInfo as Record<string, unknown>;
+          console.log('✅ Found brand info in recommendation data:', brand);
+          const productData = data?.product as Record<string, unknown> | undefined;
           product = {
             id: 'unknown',
-            name: (recommendationData as any)?.product?.name || 'Product',
-            url: (recommendationData as any)?.product?.url || '#',
-            description: (recommendationData as any)?.product?.description || 'Product information not available',
-            image_url: (recommendationData as any)?.product?.image_url || null,
-            price: (recommendationData as any)?.product?.price || null,
-            currency: (recommendationData as any)?.product?.currency || 'USD',
+            name: (productData?.name as string) || 'Product',
+            url: (productData?.url as string) || '#',
+            description: (productData?.description as string) || 'Product information not available',
+            image_url: (productData?.image_url as string) || null,
+            price: (productData?.price as number) || null,
+            currency: (productData?.currency as string) || 'USD',
             brand: {
-              id: brandInfo.id || 1,
-              slug: brandInfo.slug || 'unknown',
-              name: brandInfo.name || 'Unknown Brand',
-              logo_url: brandInfo.logo_url || null,
-              description: brandInfo.description || 'Brand information not available',
-              url: brandInfo.url || '#'
+              id: (brand.id as number) || 1,
+              slug: (brand.slug as string) || 'unknown',
+              name: (brand.name as string) || 'Unknown Brand',
+              logo_url: (brand.logo_url as string) || null,
+              description: (brand.description as string) || 'Brand information not available',
+              url: (brand.url as string) || '#'
             }
           };
         }
@@ -173,9 +176,8 @@ export async function GET(
     if (!product) {
       console.log('❌ No product data found, creating fallback product');
       
-      // Try to extract any available information from the query or recommendation data
+      // Try to extract any available information from the query
       const query = sharedRecommendation.query || '';
-      const recommendationData = sharedRecommendation.recommendation_data;
       
       // Try to parse brand and product name from the query
       let brandName = 'Unknown Brand';
@@ -183,7 +185,7 @@ export async function GET(
       
       if (query) {
         // Common patterns: "Brand Product", "Brand - Product", "Brand: Product"
-        const parts = query.split(/[-:]/).map(part => part.trim());
+        const parts = query.split(/[-:]/).map((part: string) => part.trim());
         if (parts.length >= 2) {
           brandName = parts[0];
           productName = parts.slice(1).join(' ');
