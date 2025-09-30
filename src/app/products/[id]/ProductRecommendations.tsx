@@ -406,16 +406,17 @@ export function ProductRecommendations({
     }
 
     try {
-      const response = await fetch("/api/recommendations", {
+      // Use the dedicated shared-recommendations endpoint for faster sharing
+      const response = await fetch("/api/shared-recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: llmQuery,
+          productId: productId,
+          recommendationData: analysisResult,
           userProfile: savedMeasurements
             ? convertMeasurementsToProfile(savedMeasurements)
             : null,
-          productId: productId,
-          makeShareable: true,
+          productQuery: llmQuery,
         }),
       });
 
