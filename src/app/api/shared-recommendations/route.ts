@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 
+// Generate a unique share token
+function generateShareToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 16; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 // POST /api/shared-recommendations - Create a shared recommendation
 export async function POST(request: NextRequest) {
   try {
@@ -24,15 +34,20 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Insert the shared recommendation
+    // Generate a unique share token
+    const shareToken = generateShareToken();
+    
+    // Insert the shared recommendation into user_recommendations table
     const { data: sharedRecommendation, error } = await supabase
-      .from('shared_recommendations')
+      .from('user_recommendations')
       .insert({
         product_id: productId,
         user_id: user?.id || null,
+        query: productQuery,
         recommendation_data: recommendationData,
         user_profile: userProfile || null,
-        product_query: productQuery,
+        share_token: shareToken,
+        is_shared: true,
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
       })
       .select('share_token, id')
@@ -46,10 +61,21 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Generate the share URL with proper environment detection
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://pointfour.in' : 'http://localhost:3000');
+    const shareUrl = `${baseUrl}/shared/${sharedRecommendation.share_token}`;
+    
+    console.log('🔍 DEBUG: Share URL generation:', {
+      NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+      NODE_ENV: process.env.NODE_ENV,
+      baseUrl,
+      shareUrl
+    });
+    
     return NextResponse.json({
       success: true,
       shareToken: sharedRecommendation.share_token,
-      shareUrl: `${process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://pointfour.in' : 'http://localhost:3000')}/shared/${sharedRecommendation.share_token}`
+      shareUrl
     });
     
   } catch (error) {
@@ -78,10 +104,10 @@ export async function GET(request: NextRequest) {
     
     // Get the shared recommendation
     const { data: sharedRecommendation, error } = await supabase
-      .from('shared_recommendations')
+      .from('user_recommendations')
       .select(`
         *,
-        product:products!shared_recommendations_product_id_fkey (
+        product:products!user_recommendations_product_id_fkey (
           id,
           name,
           url,
@@ -100,6 +126,7 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq('share_token', token)
+      .eq('is_shared', true)
       .gt('expires_at', new Date().toISOString())
       .single();
     
@@ -111,9 +138,13 @@ export async function GET(request: NextRequest) {
     }
     
     // Increment view count
-    await supabase.rpc('increment_shared_recommendation_view', {
-      share_token_param: token
-    });
+    await supabase
+      .from('user_recommendations')
+      .update({
+        view_count: (sharedRecommendation.view_count || 0) + 1,
+        last_viewed_at: new Date().toISOString()
+      })
+      .eq('share_token', token);
     
     return NextResponse.json({
       success: true,
@@ -121,7 +152,7 @@ export async function GET(request: NextRequest) {
         recommendation: sharedRecommendation.recommendation_data,
         product: sharedRecommendation.product,
         userProfile: sharedRecommendation.user_profile,
-        productQuery: sharedRecommendation.product_query,
+        productQuery: sharedRecommendation.query,
         createdAt: sharedRecommendation.created_at,
         viewCount: sharedRecommendation.view_count + 1, // Include the incremented count
         expiresAt: sharedRecommendation.expires_at

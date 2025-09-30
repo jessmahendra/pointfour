@@ -20,10 +20,10 @@ export async function GET(
     
     // Get the shared recommendation
     const { data: sharedRecommendation, error } = await supabase
-      .from('shared_recommendations')
+      .from('user_recommendations')
       .select(`
         *,
-        product:products!shared_recommendations_product_id_fkey (
+        product:products!user_recommendations_product_id_fkey (
           id,
           name,
           url,
@@ -42,6 +42,7 @@ export async function GET(
         )
       `)
       .eq('share_token', token)
+      .eq('is_shared', true)
       .gt('expires_at', new Date().toISOString())
       .single();
     
@@ -53,9 +54,13 @@ export async function GET(
     }
     
     // Increment view count
-    await supabase.rpc('increment_shared_recommendation_view', {
-      share_token_param: token
-    });
+    await supabase
+      .from('user_recommendations')
+      .update({
+        view_count: (sharedRecommendation.view_count || 0) + 1,
+        last_viewed_at: new Date().toISOString()
+      })
+      .eq('share_token', token);
     
     return NextResponse.json({
       success: true,
@@ -63,7 +68,7 @@ export async function GET(
         recommendation: sharedRecommendation.recommendation_data,
         product: sharedRecommendation.product,
         userProfile: sharedRecommendation.user_profile,
-        productQuery: sharedRecommendation.product_query,
+        productQuery: sharedRecommendation.query,
         createdAt: sharedRecommendation.created_at,
         viewCount: sharedRecommendation.view_count + 1, // Include the incremented count
         expiresAt: sharedRecommendation.expires_at
