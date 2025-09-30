@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       shareToken: sharedRecommendation.share_token,
-      shareUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/shared/${sharedRecommendation.share_token}`
+      shareUrl: `${process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://pointfour.in' : 'http://localhost:3000')}/shared/${sharedRecommendation.share_token}`
     });
     
   } catch (error) {

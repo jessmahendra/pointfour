@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
     });
     
     // Return the share ID and URL
-    const shareUrl = `${request.nextUrl.origin}/analyze?share=${shareId}`;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://pointfour.in' : 'http://localhost:3000');
+    const shareUrl = `${baseUrl}/analyze?share=${shareId}`;
     
     return NextResponse.json({
       success: true,

@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       success: true,
       recommendationId,
       shareToken: shareToken,
-      shareUrl: shareToken ? `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/shared/${shareToken}` : null
+      shareUrl: shareToken ? `${process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://pointfour.in' : 'http://localhost:3000')}/shared/${shareToken}` : null
     });
     
   } catch (error) {

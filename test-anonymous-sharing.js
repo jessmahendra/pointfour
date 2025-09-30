@@ -7,7 +7,7 @@
 
 const fetch = require('node-fetch');
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://pointfour.in' : 'http://localhost:3000');
 
 async function testAnonymousSharing() {
   console.log('🧪 Testing Anonymous User Recommendation Sharing');

@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
         );
         if (savedToken) {
           shareToken = savedToken;
-          shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/shared/${shareToken}`;
+          shareUrl = `${process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://pointfour.in' : 'http://localhost:3000')}/shared/${shareToken}`;
         }
       }
       
@@ -963,7 +963,7 @@ Make your response helpful, specific, and actionable. Be concise and avoid verbo
       success: true,
       data: enhancedResult,
       shareToken: shareToken,
-      shareUrl: shareToken ? `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/shared/${shareToken}` : null
+      shareUrl: shareToken ? `${process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://pointfour.in' : 'http://localhost:3000')}/shared/${shareToken}` : null
     });
     
   } catch (error) {

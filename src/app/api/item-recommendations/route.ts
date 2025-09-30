@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
 // Fetch brands from existing API
 async function fetchBrands(): Promise<Brand[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://pointfour.in' : 'http://localhost:3000');
     const response = await fetch(`${baseUrl}/api/brands`, {
       method: 'GET',
       headers: {
@@ -173,7 +173,7 @@ async function fetchBrands(): Promise<Brand[]> {
 // Fetch reviews from existing API
 async function fetchReviews(): Promise<Review[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://pointfour.in' : 'http://localhost:3000');
     const response = await fetch(`${baseUrl}/api/reviews`, {
       method: 'GET',
       headers: {
