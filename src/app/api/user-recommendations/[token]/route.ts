@@ -135,14 +135,73 @@ export async function GET(
       }
     } else {
       console.log('❌ No product_id found in shared recommendation');
+      
+      // Try to extract brand information from the recommendation data itself
+      const recommendationData = sharedRecommendation.recommendation_data;
+      if (recommendationData && typeof recommendationData === 'object') {
+        console.log('🔍 Attempting to extract brand info from recommendation data');
+        
+        // Look for brand information in the recommendation data
+        const brandInfo = (recommendationData as any)?.brand || 
+                         (recommendationData as any)?.product?.brand ||
+                         (recommendationData as any)?.analysisResult?.brand;
+        
+        if (brandInfo) {
+          console.log('✅ Found brand info in recommendation data:', brandInfo);
+          product = {
+            id: 'unknown',
+            name: (recommendationData as any)?.product?.name || 'Product',
+            url: (recommendationData as any)?.product?.url || '#',
+            description: (recommendationData as any)?.product?.description || 'Product information not available',
+            image_url: (recommendationData as any)?.product?.image_url || null,
+            price: (recommendationData as any)?.product?.price || null,
+            currency: (recommendationData as any)?.product?.currency || 'USD',
+            brand: {
+              id: brandInfo.id || 1,
+              slug: brandInfo.slug || 'unknown',
+              name: brandInfo.name || 'Unknown Brand',
+              logo_url: brandInfo.logo_url || null,
+              description: brandInfo.description || 'Brand information not available',
+              url: brandInfo.url || '#'
+            }
+          };
+        }
+      }
     }
     
     // If we can't get product data, create a minimal product object
     if (!product) {
       console.log('❌ No product data found, creating fallback product');
+      
+      // Try to extract any available information from the query or recommendation data
+      const query = sharedRecommendation.query || '';
+      const recommendationData = sharedRecommendation.recommendation_data;
+      
+      // Try to parse brand and product name from the query
+      let brandName = 'Unknown Brand';
+      let productName = 'Product';
+      
+      if (query) {
+        // Common patterns: "Brand Product", "Brand - Product", "Brand: Product"
+        const parts = query.split(/[-:]/).map(part => part.trim());
+        if (parts.length >= 2) {
+          brandName = parts[0];
+          productName = parts.slice(1).join(' ');
+        } else {
+          // Try to extract brand from the beginning of the query
+          const words = query.split(' ');
+          if (words.length >= 2) {
+            brandName = words[0];
+            productName = words.slice(1).join(' ');
+          } else {
+            productName = query;
+          }
+        }
+      }
+      
       product = {
-        id: sharedRecommendation.product_id,
-        name: 'Product',
+        id: sharedRecommendation.product_id || 'unknown',
+        name: productName,
         url: '#',
         description: 'Product information not available',
         image_url: null,
@@ -150,8 +209,8 @@ export async function GET(
         currency: 'USD',
         brand: {
           id: 1,
-          slug: 'unknown',
-          name: 'Unknown Brand',
+          slug: brandName.toLowerCase().replace(/\s+/g, '-'),
+          name: brandName,
           logo_url: null,
           description: 'Brand information not available',
           url: '#'
