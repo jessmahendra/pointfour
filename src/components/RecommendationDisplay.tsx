@@ -112,7 +112,7 @@ function CollapsibleSection({ title, content, defaultOpen = false }: {
       {isOpen && (
         <div
           style={{
-            padding: "0 20px 20px 20px",
+            padding: "16px 20px 20px 20px",
             backgroundColor: "#FFFFFF",
             borderTop: "1px solid #F8F7F4",
           }}
@@ -197,7 +197,7 @@ export function RecommendationDisplay({
               fontSize: "18px",
               fontWeight: "600",
               color: "#4E4B4B",
-              marginBottom: "12px",
+              marginBottom: "16px",
               marginTop: 0,
             }}
           >
@@ -210,7 +210,21 @@ export function RecommendationDisplay({
               color: "#4E4B4B",
             }}
           >
-            <MarkdownText text={tldr} />
+            {/* Custom rendering for TLDR to make labels bold */}
+            {tldr.split('\n').filter(line => line.trim()).map((line, index) => {
+              // Match pattern like "- Overall recommendation: text" or "• Overall recommendation: text"
+              const match = line.match(/^[-•]\s*([^:]+):\s*(.+)$/);
+              if (match) {
+                const [, label, content] = match;
+                return (
+                  <div key={index} style={{ marginBottom: "8px" }}>
+                    <span style={{ fontWeight: "600" }}>• {label}:</span>{" "}
+                    <span>{content}</span>
+                  </div>
+                );
+              }
+              return <div key={index} style={{ marginBottom: "8px" }}>{line}</div>;
+            })}
           </div>
         </div>
       )}

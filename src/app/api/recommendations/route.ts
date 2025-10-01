@@ -772,12 +772,13 @@ export async function POST(request: NextRequest) {
       // Add results count
       enhancedContext += `Total External Results: ${externalSearchResults.totalResults}\n`;
       
-      // Add some key external reviews if available
+      // Add external reviews - these are REAL customer reviews
       if (externalSearchResults.reviews && externalSearchResults.reviews.length > 0) {
-        enhancedContext += `\nKey External Reviews:\n`;
-        externalSearchResults.reviews.slice(0, 3).forEach((review: { title: string; source: string; snippet: string }, index: number) => {
-          enhancedContext += `${index + 1}. ${review.title} (${review.source}): ${review.snippet}\n`;
+        enhancedContext += `\n**CUSTOMER REVIEWS** (Use these for "What customers say" section):\n`;
+        externalSearchResults.reviews.slice(0, 8).forEach((review: { title: string; source: string; snippet: string }, index: number) => {
+          enhancedContext += `\nReview ${index + 1} [${review.source}]:\n"${review.snippet}"\n`;
         });
+        enhancedContext += `\n**IMPORTANT**: Extract direct quotes from the reviews above for the "What customers say" section.\n`;
       }
       
       // Note that we're using web data because database was insufficient
@@ -848,12 +849,14 @@ ${userContext ? `- Your fit: [One sentence specific to user's measurements]` : '
 
 **What customers say**
 Positive feedback:
-- [Quote or summary from positive review]
-- [Quote or summary from positive review]
+- [Direct quote from CUSTOMER REVIEWS section above - use quotation marks]
+- [Direct quote from CUSTOMER REVIEWS section above - use quotation marks]
 
 Negative feedback:
-- [Quote or summary from negative review]
-- [Quote or summary from negative review]
+- [Direct quote from CUSTOMER REVIEWS section above - use quotation marks]
+- [Direct quote from CUSTOMER REVIEWS section above - use quotation marks]
+
+IMPORTANT: Only use ACTUAL customer quotes from the CUSTOMER REVIEWS section provided above, NOT product descriptions. If no actual reviews available, state "Customer reviews are limited."
 
 [Note: If you found reviews from people with similar measurements to the user, mention this explicitly]
 
