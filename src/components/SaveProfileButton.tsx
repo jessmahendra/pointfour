@@ -225,40 +225,6 @@ export function SaveProfileButton({ className = "" }: SaveProfileButtonProps) {
                 quickest way to do another search with your measurements already
                 filled in, giving you the most tailored results every time.
               </p>
-
-              <div
-                style={{
-                  backgroundColor: "#F8F7F4",
-                  padding: "16px",
-                  borderRadius: "8px",
-                  marginBottom: "20px",
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: "500",
-                    color: "#333",
-                    margin: "0 0 8px 0",
-                  }}
-                >
-                  Benefits of saving your profile:
-                </p>
-                <ul
-                  style={{
-                    fontSize: "12px",
-                    color: "#666",
-                    lineHeight: "1.4",
-                    margin: 0,
-                    paddingLeft: "16px",
-                  }}
-                >
-                  <li>Skip measurement forms on future searches</li>
-                  <li>Get instant personalized recommendations</li>
-                  <li>Save time on every new search</li>
-                  <li>Most accurate sizing advice</li>
-                </ul>
-              </div>
             </div>
 
             <form onSubmit={handleSignup}>
