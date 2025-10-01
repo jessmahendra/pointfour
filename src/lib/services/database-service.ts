@@ -15,6 +15,7 @@ export interface Brand {
 export interface Product {
   id: number;
   name: string;
+  normalized_name?: string; // Auto-generated normalized name for duplicate detection
   url: string;
   brand_id: string; // This is the brand slug, not a numeric ID
   description?: string;
@@ -227,25 +228,76 @@ export class DatabaseService {
   }
 
   /**
-   * Find existing product by name and brand slug
+   * Normalize a product name for matching
    */
-  async findExistingProduct(productName: string, brandSlug: string): Promise<Product | null> {
+  private normalizeProductName(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .trim();
+  }
+
+  /**
+   * Find existing product by name and brand slug with fuzzy matching
+   */
+  async findExistingProduct(productName: string, brandSlug: string, threshold: number = 0.85): Promise<Product | null> {
     try {
       const supabase = await this.getSupabaseClient();
-      
-      const { data: product, error } = await supabase
+
+      // First try exact normalized match (fast path)
+      const normalizedName = this.normalizeProductName(productName);
+      const { data: exactMatch, error: exactError } = await supabase
         .from('products')
         .select('*')
         .eq('brand_id', brandSlug)
-        .ilike('name', productName)
-        .single();
+        .eq('normalized_name', normalizedName)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
-        console.error('Error finding product:', error);
+      if (exactMatch && !exactError) {
+        console.log(`✅ Found exact product match: ${exactMatch.name} (ID: ${exactMatch.id})`);
+        return exactMatch;
+      }
+
+      // If no exact match, get all products for this brand and do fuzzy matching
+      const { data: brandProducts, error: brandError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('brand_id', brandSlug);
+
+      if (brandError) {
+        console.error('Error fetching products for fuzzy matching:', brandError);
         return null;
       }
 
-      return product;
+      if (!brandProducts || brandProducts.length === 0) {
+        console.log(`No products found for brand: ${brandSlug}`);
+        return null;
+      }
+
+      // Find best fuzzy match
+      let bestMatch: Product | null = null;
+      let bestSimilarity = 0;
+
+      for (const product of brandProducts) {
+        const similarity = this.calculateSimilarity(
+          normalizedName,
+          this.normalizeProductName(product.name)
+        );
+
+        if (similarity > bestSimilarity) {
+          bestSimilarity = similarity;
+          bestMatch = product;
+        }
+      }
+
+      if (bestMatch && bestSimilarity >= threshold) {
+        console.log(`✅ Found fuzzy product match: ${bestMatch.name} (ID: ${bestMatch.id}, similarity: ${(bestSimilarity * 100).toFixed(1)}%)`);
+        return bestMatch;
+      }
+
+      console.log(`No product match found for "${productName}" (best similarity: ${(bestSimilarity * 100).toFixed(1)}%)`);
+      return null;
     } catch (error) {
       console.error('Error in findExistingProduct:', error);
       return null;
