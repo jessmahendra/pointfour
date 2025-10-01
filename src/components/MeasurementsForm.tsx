@@ -67,7 +67,7 @@ const FIT_PREFERENCES = [
   { value: "tight-fitting", label: "Tight-fitting" },
 ] as const;
 
-type Step = "basic" | "sizes" | "preferences" | "body" | "complete";
+type Step = "height" | "tops" | "bottoms" | "shoes" | "birthday" | "preferences" | "body" | "complete";
 
 export default function MeasurementsForm({
   onSave,
@@ -93,11 +93,15 @@ export default function MeasurementsForm({
       unit: "cm",
     },
   });
-  const [currentStep, setCurrentStep] = useState<Step>("basic");
+  const [currentStep, setCurrentStep] = useState<Step>("height");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [heightUnit, setHeightUnit] = useState<"cm" | "ft">("cm");
+  const [birthdayDay, setBirthdayDay] = useState("");
+  const [birthdayMonth, setBirthdayMonth] = useState("");
+  const [birthdayYear, setBirthdayYear] = useState("");
 
   // Load existing measurements on component mount
   useEffect(() => {
@@ -107,6 +111,28 @@ export default function MeasurementsForm({
       setLoading(false);
     }
   }, [skipLoading]);
+
+  // Sync birthday fields with DOB
+  useEffect(() => {
+    if (measurements.DOB) {
+      const parts = measurements.DOB.split("/");
+      if (parts.length === 3) {
+        setBirthdayDay(parts[0]);
+        setBirthdayMonth(parts[1]);
+        setBirthdayYear(parts[2]);
+      }
+    }
+  }, [measurements.DOB]);
+
+  // Update DOB when birthday fields change
+  useEffect(() => {
+    if (birthdayDay && birthdayMonth && birthdayYear) {
+      const dob = `${birthdayDay.padStart(2, "0")}/${birthdayMonth.padStart(2, "0")}/${birthdayYear}`;
+      if (dob !== measurements.DOB) {
+        setMeasurements((prev) => ({ ...prev, DOB: dob }));
+      }
+    }
+  }, [birthdayDay, birthdayMonth, birthdayYear]);
 
   const loadMeasurements = async () => {
     setLoading(true);
@@ -266,7 +292,7 @@ export default function MeasurementsForm({
   };
 
   const nextStep = () => {
-    const steps: Step[] = ["basic", "sizes", "preferences", "body", "complete"];
+    const steps: Step[] = ["height", "tops", "bottoms", "shoes", "birthday", "preferences", "body", "complete"];
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex < steps.length - 1) {
       setCurrentStep(steps[currentIndex + 1]);
@@ -274,18 +300,18 @@ export default function MeasurementsForm({
   };
 
   const prevStep = () => {
-    const steps: Step[] = ["basic", "sizes", "preferences", "body", "complete"];
+    const steps: Step[] = ["height", "tops", "bottoms", "shoes", "birthday", "preferences", "body", "complete"];
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex > 0) {
       setCurrentStep(steps[currentIndex - 1]);
     }
   };
 
-  const canProceedFromBasic = measurements.DOB && measurements.height;
-  const canProceedFromSizes =
-    (measurements.usualSize?.tops?.length || 0) > 0 ||
-    (measurements.usualSize?.bottoms?.length || 0) > 0 ||
-    (measurements.usualSize?.shoes?.length || 0) > 0;
+  const canProceedFromHeight = measurements.height;
+  const canProceedFromTops = (measurements.usualSize?.tops?.length || 0) > 0;
+  const canProceedFromBottoms = (measurements.usualSize?.bottoms?.length || 0) > 0;
+  const canProceedFromShoes = (measurements.usualSize?.shoes?.length || 0) > 0;
+  const canProceedFromBirthday = measurements.DOB;
 
   if (loading) {
     return (
@@ -302,11 +328,14 @@ export default function MeasurementsForm({
   }
 
   const stepProgress = {
-    basic: 1,
-    sizes: 2,
-    preferences: 3,
-    body: 4,
-    complete: 5,
+    height: 1,
+    tops: 2,
+    bottoms: 3,
+    shoes: 4,
+    birthday: 5,
+    preferences: 6,
+    body: 7,
+    complete: 8,
   };
 
   return (
@@ -315,189 +344,335 @@ export default function MeasurementsForm({
       {currentStep !== "complete" && (
         <div className="mb-2">
           <span className="text-sm font-medium" style={{ color: "#6C6A68" }}>
-            Step {stepProgress[currentStep]} of 4
+            Step {stepProgress[currentStep]} of 7
           </span>
         </div>
       )}
 
       {/* Step Content */}
-      {currentStep === "basic" && (
+      {currentStep === "height" && (
         <div className="space-y-6">
           <div className="mb-6">
             <h3
               className="text-xl font-semibold mb-2"
               style={{ color: "#4E4B4B" }}
             >
-              Your details
+              What&apos;s your height?
             </h3>
+            <p className="text-sm" style={{ color: "#6C6A68" }}>
+              This helps us provide accurate size recommendations
+            </p>
           </div>
 
-          <div className="space-y-6">
-            {/* Date of Birth */}
-            <div>
-              <label
-                htmlFor="dob"
-                className="block text-sm font-medium mb-2"
+          <div className="flex items-center mb-4">
+            <div className="flex items-center space-x-3">
+              <span
+                className={`text-sm font-medium ${heightUnit === "cm" ? "font-semibold" : ""}`}
                 style={{ color: "#4E4B4B" }}
               >
-                Date of birth
-              </label>
-              <input
-                type="date"
-                id="dob"
-                value={measurements.DOB || ""}
-                onChange={(e) => handleInputChange("DOB", e.target.value)}
-                className="w-full px-3 py-2 rounded border transition-colors focus:outline-none"
+                cm
+              </span>
+              <button
+                type="button"
+                onClick={() => setHeightUnit(heightUnit === "cm" ? "ft" : "cm")}
+                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
                 style={{
-                  backgroundColor: "#F8F7F4",
-                  borderColor: "#E9DED5",
-                  color: "#4E4B4B",
+                  backgroundColor: heightUnit === "ft" ? "#4E4B4B" : "#E9DED5",
                 }}
-                max={new Date().toISOString().split("T")[0]}
-              />
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    heightUnit === "ft" ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+              <span
+                className={`text-sm font-medium ${heightUnit === "ft" ? "font-semibold" : ""}`}
+                style={{ color: "#4E4B4B" }}
+              >
+                ft
+              </span>
             </div>
+          </div>
 
-            {/* Height */}
-            <div>
-              <label
-                htmlFor="height"
-                className="block text-sm font-medium mb-2"
-                style={{ color: "#4E4B4B" }}
-              >
-                Height
-              </label>
-              <input
-                type="number"
-                id="height"
-                value={measurements.height || ""}
-                onChange={(e) =>
-                  handleInputChange(
-                    "height",
-                    e.target.value ? Number(e.target.value) : 0
-                  )
-                }
-                min="50"
-                max="300"
-                step="0.1"
-                className="w-full px-3 py-2 rounded border transition-colors focus:outline-none"
-                style={{
-                  backgroundColor: "#F8F7F4",
-                  borderColor: "#E9DED5",
-                  color: "#4E4B4B",
-                }}
-                placeholder="166 cm"
-              />
+          <div>
+            <label
+              htmlFor="height"
+              className="block text-sm font-medium mb-2"
+              style={{ color: "#4E4B4B" }}
+            >
+              Height ({heightUnit})
+            </label>
+            <input
+              type="number"
+              id="height"
+              value={measurements.height || ""}
+              onChange={(e) =>
+                handleInputChange(
+                  "height",
+                  e.target.value ? Number(e.target.value) : 0
+                )
+              }
+              min="50"
+              max="300"
+              step="0.1"
+              className="w-full px-3 py-2 rounded border transition-colors focus:outline-none"
+              style={{
+                backgroundColor: "#F8F7F4",
+                borderColor: "#E9DED5",
+                color: "#4E4B4B",
+              }}
+              placeholder={heightUnit === "cm" ? "166" : "5.5"}
+            />
+          </div>
+        </div>
+      )}
+
+      {currentStep === "tops" && (
+        <div className="space-y-6">
+          <div className="mb-6">
+            <h3
+              className="text-xl font-semibold mb-2"
+              style={{ color: "#4E4B4B" }}
+            >
+              What&apos;s your tops size?
+            </h3>
+            <p className="text-sm" style={{ color: "#6C6A68" }}>
+              Select all sizes that fit you well
+            </p>
+          </div>
+
+          <div>
+            <label
+              className="block text-sm font-semibold mb-4"
+              style={{ color: "#4E4B4B" }}
+            >
+              Tops Size (UK)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {UK_TOPS_SIZES.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => {
+                    const isSelected =
+                      measurements.usualSize?.tops?.includes(size) || false;
+                    handleMultiSelectChange("tops", size, !isSelected);
+                  }}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    measurements.usualSize?.tops?.includes(size)
+                      ? "bg-stone-200 text-stone-800"
+                      : "bg-stone-100 text-stone-600 hover:bg-stone-150"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {currentStep === "sizes" && (
+      {currentStep === "bottoms" && (
         <div className="space-y-6">
           <div className="mb-6">
             <h3
               className="text-xl font-semibold mb-2"
               style={{ color: "#4E4B4B" }}
             >
-              Your Usual Sizes
+              What&apos;s your bottoms size?
             </h3>
             <p className="text-sm" style={{ color: "#6C6A68" }}>
-              Click on the sizes that fit you well (you can select multiple
-              sizes)
+              Select all sizes that fit you well
             </p>
           </div>
 
-          <div className="space-y-8">
-            {/* Tops Size */}
-            <div>
-              <label
-                className="block text-sm font-semibold mb-4"
-                style={{ color: "#4E4B4B" }}
-              >
-                Tops Size (UK)
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {UK_TOPS_SIZES.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => {
-                      const isSelected =
-                        measurements.usualSize?.tops?.includes(size) || false;
-                      handleMultiSelectChange("tops", size, !isSelected);
-                    }}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      measurements.usualSize?.tops?.includes(size)
-                        ? "bg-stone-200 text-stone-800"
-                        : "bg-stone-100 text-stone-600 hover:bg-stone-150"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
+          <div>
+            <label
+              className="block text-sm font-semibold mb-4"
+              style={{ color: "#4E4B4B" }}
+            >
+              Bottoms Size (UK)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {UK_BOTTOMS_SIZES.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => {
+                    const isSelected =
+                      measurements.usualSize?.bottoms?.includes(size) ||
+                      false;
+                    handleMultiSelectChange("bottoms", size, !isSelected);
+                  }}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    measurements.usualSize?.bottoms?.includes(size)
+                      ? "bg-stone-200 text-stone-800"
+                      : "bg-stone-100 text-stone-600 hover:bg-stone-150"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* Bottoms Size */}
-            <div>
-              <label
-                className="block text-sm font-semibold mb-4"
-                style={{ color: "#4E4B4B" }}
-              >
-                Bottoms Size (UK)
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {UK_BOTTOMS_SIZES.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => {
-                      const isSelected =
-                        measurements.usualSize?.bottoms?.includes(size) ||
-                        false;
-                      handleMultiSelectChange("bottoms", size, !isSelected);
-                    }}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      measurements.usualSize?.bottoms?.includes(size)
-                        ? "bg-stone-200 text-stone-800"
-                        : "bg-stone-100 text-stone-600 hover:bg-stone-150"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
+      {currentStep === "shoes" && (
+        <div className="space-y-6">
+          <div className="mb-6">
+            <h3
+              className="text-xl font-semibold mb-2"
+              style={{ color: "#4E4B4B" }}
+            >
+              What&apos;s your shoe size?
+            </h3>
+            <p className="text-sm" style={{ color: "#6C6A68" }}>
+              Select all sizes that fit you well
+            </p>
+          </div>
 
-            {/* Shoe Size */}
-            <div>
-              <label
-                className="block text-sm font-semibold mb-4"
+          <div>
+            <label
+              className="block text-sm font-semibold mb-4"
+              style={{ color: "#4E4B4B" }}
+            >
+              Shoe Size (EU)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {EU_SHOE_SIZES.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => {
+                    const isSelected =
+                      measurements.usualSize?.shoes?.includes(size) || false;
+                    handleMultiSelectChange("shoes", size, !isSelected);
+                  }}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    measurements.usualSize?.shoes?.includes(size)
+                      ? "bg-stone-200 text-stone-800"
+                      : "bg-stone-100 text-stone-600 hover:bg-stone-150"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {currentStep === "birthday" && (
+        <div className="space-y-6">
+          <div className="mb-6">
+            <h3
+              className="text-xl font-semibold mb-2"
+              style={{ color: "#4E4B4B" }}
+            >
+              What&apos;s your date of birth?
+            </h3>
+            <p className="text-sm" style={{ color: "#6C6A68" }}>
+              This helps us find reviews from people similar to you
+            </p>
+          </div>
+
+          <div>
+            <fieldset>
+              <legend
+                className="block text-sm font-medium mb-3"
                 style={{ color: "#4E4B4B" }}
               >
-                Shoe Size (EU)
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {EU_SHOE_SIZES.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => {
-                      const isSelected =
-                        measurements.usualSize?.shoes?.includes(size) || false;
-                      handleMultiSelectChange("shoes", size, !isSelected);
-                    }}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      measurements.usualSize?.shoes?.includes(size)
-                        ? "bg-stone-200 text-stone-800"
-                        : "bg-stone-100 text-stone-600 hover:bg-stone-150"
-                    }`}
+                Date of birth
+              </legend>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label
+                    htmlFor="dob-day"
+                    className="block text-xs font-medium mb-1"
+                    style={{ color: "#6C6A68" }}
                   >
-                    {size}
-                  </button>
-                ))}
+                    Day
+                  </label>
+                  <input
+                    type="text"
+                    id="dob-day"
+                    value={birthdayDay}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 2);
+                      setBirthdayDay(value);
+                      if (error) setError(null);
+                      if (success) setSuccess(null);
+                    }}
+                    maxLength={2}
+                    className="w-full px-3 py-2 rounded border transition-colors focus:outline-none text-center"
+                    style={{
+                      backgroundColor: "#F8F7F4",
+                      borderColor: "#E9DED5",
+                      color: "#4E4B4B",
+                    }}
+                    placeholder="DD"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label
+                    htmlFor="dob-month"
+                    className="block text-xs font-medium mb-1"
+                    style={{ color: "#6C6A68" }}
+                  >
+                    Month
+                  </label>
+                  <input
+                    type="text"
+                    id="dob-month"
+                    value={birthdayMonth}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 2);
+                      setBirthdayMonth(value);
+                      if (error) setError(null);
+                      if (success) setSuccess(null);
+                    }}
+                    maxLength={2}
+                    className="w-full px-3 py-2 rounded border transition-colors focus:outline-none text-center"
+                    style={{
+                      backgroundColor: "#F8F7F4",
+                      borderColor: "#E9DED5",
+                      color: "#4E4B4B",
+                    }}
+                    placeholder="MM"
+                  />
+                </div>
+                <div className="flex-[1.5]">
+                  <label
+                    htmlFor="dob-year"
+                    className="block text-xs font-medium mb-1"
+                    style={{ color: "#6C6A68" }}
+                  >
+                    Year
+                  </label>
+                  <input
+                    type="text"
+                    id="dob-year"
+                    value={birthdayYear}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 4);
+                      setBirthdayYear(value);
+                      if (error) setError(null);
+                      if (success) setSuccess(null);
+                    }}
+                    maxLength={4}
+                    className="w-full px-3 py-2 rounded border transition-colors focus:outline-none text-center"
+                    style={{
+                      backgroundColor: "#F8F7F4",
+                      borderColor: "#E9DED5",
+                      color: "#4E4B4B",
+                    }}
+                    placeholder="YYYY"
+                  />
+                </div>
               </div>
-            </div>
+            </fieldset>
           </div>
         </div>
       )}
@@ -612,7 +787,7 @@ export default function MeasurementsForm({
           <div className="flex items-center mb-6">
             <div className="flex items-center space-x-3">
               <span
-                className="text-sm font-medium"
+                className={`text-sm font-medium ${measurements.bodyMeasurements?.unit === "cm" ? "font-semibold" : ""}`}
                 style={{ color: "#4E4B4B" }}
               >
                 cm
@@ -623,21 +798,21 @@ export default function MeasurementsForm({
                 className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
                 style={{
                   backgroundColor:
-                    measurements.bodyMeasurements?.unit === "cm"
-                      ? "#EBE6E2"
+                    measurements.bodyMeasurements?.unit === "in"
+                      ? "#4E4B4B"
                       : "#E9DED5",
                 }}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    measurements.bodyMeasurements?.unit === "cm"
+                    measurements.bodyMeasurements?.unit === "in"
                       ? "translate-x-6"
                       : "translate-x-1"
                   }`}
                 />
               </button>
               <span
-                className="text-sm font-medium"
+                className={`text-sm font-medium ${measurements.bodyMeasurements?.unit === "in" ? "font-semibold" : ""}`}
                 style={{ color: "#4E4B4B" }}
               >
                 in
@@ -825,18 +1000,18 @@ export default function MeasurementsForm({
 
       {/* Action Buttons */}
       <div className="pt-6">
-        {currentStep === "basic" && (
+        {currentStep === "height" && (
           <button
             type="button"
             onClick={nextStep}
-            disabled={!canProceedFromBasic}
+            disabled={!canProceedFromHeight}
             className="w-full px-8 py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-black hover:bg-stone-800 text-white disabled:bg-stone-400"
           >
-            Continue
+            Next
           </button>
         )}
 
-        {currentStep === "sizes" && (
+        {currentStep === "tops" && (
           <div className="flex justify-between items-center">
             <button
               type="button"
@@ -848,10 +1023,70 @@ export default function MeasurementsForm({
             <button
               type="button"
               onClick={nextStep}
-              disabled={!canProceedFromSizes}
+              disabled={!canProceedFromTops}
               className="flex-1 ml-4 px-8 py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-black hover:bg-stone-800 text-white disabled:bg-stone-400"
             >
-              Continue
+              Next
+            </button>
+          </div>
+        )}
+
+        {currentStep === "bottoms" && (
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={prevStep}
+              className="px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-stone-100 hover:bg-stone-200 text-stone-700"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={nextStep}
+              disabled={!canProceedFromBottoms}
+              className="flex-1 ml-4 px-8 py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-black hover:bg-stone-800 text-white disabled:bg-stone-400"
+            >
+              Next
+            </button>
+          </div>
+        )}
+
+        {currentStep === "shoes" && (
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={prevStep}
+              className="px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-stone-100 hover:bg-stone-200 text-stone-700"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={nextStep}
+              disabled={!canProceedFromShoes}
+              className="flex-1 ml-4 px-8 py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-black hover:bg-stone-800 text-white disabled:bg-stone-400"
+            >
+              Next
+            </button>
+          </div>
+        )}
+
+        {currentStep === "birthday" && (
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={prevStep}
+              className="px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-stone-100 hover:bg-stone-200 text-stone-700"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={nextStep}
+              disabled={!canProceedFromBirthday}
+              className="flex-1 ml-4 px-8 py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-black hover:bg-stone-800 text-white disabled:bg-stone-400"
+            >
+              Next
             </button>
           </div>
         )}
@@ -870,7 +1105,7 @@ export default function MeasurementsForm({
               onClick={nextStep}
               className="flex-1 ml-4 px-8 py-3 rounded-lg text-sm font-semibold transition-colors bg-black hover:bg-stone-800 text-white"
             >
-              Continue
+              Next
             </button>
           </div>
         )}
