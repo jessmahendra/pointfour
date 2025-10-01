@@ -775,10 +775,10 @@ export async function POST(request: NextRequest) {
       // Add external reviews - these are REAL customer reviews
       if (externalSearchResults.reviews && externalSearchResults.reviews.length > 0) {
         enhancedContext += `\n**CUSTOMER REVIEWS** (Use these for "What customers say" section):\n`;
-        externalSearchResults.reviews.slice(0, 8).forEach((review: { title: string; source: string; snippet: string }, index: number) => {
-          enhancedContext += `\nReview ${index + 1} [${review.source}]:\n"${review.snippet}"\n`;
+        externalSearchResults.reviews.slice(0, 8).forEach((review: { title: string; source: string; snippet: string; url?: string }, index: number) => {
+          enhancedContext += `\nReview ${index + 1} [${review.source}]:\n"${review.snippet}"\nSource URL: ${review.url || 'N/A'}\n`;
         });
-        enhancedContext += `\n**IMPORTANT**: Extract direct quotes from the reviews above for the "What customers say" section.\n`;
+        enhancedContext += `\n**IMPORTANT**: Extract direct quotes from the reviews above for the "What customers say" section. When you include a quote, add the source as a markdown link using this format: [source name](URL)\n`;
       }
       
       // Note that we're using web data because database was insufficient
@@ -823,7 +823,7 @@ User Query: ${query}
 4. **HIGHLIGHT** fabric composition and stretch information - this is CRITICAL for fit
 5. **SEPARATE** positive and negative feedback clearly
 
-**RESPONSE FORMAT - You MUST structure your response EXACTLY like this:**
+**RESPONSE FORMAT - You MUST structure your response EXACTLY like this (keep the ** markers around section headings):**
 
 **TLDR**
 - Overall recommendation: [One sentence: size up/down/true-to-size with key reason]
@@ -849,14 +849,20 @@ ${userContext ? `- Your fit: [One sentence specific to user's measurements]` : '
 
 **What customers say**
 Positive feedback:
-- [Direct quote from CUSTOMER REVIEWS section above - use quotation marks]
-- [Direct quote from CUSTOMER REVIEWS section above - use quotation marks]
+- "Quote from review" - [source name](URL)
+- "Quote from review" - [source name](URL)
 
 Negative feedback:
-- [Direct quote from CUSTOMER REVIEWS section above - use quotation marks]
-- [Direct quote from CUSTOMER REVIEWS section above - use quotation marks]
+- "Quote from review" - [source name](URL)
+- "Quote from review" - [source name](URL)
 
-IMPORTANT: Only use ACTUAL customer quotes from the CUSTOMER REVIEWS section provided above, NOT product descriptions. If no actual reviews available, state "Customer reviews are limited."
+IMPORTANT FORMATTING RULE: Each section heading MUST be surrounded by ** markers (e.g., **About the brand**, **Choose your size**). Do not output plain text headings.
+
+IMPORTANT:
+- Only use ACTUAL customer quotes from the CUSTOMER REVIEWS section provided above, NOT product descriptions
+- ALWAYS include the source link after each quote using markdown format: [source name](URL)
+- Use the exact Source URL provided with each review
+- If no actual reviews available, state "Customer reviews are limited."
 
 [Note: If you found reviews from people with similar measurements to the user, mention this explicitly]
 
