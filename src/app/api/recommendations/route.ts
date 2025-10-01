@@ -809,60 +809,66 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the AI prompt with enhanced context
-    const aiPrompt = `You are a fashion expert helping users find the right fit for clothing and footwear brands. 
+    const aiPrompt = `You are a fashion expert helping users find the right fit for clothing and footwear brands.
 
 ${enhancedContext ? `Here's what I know about the brand:\n${enhancedContext}\n` : ''}${userContext}
 
 User Query: ${query}
 
-**MANDATORY: You MUST include ALL of the following sections in your response, even if data is limited:**
+**INSTRUCTIONS:**
+1. **PRIORITIZE** reviews that mention body measurements, sizes worn, or fit details
+2. **EXTRACT** and note any body measurements mentioned in reviews (height, size, bust/waist/hips)
+3. **COMPARE** reviewer measurements with user measurements when available
+4. **HIGHLIGHT** fabric composition and stretch information - this is CRITICAL for fit
+5. **SEPARATE** positive and negative feedback clearly
 
-Start your response with: "Found [X] reviews and discussions from [Y] sources."
+**RESPONSE FORMAT - You MUST structure your response EXACTLY like this:**
 
-**Summary**: [Brand name] is a [1-2 sentence concise brand description]. [NO user-specific information]
+**TLDR**
+- Overall recommendation: [One sentence: size up/down/true-to-size with key reason]
+- Fabric & stretch: [One sentence about fabric type and how it affects fit]
+- Best for: [One sentence about which body types/sizes this works best for, or "Reviews from similar body types not available"]
+${userContext ? `- Your fit: [One sentence specific to user's measurements]` : ''}
 
-**Fit summary**: [1-2 sentences about fit for this specific user based on available data and their measurements]
+**About the brand**
+[2-3 sentences about the brand, their style, and general reputation]
 
-**Quality**: [1-2 sentences about brand quality and materials - ALWAYS include this section, even if you must state "Quality information is limited based on available reviews"]
+**Choose your size**
+[Specific sizing guidance based on user measurements if available. Include what size to order and why. If reviews mention similar measurements to the user, reference those.]
 
-**Sizing**: Include all sizing advice, fit considerations, and specific guidance (runs small/large, true to size, etc.) based on customer reviews AND the user's specific measurements. This should contain all the detailed sizing information and fit considerations tailored to their size and preferences.
+**Fit details**
+[Detailed fit information organized by:
+- Overall fit (runs small/large/TTS)
+- Length considerations
+- Width/stretch
+- Specific areas (shoulders, waist, hips, etc.)]
 
-**Recommendations**: Provide 3-4 specific, actionable recommendations based on the available customer review data and the user's specific measurements and preferences. Format each recommendation as a numbered list item with:
+**Materials & fabric**
+[Fabric composition, stretch level, quality, how it affects fit and comfort. This section is CRITICAL - always include detailed fabric information.]
 
-1. **Customer Feedback**: What customers say about this brand/product (comfort, fit, quality) — include specific details from reviews
-2. **Specific Size Recommendation**: Exact size advice based on user's measurements and body shape — include specific size numbers and reasoning
-3. **Alternative Sizing/Fit Preference**: Options for different fit preferences or if unsure — include size up/down advice and comparison suggestions
-4. **Pre-Purchase Checks**: Actionable steps before buying — check size charts, return policies, length considerations, etc.
+**What customers say**
+Positive feedback:
+- [Quote or summary from positive review]
+- [Quote or summary from positive review]
 
-Each recommendation should be:
-- Numbered (1, 2, 3, 4)
-- Start with a clear, direct statement
-- Include supporting context separated by em dashes (—) or semicolons
-- Be specific to the user's measurements and preferences
-- Provide actionable next steps
+Negative feedback:
+- [Quote or summary from negative review]
+- [Quote or summary from negative review]
 
-**Warnings**: Any important fit or quality considerations (if none, state "No specific warnings identified")
-
-**Price**: Price range information if available (if not available, state "Price information not available")
-
-**Customer Reviews**: Include relevant user feedback and quotes (if limited, state "Limited customer review data available")
+[Note: If you found reviews from people with similar measurements to the user, mention this explicitly]
 
 **CRITICAL REQUIREMENTS:**
-- ALL sections above must be present in every response
-- Quality section is MANDATORY - never omit it
-- If data is limited for any section, acknowledge this but still provide the section
-- Keep all sections concise (1-2 sentences each)
-- Make recommendations DATA-DRIVEN based on the customer reviews provided AND the user's specific measurements
-- If user measurements are provided, ALWAYS tailor recommendations to their specific size, height, and fit preferences
-- If we have good database data, use that as the primary source
-- If database data is limited but we have web search results, focus on the web data
-- Base recommendations on actual customer feedback patterns AND the user's measurements, not generic advice
-- Include specific insights from the review data when available, especially for users with similar measurements
-- Provide actionable next steps based on the available data AND the user's specific measurements
-- Always be encouraging but transparent about data availability
-- When user measurements are available, make sizing advice specific to their size and preferences
+- Extract and prioritize reviews mentioning specific measurements
+- If no reviews mention measurements similar to user's, state "Reviews from people with similar measurements are limited"
+- Fabric & stretch section is MANDATORY and must be detailed
+- Always separate positive and negative customer quotes
+- Be specific about which body types/sizes each piece works best for
+- If user has measurements, tailor every section to their specific size
+- Be concise - each section should be 2-4 sentences max except "Fit details"
+- Use actual customer quotes when available (in quotes)
+- If limited data, be honest but still provide best guidance possible
 
-Make your response helpful, specific, and actionable. Be concise and avoid verbose descriptions.`;
+Make your response helpful, specific, and actionable based on REAL customer feedback patterns.`;
     
     console.log('=== DEBUG: AI prompt created ===');
     console.log('Prompt length:', aiPrompt.length);
