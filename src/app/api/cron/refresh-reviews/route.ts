@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        const brandName = (product.brands as {name: string})?.name || '';
+        const brandName = (product.brands as {name: string}[])?.[0]?.name || '';
         const productName = product.name;
 
         console.log(`🔍 Refreshing reviews for: ${brandName} ${productName}`);

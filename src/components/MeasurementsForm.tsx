@@ -132,7 +132,7 @@ export default function MeasurementsForm({
         setMeasurements((prev) => ({ ...prev, DOB: dob }));
       }
     }
-  }, [birthdayDay, birthdayMonth, birthdayYear]);
+  }, [birthdayDay, birthdayMonth, birthdayYear, measurements.DOB]);
 
   const loadMeasurements = async () => {
     setLoading(true);
