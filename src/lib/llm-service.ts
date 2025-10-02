@@ -2,6 +2,7 @@ import { generateText, generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 import { useLLMStore, LLMInteraction } from './llm-store';
+import { DEFAULT_ASSISTANT_SYSTEM_PROMPT, DEFAULT_STRUCTURED_DATA_SYSTEM_PROMPT } from '@/prompts';
 
 // LLMInteraction interface is now imported from llm-store
 
@@ -46,7 +47,7 @@ export class LLMService {
     
     const {
       model = this.selectModel(),
-      systemPrompt = "You are a helpful assistant.",
+      systemPrompt = DEFAULT_ASSISTANT_SYSTEM_PROMPT,
       temperature = 0.7,
       // maxTokens = 2000, // TODO: Fix AI SDK v5 property name
       metadata = {},
@@ -159,7 +160,7 @@ export class LLMService {
     
     const {
       model = this.selectModel(),
-      systemPrompt = "You are a helpful assistant that returns structured data.",
+      systemPrompt = DEFAULT_STRUCTURED_DATA_SYSTEM_PROMPT,
       temperature = 0.3,
       // maxTokens = 2000, // TODO: Fix AI SDK v5 property name
       metadata = {},

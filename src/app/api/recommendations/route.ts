@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { llmService } from '@/lib/llm-service';
+import { 
+  FASHION_RECOMMENDATIONS_SYSTEM_PROMPT,
+  buildFashionRecommendationsPrompt,
+  buildUserContext,
+  type FashionRecommendationVariables
+} from '@/prompts';
 import { createClient } from '@/utils/supabase/server';
 
 // Caching Configuration
@@ -796,88 +802,16 @@ export async function POST(request: NextRequest) {
     console.log('Has external data:', !!externalSearchResults);
     
     // Create user context from measurements
-    let userContext = '';
-    if (userProfile) {
-      userContext = '\n**USER MEASUREMENTS AND PREFERENCES:**\n';
-      if (userProfile.ukClothingSize) userContext += `- UK Clothing Size: ${userProfile.ukClothingSize}\n`;
-      if (userProfile.ukShoeSize) userContext += `- UK Shoe Size: ${userProfile.ukShoeSize}\n`;
-      if (userProfile.height) userContext += `- Height: ${userProfile.height}\n`;
-      if (userProfile.fitPreference) userContext += `- Fit Preference: ${userProfile.fitPreference}\n`;
-      if (userProfile.bodyShape) userContext += `- Body Shape: ${userProfile.bodyShape}\n`;
-      if (userProfile.footType) userContext += `- Foot Type: ${userProfile.footType}\n`;
-      if (userProfile.category) userContext += `- Category: ${userProfile.category}\n`;
-      userContext += '\n';
-    }
+    const userContext = buildUserContext(userProfile);
 
     // Create the AI prompt with enhanced context
-    const aiPrompt = `You are a fashion expert helping users find the right fit for clothing and footwear brands.
-
-${enhancedContext ? `Here's what I know about the brand:\n${enhancedContext}\n` : ''}${userContext}
-
-User Query: ${query}
-
-**INSTRUCTIONS:**
-1. **PRIORITIZE** reviews that mention body measurements, sizes worn, or fit details
-2. **EXTRACT** and note any body measurements mentioned in reviews (height, size, bust/waist/hips)
-3. **COMPARE** reviewer measurements with user measurements when available
-4. **HIGHLIGHT** fabric composition and stretch information - this is CRITICAL for fit
-5. **SEPARATE** positive and negative feedback clearly
-
-**RESPONSE FORMAT - You MUST structure your response EXACTLY like this (keep the ** markers around section headings):**
-
-**TLDR**
-- Overall recommendation: [One sentence: size up/down/true-to-size with key reason]
-- Fabric & stretch: [One sentence about fabric type and how it affects fit]
-- Best for: [One sentence about which body types/sizes this works best for, or "Reviews from similar body types not available"]
-${userContext ? `- Your fit: [One sentence specific to user's measurements]` : ''}
-
-**About the brand**
-[2-3 sentences about the brand, their style, and general reputation]
-
-**Choose your size**
-[Specific sizing guidance based on user measurements if available. Include what size to order and why. If reviews mention similar measurements to the user, reference those.]
-
-**Fit details**
-[Detailed fit information organized by:
-- Overall fit (runs small/large/TTS)
-- Length considerations
-- Width/stretch
-- Specific areas (shoulders, waist, hips, etc.)]
-
-**Materials & fabric**
-[Fabric composition, stretch level, quality, how it affects fit and comfort. This section is CRITICAL - always include detailed fabric information.]
-
-**What customers say**
-Positive feedback:
-- "Quote from review" - [source name](URL)
-- "Quote from review" - [source name](URL)
-
-Negative feedback:
-- "Quote from review" - [source name](URL)
-- "Quote from review" - [source name](URL)
-
-IMPORTANT FORMATTING RULE: Each section heading MUST be surrounded by ** markers (e.g., **About the brand**, **Choose your size**). Do not output plain text headings.
-
-IMPORTANT:
-- Only use ACTUAL customer quotes from the CUSTOMER REVIEWS section provided above, NOT product descriptions
-- ALWAYS include the source link after each quote using markdown format: [source name](URL)
-- Use the exact Source URL provided with each review
-- If no actual reviews available, state "Customer reviews are limited."
-
-[Note: If you found reviews from people with similar measurements to the user, mention this explicitly]
-
-**CRITICAL REQUIREMENTS:**
-- Extract and prioritize reviews mentioning specific measurements
-- If no reviews mention measurements similar to user's, state "Reviews from people with similar measurements are limited"
-- Fabric & stretch section is MANDATORY and must be detailed
-- Always separate positive and negative customer quotes
-- Be specific about which body types/sizes each piece works best for
-- If user has measurements, tailor every section to their specific size
-- Be concise - each section should be 2-4 sentences max except "Fit details"
-- Use actual customer quotes when available (in quotes)
-- If limited data, be honest but still provide best guidance possible
-
-Make your response helpful, specific, and actionable based on REAL customer feedback patterns.`;
+    const recommendationVariables: FashionRecommendationVariables = {
+      query,
+      enhancedContext,
+      userContext
+    };
+    
+    const aiPrompt = buildFashionRecommendationsPrompt(recommendationVariables);
     
     console.log('=== DEBUG: AI prompt created ===');
     console.log('Prompt length:', aiPrompt.length);
@@ -886,7 +820,7 @@ Make your response helpful, specific, and actionable based on REAL customer feed
     console.log(`🤖 RECOMMENDATIONS API: Using LLM service with GPT-5 testing`);
     
     const { text: aiResponse, interaction } = await llmService.generateText(aiPrompt, {
-      systemPrompt: "You are a helpful fashion expert who provides detailed, accurate sizing and fit advice based on available data. Always be encouraging but honest about data limitations.",
+      systemPrompt: FASHION_RECOMMENDATIONS_SYSTEM_PROMPT,
       temperature: 1,
       maxTokens: 2000,
       metadata: { 

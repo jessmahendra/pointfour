@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { llmService } from '@/lib/llm-service';
+import { DEFAULT_ASSISTANT_SYSTEM_PROMPT } from '@/prompts';
 import { productParsingService } from '@/lib/services/product-parsing-service';
 
 export async function POST(request: NextRequest) {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
       const { text, interaction: textInteraction } = await llmService.generateText(
         prompt,
         {
-          systemPrompt: systemPrompt || "You are a helpful assistant.",
+          systemPrompt: systemPrompt || DEFAULT_ASSISTANT_SYSTEM_PROMPT,
           temperature: 0.7,
           metadata: { type: 'text', userPrompt: prompt },
           source: 'text-generator'

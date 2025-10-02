@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { llmService } from '@/lib/llm-service';
 import { z } from 'zod';
+import { 
+  FASHION_EXPERT_STRUCTURED_SYSTEM_PROMPT,
+  FASHION_EXPERT_GENERAL_SYSTEM_PROMPT,
+  buildFashionExpertTestPrompt
+} from '@/prompts';
 
 // Schema for structured data generation
 const FashionRecommendationSchema = z.object({
@@ -32,10 +37,10 @@ export async function POST(request: NextRequest) {
     if (type === 'object') {
       // Test structured object generation
       const { object, interaction: objInteraction } = await llmService.generateObject(
-        `Analyze this fashion query and provide a structured recommendation: "${query}"`,
+        buildFashionExpertTestPrompt(query, 'structured'),
         FashionRecommendationSchema,
         {
-          systemPrompt: "You are a fashion expert who provides detailed, structured recommendations for clothing brands and sizing advice.",
+          systemPrompt: FASHION_EXPERT_STRUCTURED_SYSTEM_PROMPT,
           temperature: 0.7,
           maxTokens: 1000,
           metadata: { testType: 'object', userQuery: query },
@@ -48,9 +53,9 @@ export async function POST(request: NextRequest) {
     } else {
       // Test text generation
       const { text, interaction: textInteraction } = await llmService.generateText(
-        `Provide fashion advice for: "${query}"`,
+        buildFashionExpertTestPrompt(query, 'general'),
         {
-          systemPrompt: "You are a helpful fashion expert who provides detailed sizing and brand recommendations.",
+          systemPrompt: FASHION_EXPERT_GENERAL_SYSTEM_PROMPT,
           temperature: 0.7,
           maxTokens: 1000,
           metadata: { testType: 'text', userQuery: query },

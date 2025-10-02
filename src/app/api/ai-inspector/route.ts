@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { llmService } from '@/lib/llm-service';
 import { z } from 'zod';
+import { 
+  FASHION_EXPERT_STRUCTURED_SYSTEM_PROMPT,
+  FASHION_EXPERT_GENERAL_SYSTEM_PROMPT,
+  buildFashionExpertTestPrompt
+} from '@/prompts';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +29,7 @@ export async function POST(request: NextRequest) {
     if (type === 'object') {
       // Test structured object generation
       const { object, interaction: objInteraction } = await llmService.generateObject(
-        `Analyze this fashion query and provide a structured recommendation: "${query}"`,
+        buildFashionExpertTestPrompt(query, 'structured'),
         z.object({
           brand: z.string().describe('The brand name'),
           category: z.string().describe('The clothing category'),
@@ -34,7 +39,7 @@ export async function POST(request: NextRequest) {
           confidence: z.enum(['low', 'medium', 'high']).describe('Confidence level')
         }),
         {
-          systemPrompt: "You are a fashion expert who provides detailed, structured recommendations for clothing brands and sizing advice.",
+          systemPrompt: FASHION_EXPERT_STRUCTURED_SYSTEM_PROMPT,
           temperature: 0.7,
           metadata: { testType: 'object', userQuery: query },
           source: 'ai-inspector-api'
@@ -45,9 +50,9 @@ export async function POST(request: NextRequest) {
     } else {
       // Test text generation
       const { text, interaction: textInteraction } = await llmService.generateText(
-        `Provide fashion advice for: "${query}"`,
+        buildFashionExpertTestPrompt(query, 'general'),
         {
-          systemPrompt: "You are a helpful fashion expert who provides detailed sizing and brand recommendations.",
+          systemPrompt: FASHION_EXPERT_GENERAL_SYSTEM_PROMPT,
           temperature: 0.7,
           metadata: { testType: 'text', userQuery: query },
           source: 'ai-inspector-api'

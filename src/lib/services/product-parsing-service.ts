@@ -1,6 +1,12 @@
 import { llmService } from '../llm-service';
 import { ProductParsingSchema, ProductParsingResult } from '../schemas/product-parsing';
 import { LLMInteraction } from '../llm-store';
+import { 
+  PRODUCT_PARSING_SYSTEM_PROMPT,
+  buildProductParsingPrompt,
+  extractProductQuery,
+  type ProductParsingVariables
+} from '@/prompts';
 import axios from 'axios';
 
 // Type for Serper API search results
@@ -66,30 +72,10 @@ export class ProductParsingService {
   }
 
   /**
-   * Extract product query from the full prompt
-   */
-  private extractProductQuery(prompt: string): string {
-    const queryMatch = prompt.match(/Query: "([^"]+)"/);
-    return queryMatch ? queryMatch[1] : prompt;
-  }
-
-  /**
-   * Build the enhanced prompt with web search context
-   */
-  private buildEnhancedPrompt(originalPrompt: string, webSearchResults: string): string {
-    return `${originalPrompt}
-
-WEB SEARCH CONTEXT:
-${webSearchResults}
-
-Based on the web search results above, please parse the product query and provide accurate brand and product information. Use the search results to verify and correct any information.`;
-  }
-
-  /**
    * Get the default system prompt for product parsing
    */
   private getDefaultSystemPrompt(): string {
-    return "You are an expert at parsing product queries and identifying brand and product information. Users may make typos, use incomplete names, or provide vague descriptions. Use the web search context provided to verify and correct any information, find the most likely brand and product they're referring to, and return accurate data. Be forgiving of typos and incomplete information - use your knowledge and the web search results to fill in the gaps and find the correct brand and product. Always return the official brand website and specific product URL when available. Return structured JSON data with brand name, brand website, product name, and product URL.";
+    return PRODUCT_PARSING_SYSTEM_PROMPT;
   }
 
   /**
@@ -111,10 +97,16 @@ Based on the web search results above, please parse the product query and provid
 
     // Perform web search if enabled
     if (enableWebSearch) {
-      const productQuery = this.extractProductQuery(prompt);
+      const productQuery = extractProductQuery(prompt);
       console.log(`🔍 Performing web search for: "${productQuery}"`);
       const webSearchResults = await this.performWebSearch(productQuery);
-      enhancedPrompt = this.buildEnhancedPrompt(prompt, webSearchResults);
+      
+      const promptVariables: ProductParsingVariables = {
+        originalPrompt: prompt,
+        webSearchResults
+      };
+      
+      enhancedPrompt = buildProductParsingPrompt(promptVariables);
     }
 
     // Generate structured object using LLM service
