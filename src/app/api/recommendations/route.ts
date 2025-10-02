@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { llmService } from '@/lib/llm-service';
 import { createClient } from '@/utils/supabase/server';
+import { reviewCacheService } from '@/lib/services/review-cache-service';
 
 // Caching Configuration
 const CACHE_CONFIG = {
@@ -502,10 +503,7 @@ export async function POST(request: NextRequest) {
         console.log('=== DEBUG: AUTOMATICALLY attempting external search (prioritizing real reviews like widget) ===');
         externalSearchAttempted = true;
         
-        // Check Serper cache first
-        const serperCacheKey = `${brandName}::${itemName}::serper`;
-        const cachedSerperResults = getCachedData(serperCache, serperCacheKey, CACHE_CONFIG.serperCacheTimeout);
-        
+        // Check DATABASE cache first (7-day cache)
         let allResults: Array<{
           title: string;
           snippet: string;
@@ -516,12 +514,34 @@ export async function POST(request: NextRequest) {
           brandLevel: boolean;
           fullContent: string;
         }> = [];
-        
-        if (cachedSerperResults) {
-          console.log('🎯 CACHE HIT: Using cached Serper results');
-          allResults = cachedSerperResults as typeof allResults;
-        } else {
-          console.log('🔄 CACHE MISS: Making fresh Serper API calls');
+
+        const productIdNum = productId ? parseInt(productId) : null;
+        let usedDatabaseCache = false;
+
+        if (productIdNum) {
+          const cachedReviews = await reviewCacheService.getCachedReviews(productIdNum);
+
+          if (cachedReviews && cachedReviews.length > 0) {
+            console.log(`🎯 DATABASE CACHE HIT: Using ${cachedReviews.length} cached reviews from database`);
+            usedDatabaseCache = true;
+
+            // Convert cached reviews to expected format
+            const reviewData = reviewCacheService.convertCachedReviewsToReviewData(cachedReviews);
+            allResults = reviewData.map(review => ({
+              title: review.title,
+              snippet: review.snippet,
+              url: review.url,
+              source: review.source,
+              tags: [brandName, itemName],
+              confidence: 'medium' as const,
+              brandLevel: true,
+              fullContent: review.snippet
+            }));
+          }
+        }
+
+        if (!usedDatabaseCache) {
+          console.log('🔄 DATABASE CACHE MISS: Making fresh Serper API calls');
           
           // Direct Serper API call for external search
           const serperApiKey = process.env.SERPER_API_KEY;
@@ -579,9 +599,24 @@ export async function POST(request: NextRequest) {
             }
           }
           
-          // Cache the Serper results
+          // Store results in database cache for 7-day persistence
+          if (productIdNum && allResults.length > 0) {
+            const searchQuery = `${brandName} ${itemName} reviews`;
+            const reviewData = allResults.map(result => ({
+              title: result.title,
+              snippet: result.snippet,
+              url: result.url,
+              source: result.source
+            }));
+
+            await reviewCacheService.storeReviews(productIdNum, searchQuery, reviewData);
+            console.log(`💾 STORED: ${reviewData.length} reviews in database for product ${productIdNum}`);
+          }
+
+          // Also cache in memory for backward compatibility (24 hours)
+          const serperCacheKey = `${brandName}::${itemName}::serper`;
           setCachedData(serperCache, serperCacheKey, allResults);
-          console.log(`💾 CACHED: Serper results for ${brandName} ${itemName}`);
+          console.log(`💾 CACHED: Serper results in memory for ${brandName} ${itemName}`);
           }
         }
         
