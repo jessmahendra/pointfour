@@ -82,16 +82,9 @@ IMPORTANT:
 - Use actual customer quotes when available (in quotes)
 - If limited data, be honest but still provide best guidance possible
 - Focus on customer experiences, not brand descriptions
-- For userReviews section, include actual quotes with their source URLs
-- Make personalSummary tailored to the specific user context when possible
 - AVOID DUPLICATE INFORMATION: Each section should provide unique insights - don't repeat the same information across sections
-- Personal Summary should focus on brand introduction and tailored recommendations
-- Quality section should focus on materials, construction, and care instructions
-- Sizing Advice should focus on fit patterns, size chart analysis, fabric stretch, length, and specific body measurements
 - For sizing advice, be extremely specific about: fabric stretch (stretchy vs non-stretchy), length (short/tall considerations), body type recommendations (petite, plus-size, athletic), and specific fit areas (waist, bust, hips, shoulders, sleeves, inseam, etc.)
 - Include specific measurements and sizing comparisons when available in reviews
-- User Reviews should provide supporting quotes that back up the other sections
-- Return valid JSON only, no other text
 
 Make your response helpful, specific, and actionable based on REAL customer feedback patterns.`;
 }
