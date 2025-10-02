@@ -101,7 +101,7 @@ export class EnhancedProductParsingServiceServiceRole {
 
       // Step 3: Find or create product
       console.log('🔍 Step 3: Looking for existing product...');
-      let product = await databaseServiceServiceRole.findExistingProduct(parsedData.productName, brand.slug);
+      let product = await databaseServiceServiceRole.findExistingProduct(parsedData.productName, brand.slug, parsedData.productUrl);
       let wasProductCreated = false;
 
       if (!product) {

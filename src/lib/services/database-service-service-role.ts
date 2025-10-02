@@ -259,28 +259,151 @@ export class DatabaseServiceServiceRole {
   }
 
   /**
-   * Find existing product by name and brand slug
+   * Normalize a product name for matching
    */
-  async findExistingProduct(productName: string, brandSlug: string): Promise<Product | null> {
+  private normalizeProductName(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .trim();
+  }
+
+  /**
+   * Normalize URL for comparison
+   */
+  private normalizeUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      // Remove protocol, www, and trailing slashes for comparison
+      return urlObj.hostname.replace(/^www\./, '') + urlObj.pathname.replace(/\/$/, '');
+    } catch {
+      // If URL parsing fails, just normalize the string
+      return url.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, '').replace(/\/$/, '');
+    }
+  }
+
+  /**
+   * Calculate Levenshtein similarity between two strings (0-1 scale)
+   */
+  private calculateSimilarity(str1: string, str2: string): number {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+
+    if (longer.length === 0) {
+      return 1.0;
+    }
+
+    const editDistance = this.levenshteinDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+  }
+
+  /**
+   * Calculate Levenshtein distance between two strings
+   */
+  private levenshteinDistance(str1: string, str2: string): number {
+    const matrix: number[][] = [];
+
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+
+    return matrix[str2.length][str1.length];
+  }
+
+  /**
+   * Find existing product by URL, name, and brand slug with fuzzy matching
+   * URL matching is prioritized as the strongest signal
+   */
+  async findExistingProduct(productName: string, brandSlug: string, productUrl?: string, threshold: number = 0.85): Promise<Product | null> {
     try {
       await this.initialize();
-      const { data: product, error } = await this.supabase
+
+      // STEP 1: Try URL match first (strongest signal)
+      if (productUrl) {
+        const normalizedUrl = this.normalizeUrl(productUrl);
+        console.log(`🔍 Checking for URL match: ${normalizedUrl}`);
+
+        const { data: allBrandProducts } = await this.supabase
+          .from('products')
+          .select('*')
+          .eq('brand_id', brandSlug);
+
+        if (allBrandProducts && allBrandProducts.length > 0) {
+          for (const product of allBrandProducts) {
+            if (product.url && this.normalizeUrl(product.url) === normalizedUrl) {
+              console.log(`✅ Found product by URL match: ${product.name} (ID: ${product.id})`);
+              return product;
+            }
+          }
+        }
+      }
+
+      // STEP 2: Try exact normalized name match (fast path)
+      const normalizedName = this.normalizeProductName(productName);
+      const { data: exactMatch } = await this.supabase
         .from('products')
         .select('*')
         .eq('brand_id', brandSlug)
-        .ilike('name', productName)
-        .single();
+        .eq('normalized_name', normalizedName)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
-        console.error('Error finding product:', error);
+      if (exactMatch) {
+        console.log(`✅ Found exact product match: ${exactMatch.name} (ID: ${exactMatch.id})`);
+        return exactMatch;
+      }
+
+      // STEP 3: Try fuzzy matching on all products for this brand
+      const { data: brandProducts } = await this.supabase
+        .from('products')
+        .select('*')
+        .eq('brand_id', brandSlug);
+
+      if (!brandProducts || brandProducts.length === 0) {
+        console.log(`No products found for brand: ${brandSlug}`);
         return null;
       }
 
-      if (product) {
-        console.log('📊 Supabase Product Query Response:', JSON.stringify(product, null, 2));
+      let bestMatch: Product | null = null;
+      let bestSimilarity = 0;
+
+      for (const product of brandProducts) {
+        const similarity = this.calculateSimilarity(
+          normalizedName,
+          this.normalizeProductName(product.name)
+        );
+
+        if (similarity > bestSimilarity) {
+          bestSimilarity = similarity;
+          bestMatch = product;
+        }
       }
 
-      return product;
+      if (bestMatch && bestSimilarity >= threshold) {
+        console.log(`✅ Found fuzzy product match: ${bestMatch.name} (ID: ${bestMatch.id}, similarity: ${(bestSimilarity * 100).toFixed(1)}%)`);
+        return bestMatch;
+      }
+
+      console.log(`No product match found for "${productName}" (best similarity: ${(bestSimilarity * 100).toFixed(1)}%)`);
+      return null;
     } catch (error) {
       console.error('Error in findExistingProduct:', error);
       return null;

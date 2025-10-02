@@ -239,13 +239,48 @@ export class DatabaseService {
   }
 
   /**
-   * Find existing product by name and brand slug with fuzzy matching
+   * Normalize URL for comparison
    */
-  async findExistingProduct(productName: string, brandSlug: string, threshold: number = 0.85): Promise<Product | null> {
+  private normalizeUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      // Remove protocol, www, and trailing slashes for comparison
+      return urlObj.hostname.replace(/^www\./, '') + urlObj.pathname.replace(/\/$/, '');
+    } catch {
+      // If URL parsing fails, just normalize the string
+      return url.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, '').replace(/\/$/, '');
+    }
+  }
+
+  /**
+   * Find existing product by URL, name, and brand slug with fuzzy matching
+   * URL matching is prioritized as the strongest signal
+   */
+  async findExistingProduct(productName: string, brandSlug: string, productUrl?: string, threshold: number = 0.85): Promise<Product | null> {
     try {
       const supabase = await this.getSupabaseClient();
 
-      // First try exact normalized match (fast path)
+      // STEP 1: Try URL match first (strongest signal)
+      if (productUrl) {
+        const normalizedUrl = this.normalizeUrl(productUrl);
+        console.log(`🔍 Checking for URL match: ${normalizedUrl}`);
+
+        const { data: allBrandProducts } = await supabase
+          .from('products')
+          .select('*')
+          .eq('brand_id', brandSlug);
+
+        if (allBrandProducts && allBrandProducts.length > 0) {
+          for (const product of allBrandProducts) {
+            if (product.url && this.normalizeUrl(product.url) === normalizedUrl) {
+              console.log(`✅ Found product by URL match: ${product.name} (ID: ${product.id})`);
+              return product;
+            }
+          }
+        }
+      }
+
+      // STEP 2: Try exact normalized name match (fast path)
       const normalizedName = this.normalizeProductName(productName);
       const { data: exactMatch, error: exactError } = await supabase
         .from('products')
@@ -259,7 +294,7 @@ export class DatabaseService {
         return exactMatch;
       }
 
-      // If no exact match, get all products for this brand and do fuzzy matching
+      // STEP 3: Try fuzzy matching on all products for this brand
       const { data: brandProducts, error: brandError } = await supabase
         .from('products')
         .select('*')
