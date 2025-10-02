@@ -1,3 +1,9 @@
 {
-  "installCommand": "npm ci"
+  "installCommand": "npm ci",
+  "crons": [
+    {
+      "path": "/api/cron/refresh-reviews",
+      "schedule": "0 2 * * 0"
+    }
+  ]
 }
