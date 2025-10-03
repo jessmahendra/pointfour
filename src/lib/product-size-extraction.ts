@@ -20,13 +20,14 @@ export interface SizeExtractionResult {
 async function extractShopifySizes(html: string): Promise<string[] | null> {
   try {
     // Look for Shopify analytics meta data which contains product variants
-    const metaMatch = html.match(/var meta = ({.*?});/s);
+    // Using [\s\S] instead of . with /s flag for broader compatibility
+    const metaMatch = html.match(/var meta = ({[\s\S]*?});/);
 
     if (metaMatch) {
       const productData = JSON.parse(metaMatch[1]);
 
       if (productData.product && productData.product.variants) {
-        const sizes = productData.product.variants.map((variant: { public_title?: string; name?: string }) => {
+        const sizes: string[] = productData.product.variants.map((variant: { public_title?: string; name?: string }) => {
           // Try to extract size from public_title or name
           const title = variant.public_title || variant.name || '';
 
@@ -38,20 +39,20 @@ async function extractShopifySizes(html: string): Promise<string[] | null> {
         }).filter((size: string) => size && size.length > 0);
 
         // Remove duplicates
-        return [...new Set(sizes)];
+        return [...new Set(sizes)] as string[];
       }
     }
 
     // Try alternative Shopify JSON format
-    const productJsonMatch = html.match(/<script[^>]*type=["']application\/json["'][^>]*data-product[^>]*>(.*?)<\/script>/s);
+    const productJsonMatch = html.match(/<script[^>]*type=["']application\/json["'][^>]*data-product[^>]*>([\s\S]*?)<\/script>/);
     if (productJsonMatch) {
       const productData = JSON.parse(productJsonMatch[1]);
       if (productData.variants) {
-        const sizes = productData.variants.map((variant: { title?: string; option2?: string; option1?: string }) => {
+        const sizes: string[] = productData.variants.map((variant: { title?: string; option2?: string; option1?: string }) => {
           return variant.title || variant.option2 || variant.option1 || '';
         }).filter((size: string) => size && size.length > 0);
 
-        return [...new Set(sizes)];
+        return [...new Set(sizes)] as string[];
       }
     }
 
@@ -68,16 +69,16 @@ async function extractShopifySizes(html: string): Promise<string[] | null> {
 async function extractWooCommerceSizes(html: string): Promise<string[] | null> {
   try {
     // Look for WooCommerce variation data
-    const variationsMatch = html.match(/var wc_add_to_cart_variation_params = ({.*?});/s);
+    const variationsMatch = html.match(/var wc_add_to_cart_variation_params = ({[\s\S]*?});/);
 
     if (variationsMatch) {
       const wcData = JSON.parse(variationsMatch[1]);
       if (wcData.variations) {
-        const sizes = wcData.variations.map((variation: { attributes?: { attribute_pa_size?: string } }) => {
+        const sizes: string[] = wcData.variations.map((variation: { attributes?: { attribute_pa_size?: string } }) => {
           return variation.attributes?.attribute_pa_size || '';
         }).filter((size: string) => size && size.length > 0);
 
-        return [...new Set(sizes)];
+        return [...new Set(sizes)] as string[];
       }
     }
 
@@ -97,9 +98,9 @@ async function extractSizesWithLLM(html: string, productUrl: string): Promise<st
 
     // Truncate HTML to reduce token usage - focus on key areas
     const relevantSections = [
-      html.match(/<select[^>]*(?:size|variant)[^>]*>.*?<\/select>/is)?.[0] || '',
-      html.match(/<div[^>]*(?:size|variant|option)[^>]*>.*?<\/div>/is)?.[0] || '',
-      html.match(/sizes?.*?:.*?\[.*?\]/is)?.[0] || '',
+      html.match(/<select[^>]*(?:size|variant)[^>]*>[\s\S]*?<\/select>/i)?.[0] || '',
+      html.match(/<div[^>]*(?:size|variant|option)[^>]*>[\s\S]*?<\/div>/i)?.[0] || '',
+      html.match(/sizes?[\s\S]*?:[\s\S]*?\[[\s\S]*?\]/i)?.[0] || '',
     ].filter(Boolean).join('\n');
 
     const truncatedHtml = relevantSections.substring(0, 5000); // Limit to 5000 chars
