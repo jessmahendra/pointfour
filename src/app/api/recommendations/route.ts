@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { llmService } from '@/lib/llm-service';
-import { 
+import {
   FASHION_RECOMMENDATIONS_SYSTEM_PROMPT,
   buildFashionRecommendationsPrompt,
   buildUserContext,
@@ -8,6 +8,7 @@ import {
 } from '@/prompts';
 import { createClient } from '@/utils/supabase/server';
 import { reviewCacheService } from '@/lib/services/review-cache-service';
+import { extractProductSizes } from '@/lib/product-size-extraction';
 
 // Caching Configuration
 const CACHE_CONFIG = {
@@ -772,7 +773,45 @@ export async function POST(request: NextRequest) {
       hasReviews: !!(externalSearchResults.reviews && externalSearchResults.reviews.length > 0),
       brandFitSummary: externalSearchResults.brandFitSummary?.summary?.substring(0, 100) + '...' || 'None'
     } : 'None');
-    
+
+    // Extract available product sizes if productId is provided
+    let availableSizes: string[] = [];
+    let sizeExtractionMethod: string | null = null;
+
+    if (productId) {
+      try {
+        console.log(`🔍 Fetching product URL for productId: ${productId}`);
+        const supabase = await createClient();
+
+        const { data: product, error: productError } = await supabase
+          .from('products')
+          .select('url')
+          .eq('id', productId)
+          .single();
+
+        if (productError) {
+          console.error('❌ Error fetching product from database:', productError);
+        } else if (product && product.url) {
+          console.log(`✅ Found product URL: ${product.url}`);
+
+          // Extract sizes from the product page
+          const sizeResult = await extractProductSizes(product.url);
+
+          if (sizeResult.success && sizeResult.sizes.length > 0) {
+            availableSizes = sizeResult.sizes;
+            sizeExtractionMethod = sizeResult.method;
+            console.log(`✅ Extracted ${availableSizes.length} sizes via ${sizeExtractionMethod}:`, availableSizes);
+          } else {
+            console.log(`⚠️ Could not extract sizes: ${sizeResult.error || 'Unknown error'}`);
+          }
+        } else {
+          console.log('⚠️ No product URL found in database');
+        }
+      } catch (error) {
+        console.error('❌ Error in size extraction process:', error);
+      }
+    }
+
     // Create enhanced context for AI
     let enhancedContext = '';
     
@@ -790,7 +829,27 @@ export async function POST(request: NextRequest) {
       if (matchingBrand.fabricStretch) enhancedContext += `Fabric Stretch: ${matchingBrand.fabricStretch}\n`;
       if (matchingBrand.userFeedback) enhancedContext += `User Feedback: ${matchingBrand.userFeedback}\n`;
     }
-    
+
+    // Add available product sizes if extracted
+    if (availableSizes.length > 0) {
+      enhancedContext += `\n**AVAILABLE SIZES FOR THIS SPECIFIC PRODUCT**: ${availableSizes.join(', ')}\n`;
+      enhancedContext += `\n**CRITICAL INSTRUCTION**: You MUST only recommend sizes from the available options listed above. `;
+      enhancedContext += `When making your recommendation in the "Choose your size" section, select the best match from these specific available sizes based on:\n`;
+      enhancedContext += `- User's measurements and body shape\n`;
+      enhancedContext += `- Similar reviewers' experiences and fit feedback\n`;
+      enhancedContext += `- Fit advice and sizing patterns from customer reviews\n`;
+      enhancedContext += `- Your comprehensive sizing analysis\n\n`;
+      enhancedContext += `If the user's measurements suggest an ideal size that's not available, recommend the closest available match and clearly explain:\n`;
+      enhancedContext += `1. Which available size you recommend (must be from the list above)\n`;
+      enhancedContext += `2. Why this is the best match for their measurements\n`;
+      enhancedContext += `3. What to expect in terms of fit (e.g., "This will be slightly roomier than your ideal fit" or "This will have a closer fit")\n\n`;
+      enhancedContext += `Example: If sizes are "XS/S, S/M, M/L" and the user would normally be a size M, recommend "S/M" and explain the fit.\n\n`;
+    } else if (productId) {
+      // Product ID was provided but we couldn't extract sizes
+      enhancedContext += `\n**NOTE**: We attempted to extract available product sizes but were unable to. `;
+      enhancedContext += `Please provide general sizing guidance but inform the user to verify available sizes on the product page.\n\n`;
+    }
+
     // Add external search results to context if available
     if (externalSearchResults && externalSearchResults.brandFitSummary) {
       enhancedContext += `\nExternal Search Results:\n`;
