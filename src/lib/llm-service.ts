@@ -84,6 +84,10 @@ export class LLMService {
         model: openai(model),
         messages,
         temperature,
+        tools: {
+          web_search: openai.tools.webSearch({}),
+          // web_search_preview: openai.tools.webSearchPreview({}),
+        },
         // maxTokens: maxTokens, // TODO: Fix AI SDK v5 property name
       });
 

@@ -9,7 +9,7 @@ interface MeasurementsFormProps {
   skipSaving?: boolean; // New prop to skip saving to database
 }
 
-// Size options for UK women's sizing
+// Size options for UK women's sizing (stored in database)
 const UK_TOPS_SIZES = [
   "4",
   "6",
@@ -44,22 +44,64 @@ const UK_BOTTOMS_SIZES = [
   "30",
   "32",
 ];
-const EU_SHOE_SIZES = [
-  "35",
-  "36",
-  "37",
-  "38",
-  "39",
-  "40",
-  "41",
-  "42",
-  "43",
-  "44",
-  "45",
-  "46",
-  "47",
-  "48",
+
+// Size conversion functions
+type SizeSystem = "UK" | "US" | "EU";
+
+const convertUKtoUS = (ukSize: string): string => {
+  const uk = parseInt(ukSize);
+  const us = uk - 4;
+  return us >= 0 ? us.toString() : ukSize;
+};
+
+const convertUKtoEU = (ukSize: string): string => {
+  const uk = parseInt(ukSize);
+  const eu = uk + 28;
+  return eu.toString();
+};
+
+const convertToDisplaySize = (ukSize: string, system: SizeSystem): string => {
+  if (system === "UK") return ukSize;
+  if (system === "US") return convertUKtoUS(ukSize);
+  if (system === "EU") return convertUKtoEU(ukSize);
+  return ukSize;
+};
+
+const SIZE_SYSTEM_OPTIONS: { value: SizeSystem; label: string }[] = [
+  { value: "UK", label: "UK" },
+  { value: "US", label: "US" },
+  { value: "EU", label: "EU" },
 ];
+
+// Shoe size conversion map (stored as EU in database)
+const SHOE_SIZE_MAP: { eu: string; us: string; uk: string }[] = [
+  { eu: "35", us: "4-4.5", uk: "2-2.5" },
+  { eu: "36", us: "5-6", uk: "3-4" },
+  { eu: "37", us: "6.5-7", uk: "4.5-5" },
+  { eu: "38", us: "7.5-8", uk: "5.5-6" },
+  { eu: "39", us: "8.5-9", uk: "6.5-7" },
+  { eu: "40", us: "9.5-10", uk: "7.5-8" },
+  { eu: "41", us: "10.5-11", uk: "8.5-9" },
+  { eu: "42", us: "11.5-12", uk: "9.5-10" },
+  { eu: "43", us: "12-12.5", uk: "10-10.5" },
+  { eu: "44", us: "13", uk: "11" },
+  { eu: "45", us: "13.5", uk: "11.5" },
+  { eu: "46", us: "14", uk: "12" },
+  { eu: "47", us: "14.5", uk: "12.5" },
+  { eu: "48", us: "15", uk: "13" },
+];
+
+const EU_SHOE_SIZES = SHOE_SIZE_MAP.map(s => s.eu);
+
+const convertShoeSize = (euSize: string, system: SizeSystem): string => {
+  const mapping = SHOE_SIZE_MAP.find(s => s.eu === euSize);
+  if (!mapping) return euSize;
+
+  if (system === "EU") return mapping.eu;
+  if (system === "US") return mapping.us;
+  if (system === "UK") return mapping.uk;
+  return euSize;
+};
 
 const FIT_PREFERENCES = [
   { value: "true-to-size", label: "True to size" },
@@ -98,6 +140,7 @@ export default function MeasurementsForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [sizeSystem, setSizeSystem] = useState<SizeSystem>("UK");
   const [heightUnit, setHeightUnit] = useState<"cm" | "ft">("cm");
   const [birthdayDay, setBirthdayDay] = useState("");
   const [birthdayMonth, setBirthdayMonth] = useState("");
@@ -443,31 +486,47 @@ export default function MeasurementsForm({
           </div>
 
           <div>
-            <label
-              className="block text-sm font-semibold mb-4"
-              style={{ color: "#4E4B4B" }}
-            >
-              Tops Size (UK)
-            </label>
+            <div className="flex justify-between items-center mb-4">
+              <label
+                className="block text-sm font-semibold"
+                style={{ color: "#4E4B4B" }}
+              >
+                Tops Size
+              </label>
+              <select
+                value={sizeSystem}
+                onChange={(e) => setSizeSystem(e.target.value as SizeSystem)}
+                className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                {SIZE_SYSTEM_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {UK_TOPS_SIZES.map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => {
-                    const isSelected =
-                      measurements.usualSize?.tops?.includes(size) || false;
-                    handleMultiSelectChange("tops", size, !isSelected);
-                  }}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    measurements.usualSize?.tops?.includes(size)
-                      ? "bg-stone-200 text-stone-800"
-                      : "bg-stone-100 text-stone-600 hover:bg-stone-150"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+              {UK_TOPS_SIZES.map((ukSize) => {
+                const displaySize = convertToDisplaySize(ukSize, sizeSystem);
+                return (
+                  <button
+                    key={ukSize}
+                    type="button"
+                    onClick={() => {
+                      const isSelected =
+                        measurements.usualSize?.tops?.includes(ukSize) || false;
+                      handleMultiSelectChange("tops", ukSize, !isSelected);
+                    }}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      measurements.usualSize?.tops?.includes(ukSize)
+                        ? "bg-stone-200 text-stone-800"
+                        : "bg-stone-100 text-stone-600 hover:bg-stone-150"
+                    }`}
+                  >
+                    {displaySize}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -488,32 +547,48 @@ export default function MeasurementsForm({
           </div>
 
           <div>
-            <label
-              className="block text-sm font-semibold mb-4"
-              style={{ color: "#4E4B4B" }}
-            >
-              Bottoms Size (UK)
-            </label>
+            <div className="flex justify-between items-center mb-4">
+              <label
+                className="block text-sm font-semibold"
+                style={{ color: "#4E4B4B" }}
+              >
+                Bottoms Size
+              </label>
+              <select
+                value={sizeSystem}
+                onChange={(e) => setSizeSystem(e.target.value as SizeSystem)}
+                className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                {SIZE_SYSTEM_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {UK_BOTTOMS_SIZES.map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => {
-                    const isSelected =
-                      measurements.usualSize?.bottoms?.includes(size) ||
-                      false;
-                    handleMultiSelectChange("bottoms", size, !isSelected);
-                  }}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    measurements.usualSize?.bottoms?.includes(size)
-                      ? "bg-stone-200 text-stone-800"
-                      : "bg-stone-100 text-stone-600 hover:bg-stone-150"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+              {UK_BOTTOMS_SIZES.map((ukSize) => {
+                const displaySize = convertToDisplaySize(ukSize, sizeSystem);
+                return (
+                  <button
+                    key={ukSize}
+                    type="button"
+                    onClick={() => {
+                      const isSelected =
+                        measurements.usualSize?.bottoms?.includes(ukSize) ||
+                        false;
+                      handleMultiSelectChange("bottoms", ukSize, !isSelected);
+                    }}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      measurements.usualSize?.bottoms?.includes(ukSize)
+                        ? "bg-stone-200 text-stone-800"
+                        : "bg-stone-100 text-stone-600 hover:bg-stone-150"
+                    }`}
+                  >
+                    {displaySize}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -534,31 +609,47 @@ export default function MeasurementsForm({
           </div>
 
           <div>
-            <label
-              className="block text-sm font-semibold mb-4"
-              style={{ color: "#4E4B4B" }}
-            >
-              Shoe Size (EU)
-            </label>
+            <div className="flex justify-between items-center mb-4">
+              <label
+                className="block text-sm font-semibold"
+                style={{ color: "#4E4B4B" }}
+              >
+                Shoe Size
+              </label>
+              <select
+                value={sizeSystem}
+                onChange={(e) => setSizeSystem(e.target.value as SizeSystem)}
+                className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                {SIZE_SYSTEM_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {EU_SHOE_SIZES.map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => {
-                    const isSelected =
-                      measurements.usualSize?.shoes?.includes(size) || false;
-                    handleMultiSelectChange("shoes", size, !isSelected);
-                  }}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    measurements.usualSize?.shoes?.includes(size)
-                      ? "bg-stone-200 text-stone-800"
-                      : "bg-stone-100 text-stone-600 hover:bg-stone-150"
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+              {EU_SHOE_SIZES.map((euSize) => {
+                const displaySize = convertShoeSize(euSize, sizeSystem);
+                return (
+                  <button
+                    key={euSize}
+                    type="button"
+                    onClick={() => {
+                      const isSelected =
+                        measurements.usualSize?.shoes?.includes(euSize) || false;
+                      handleMultiSelectChange("shoes", euSize, !isSelected);
+                    }}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      measurements.usualSize?.shoes?.includes(euSize)
+                        ? "bg-stone-200 text-stone-800"
+                        : "bg-stone-100 text-stone-600 hover:bg-stone-150"
+                    }`}
+                  >
+                    {displaySize}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
