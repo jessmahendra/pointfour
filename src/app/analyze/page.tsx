@@ -201,7 +201,11 @@ function BrandAnalysisContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: `Parse this product query and identify the brand name and product name. The user may have made typos, used incomplete names, or provided vague descriptions. Use web search to verify and correct any information, find the most likely brand and product they're referring to, and return accurate data. Be forgiving of typos and incomplete information - use your knowledge and web search to fill in the gaps and find the correct brand and product. Always return the official brand website and specific product URL when available. Query: "${simpleQuery}"`,
+          prompt: `Parse this product query and identify the brand name and product name. The user may have made typos, used incomplete names, or provided vague descriptions. Use web search to verify and correct any information, find the most likely brand and product they're referring to, and return accurate data. Be forgiving of typos and incomplete information - use your knowledge and web search to fill in the gaps and find the correct brand and product.
+
+CRITICAL: The productUrl must be the direct product page URL (e.g., /products/product-name), NOT a collection page URL (e.g., /collections/collection-name). Collection pages list multiple products; we need the specific product detail page where users can select sizes and add to cart.
+
+Query: "${simpleQuery}"`,
           options: {
             enableWebSearch: true,
             temperature: 0.3,

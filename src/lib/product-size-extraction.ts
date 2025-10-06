@@ -143,10 +143,34 @@ Format: size1, size2, size3`;
 }
 
 /**
+ * Check if URL is a collection page (not a specific product)
+ */
+function isCollectionUrl(url: string): boolean {
+  // Common patterns for collection URLs
+  const collectionPatterns = [
+    /\/collections\/[^/]+$/,  // ends with /collections/name
+    /\/collections\/[^/]+\/?$/,  // ends with /collections/name or /collections/name/
+  ];
+
+  return collectionPatterns.some(pattern => pattern.test(url));
+}
+
+/**
  * Main function to extract product sizes from a product URL
  */
 export async function extractProductSizes(productUrl: string): Promise<SizeExtractionResult> {
   console.log(`🔍 Extracting sizes from: ${productUrl}`);
+
+  // Check if this is a collection URL (not a specific product)
+  if (isCollectionUrl(productUrl)) {
+    console.log(`⚠️ URL appears to be a collection page, not a specific product. Cannot extract sizes.`);
+    return {
+      success: false,
+      sizes: [],
+      method: 'failed',
+      error: 'URL is a collection page, not a specific product page. Please use the specific product URL.',
+    };
+  }
 
   try {
     // Fetch the product page HTML
