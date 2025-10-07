@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // GET - Fetch a single review
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
