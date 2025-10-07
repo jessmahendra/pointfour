@@ -35,9 +35,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pointfour: know before you own",
+  title: "Woven: know it fits before you buy",
   description:
-    "Get personalised recommendations based on real user reviews and sizing data from our fashion directory.",
+    "Your new fitting room is a community. Get personalised size recommendations based on real reviews from women like you.",
 };
 
 export default function RootLayout({

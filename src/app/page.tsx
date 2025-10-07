@@ -1,193 +1,281 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
+import { Crimson_Pro } from "next/font/google";
 
-export default function HomePage() {
+const crimsonPro = Crimson_Pro({
+  subsets: ["latin"],
+  weight: ["300", "400", "600"],
+  variable: "--font-crimson-pro",
+});
+
+export default function LandingPage() {
+  const [scrolled, setScrolled] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-4xl flex flex-col items-center">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-6xl font-bold text-stone-900 mb-6">
-            Know before you own
-          </h1>
-          <p className="text-xl text-stone-600 max-w-2xl mx-auto">
-            Get personalized recommendations based on real user reviews and sizing data from our fashion directory.
-          </p>
-        </div>
+    <div className={`min-h-screen bg-white relative overflow-hidden ${crimsonPro.variable}`}>
+      {/* Decorative Background Circles */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {/* Ellipse 1 - Above the fold (top center) */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '1203px',
+            height: '1203px',
+            top: '-159px',
+            left: '50%',
+            transform: 'translateX(-50%) translateX(7px)',
+            background: 'radial-gradient(50% 50% at 50% 50%, rgba(255, 224, 130, 0.2) 0%, rgba(255, 255, 255, 0) 100%)',
+            filter: 'blur(80px)',
+          }}
+        />
 
-        {/* Main Action Cards */}
-        <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-12 w-full">
-          {/* Review a Brand Card */}
-          <Link href="/analyze" className="flex-shrink-0">
-            <div
-              className="p-6 cursor-pointer group transition-all duration-200 hover:shadow-sm"
+        {/* Ellipse 2 - Lower section right side (PURPLE) */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '1542px',
+            height: '1542px',
+            top: '611px',
+            left: '50%',
+            transform: 'translateX(-50%) translateX(100px)',
+            background: 'radial-gradient(50% 50% at 50% 50%, rgba(188, 73, 220, 0.85) 0%, rgba(255, 255, 255, 0) 100%)',
+            filter: 'blur(100px)',
+          }}
+        />
+
+        {/* Ellipse 3 - Lower section left side (ORANGE) */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '1534px',
+            height: '1534px',
+            top: '731px',
+            left: '50%',
+            transform: 'translateX(-50%) translateX(-209px)',
+            background: 'radial-gradient(50% 50% at 50% 50%, rgba(255, 182, 146, 0.3) 0%, rgba(255, 255, 255, 0) 100%)',
+            filter: 'blur(100px)',
+          }}
+        />
+      </div>
+
+      {/* Navigation */}
+      <nav className={`sticky top-0 z-50 px-6 py-6 transition-all duration-300 ${scrolled ? 'bg-white/80 backdrop-blur-sm' : ''}`}>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="text-xl font-normal text-black" style={{ fontFamily: 'var(--font-crimson-pro)' }}>
+              woven
+            </Link>
+            <div className="flex items-center gap-8 text-[18px]" style={{ fontFamily: 'var(--font-crimson-pro)', fontWeight: 300 }}>
+              <a href="#about-woven" className="text-black hover:opacity-70 transition-opacity">
+                about Woven
+              </a>
+              <a href="#how-it-works" className="text-black hover:opacity-70 transition-opacity">
+                how it works
+              </a>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative z-10 pt-32 md:pt-40 pb-16 md:pb-32 px-4 md:px-6">
+        <div className="max-w-[591px] mx-auto">
+          <div className="text-center mb-6 md:mb-8">
+            <h1
+              className="text-[32px] md:text-[40px] leading-[32px] md:leading-[40px] mb-2 text-black"
               style={{
-                width: "280px",
-                backgroundColor: "#F8F7F4",
-                border: "1px solid #E9DED5",
-                borderRadius: "12px",
+                fontFamily: 'var(--font-crimson-pro)',
+                fontWeight: 300,
               }}
             >
-              <div>
-                {/* Icon without frame */}
-                <div className="mb-4">
-                  <svg
-                    width="32"
-                    height="32"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-stone-600"
-                  >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14,2 14,8 20,8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                    <polyline points="10,9 9,9 8,9" />
-                  </svg>
-                </div>
-
-                <div>
-                  <h3
-                    className="font-semibold mb-3 leading-tight flex items-center gap-2"
-                    style={{
-                      fontFamily: "Inter, sans-serif",
-                      fontSize: "16px",
-                      fontWeight: "600",
-                      color: "#4E4B4B",
-                    }}
-                  >
-                    Review a brand or item
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-stone-600"
-                    >
-                      <path d="M5 12h14" />
-                      <path d="m12 5 7 7-7 7" />
-                    </svg>
-                  </h3>
-                  <p
-                    className="leading-relaxed"
-                    style={{
-                      fontFamily: "Inter, sans-serif",
-                      fontSize: "14px",
-                      fontWeight: "400",
-                      color: "rgba(78, 75, 75, 0.7)",
-                    }}
-                  >
-                    Type any brand to discover their fit based on similar body
-                    types
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Link>
-
-          {/* Get Recommendations Card - HIDDEN FOR NOW */}
-          <Link
-            href="/recommendations"
-            className="flex-shrink-0"
-            style={{ display: "none" }}
-          >
-            <div
-              className="p-6 cursor-pointer group transition-all duration-200 hover:shadow-sm"
+              Your new fitting room is a community
+            </h1>
+            <p
+              className="text-[18px] md:text-[20px] leading-[18px] md:leading-[20px] text-center"
               style={{
-                width: "280px",
-                backgroundColor: "#F8F7F4",
-                border: "1px solid #E9DED5",
-                borderRadius: "12px",
+                fontFamily: 'var(--font-crimson-pro)',
+                fontWeight: 300,
+                opacity: 0.7,
               }}
             >
-              <div>
-                {/* Icon without frame */}
-                <div className="mb-4">
-                  <svg
-                    width="32"
-                    height="32"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-stone-600"
-                  >
-                    <path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-4" />
-                    <polyline points="9,11 12,14 15,11" />
-                    <line x1="12" y1="14" x2="12" y2="3" />
-                  </svg>
-                </div>
+              Know it fits before you buy
+            </p>
+          </div>
 
-                <div>
-                  <h3
-                    className="font-semibold mb-3 leading-tight flex items-center gap-2"
-                    style={{
-                      fontFamily: "Inter, sans-serif",
-                      fontSize: "16px",
-                      fontWeight: "600",
-                      color: "#4E4B4B",
-                    }}
-                  >
-                    Get recommendations
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-stone-600"
-                    >
-                      <path d="M5 12h14" />
-                      <path d="m12 5 7 7-7 7" />
-                    </svg>
-                  </h3>
-                  <p
-                    className="leading-relaxed"
-                    style={{
-                      fontFamily: "Inter, sans-serif",
-                      fontSize: "14px",
-                      fontWeight: "400",
-                      color: "rgba(78, 75, 75, 0.7)",
-                    }}
-                  >
-                    Tell us what you&apos;re looking for to get brand
-                    recommendations
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Link>
+          <div className="flex justify-center mb-8 md:mb-16">
+            <Link
+              href="/analyze"
+              className="inline-flex items-center justify-center px-8 py-4 bg-[#C3B300] text-white text-[16px] md:text-[18px] font-medium rounded-2xl hover:bg-[#B0A300] transition-all w-full max-w-[370px] h-[50px] border border-[#e4e4ce]"
+            >
+              Try it now
+            </Link>
+          </div>
         </div>
+      </section>
 
-        {/* Browse Directory Link - HIDDEN FOR NOW */}
-        <div className="text-center" style={{ display: "none" }}>
-          <Link
-            href="/directory"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+      {/* App Demo Section */}
+      <section className="relative z-10 py-16 md:py-32 px-4 md:px-6">
+        <div className="max-w-5xl mx-auto">
+          {/* Demo GIF - matching Figma dimensions */}
+          <div
+            className="rounded-[10px] shadow-lg overflow-hidden"
             style={{
-              border: "1px solid #E9DED5",
-              color: "#6C6A68",
+              maxWidth: '849px',
+              margin: '0 auto',
             }}
           >
-            <span className="text-xs">🌐</span>
-            Browse directory
-          </Link>
+            <img
+              src="/woven-demo.gif"
+              alt="Woven app demonstration"
+              className="w-full h-auto"
+              style={{
+                display: 'block',
+              }}
+            />
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* Value Proposition Section */}
+      <section className="relative z-10 py-24 md:py-40 px-4 md:px-6">
+        <div className="max-w-[713px] mx-auto text-center">
+          <h2
+            className="text-[48px] md:text-[72px] leading-[42px] md:leading-[61.2px] text-black mb-8"
+            style={{
+              fontFamily: 'var(--font-crimson-pro)',
+              fontWeight: 300,
+            }}
+          >
+            All the reviews you need, none of the guessing.
+          </h2>
+        </div>
+      </section>
+
+      {/* About Woven Section */}
+      <section id="about-woven" className="relative z-10 py-24 md:py-40 px-4 md:px-6">
+        <div className="max-w-[713px] mx-auto text-center">
+          <p
+            className="text-[28px] md:text-[40px] leading-[32px] md:leading-[40px] text-black"
+            style={{
+              fontFamily: 'var(--font-crimson-pro)',
+              fontWeight: 300,
+            }}
+          >
+            Woven helps you find the right size based on real reviews from women like you—no more guessing, no more returns.
+          </p>
+        </div>
+      </section>
+
+      {/* Product Visualization Section */}
+      <section className="relative z-10 py-24 md:py-40 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="relative flex flex-col md:flex-row items-center justify-center min-h-[600px] md:min-h-[700px]">
+            {/* Center product image - lowest z-index */}
+            <img
+              src="/jeans.png"
+              alt="Frame wide-leg jeans"
+              className="relative z-0 w-full max-w-[348px] h-auto block shadow-[0px_3.617px_5.426px_0px_rgba(0,0,0,0.02),0px_9.043px_16.277px_0px_rgba(0,0,0,0.02),0px_16.277px_50.639px_0px_rgba(0,0,0,0.04)]"
+            />
+
+            {/* Left review cards - overlapping on top of image */}
+            <div className="hidden md:flex md:absolute md:left-[5%] lg:left-[10%] xl:left-[15%] top-[15%] flex-col gap-4 z-20">
+              <div
+                className="bg-[#fffde4] border border-[#f1eded] rounded-[10px] p-6 w-[305px] shadow-md"
+                style={{ transform: 'rotate(3.276deg)' }}
+              >
+                <p className="text-[14px] text-[rgba(0,0,0,0.6)] font-medium mb-4 leading-relaxed">
+                  "Frame wide-leg jeans: soft, curve-friendly, and literally perfect. These jeans are hands-down one of the most comfortable pair I have ever put on my body"
+                </p>
+                <p className="text-[14px] text-[rgba(0,0,0,0.7)] font-semibold underline">
+                  themomedit.com
+                </p>
+              </div>
+              <div
+                className="bg-[#f0f4ea] border border-[#f1eded] rounded-[10px] p-6 w-[296px] shadow-md"
+                style={{ transform: 'rotate(-11.171deg)' }}
+              >
+                <p className="text-[14px] text-[rgba(0,0,0,0.6)] font-medium mb-4 leading-relaxed">
+                  "I love these jeans... I'm a size 8 normally and the 26 fit me perfectly"
+                </p>
+                <p className="text-[14px] text-[rgba(0,0,0,0.7)] font-semibold underline">
+                  anthropologie.com
+                </p>
+              </div>
+            </div>
+
+            {/* Right recommendation card - overlapping on top of image */}
+            <div className="md:absolute md:right-[5%] lg:right-[10%] xl:right-[15%] md:top-[25%] bg-white border border-[#f1eded] rounded-[10px] p-6 w-full max-w-[384px] shadow-md z-20 mt-8 md:mt-0">
+              <h3 className="text-[16px] font-semibold text-black opacity-70 mb-4">
+                True to size: order 26
+              </h3>
+              <p className="text-[14px] text-[rgba(0,0,0,0.6)] font-medium mb-4 leading-relaxed">
+                Based on your UK 6-8 (approx waist 24-26" / 61-66cm) and preference for a well-fitting jean, a size 26 best matches the high-rise, fitted-hip cut
+              </p>
+              <div className="space-y-2">
+                <h4 className="text-[16px] font-semibold text-black opacity-70">
+                  Fabric and stretch
+                </h4>
+                <p className="text-[14px] text-[rgba(0,0,0,0.6)] font-medium leading-relaxed">
+                  100% stretch cotton. Reviewers mention that this style is high-stretch, so the waist and hip have some give after wear.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section id="how-it-works" className="relative z-10 py-24 md:py-40 px-4 md:px-6">
+        <div className="max-w-[591px] mx-auto text-center space-y-6">
+          <h2
+            className="text-[28px] md:text-[40px] leading-[32px] md:leading-[40px] text-black"
+            style={{
+              fontFamily: 'var(--font-crimson-pro)',
+              fontWeight: 300,
+            }}
+          >
+            Tell Woven what you want to buy, we'll do all the work for you
+          </h2>
+          <div className="flex justify-center mb-12">
+            <Link
+              href="/analyze"
+              className="inline-flex items-center justify-center px-8 py-4 bg-[#C3B300] text-white text-[16px] md:text-[18px] font-medium rounded-2xl hover:bg-[#B0A300] transition-all w-full max-w-[370px] h-[50px] border border-[#e4e4ce]"
+            >
+              Try it now
+            </Link>
+          </div>
+          {/* Form Screenshot */}
+          <div className="flex justify-center">
+            <div className="border border-[rgba(0,0,0,0.1)] rounded-[10px] overflow-hidden max-w-[533px] w-full shadow-sm">
+              <img
+                src="/form-screenshot.png"
+                alt="Woven product form interface"
+                className="w-full h-auto block"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer - Minimal */}
+      <footer className="relative z-10 py-16 md:py-20 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-stone-500 text-sm">
+            © {new Date().getFullYear()} Woven. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

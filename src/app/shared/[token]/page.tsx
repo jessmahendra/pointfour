@@ -119,7 +119,7 @@ export default async function SharedPage({ params }: SharedPageProps) {
               href="/"
               className="text-2xl font-bold text-stone-900 hover:text-[#928704]"
             >
-              pointfour
+              woven
             </Link>
             <div className="text-sm text-stone-500">Shared Recommendation</div>
           </div>
