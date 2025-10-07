@@ -117,7 +117,10 @@ export default function LandingPage() {
           <div className="flex justify-center mb-8 md:mb-16">
             <Link
               href="/analyze"
-              className="inline-flex items-center justify-center px-8 py-4 bg-[#C3B300] text-white text-[16px] md:text-[18px] font-medium rounded-2xl hover:bg-[#B0A300] transition-all w-full max-w-[370px] h-[50px] border border-[#e4e4ce]"
+              className="inline-flex items-center justify-center px-6 py-2 bg-[#c3b300] text-white text-[18px] font-medium rounded-[12px] hover:bg-[#B0A300] transition-all"
+              style={{
+                boxShadow: '-8px -2px 20px 0px rgba(9,236,112,0.07), 0px 10px 18px 0px rgba(161,83,10,0.1)'
+              }}
             >
               Try it now
             </Link>
@@ -256,14 +259,17 @@ export default function LandingPage() {
           <div className="flex justify-center mb-12">
             <Link
               href="/analyze"
-              className="inline-flex items-center justify-center px-8 py-4 bg-[#C3B300] text-white text-[16px] md:text-[18px] font-medium rounded-2xl hover:bg-[#B0A300] transition-all w-full max-w-[370px] h-[50px] border border-[#e4e4ce]"
+              className="inline-flex items-center justify-center px-6 py-2 bg-[#c3b300] text-white text-[18px] font-medium rounded-[12px] hover:bg-[#B0A300] transition-all"
+              style={{
+                boxShadow: '-8px -2px 20px 0px rgba(9,236,112,0.07), 0px 10px 18px 0px rgba(161,83,10,0.1)'
+              }}
             >
               Try it now
             </Link>
           </div>
           {/* Form Screenshot */}
           <div className="flex justify-center">
-            <div className="border border-[rgba(0,0,0,0.1)] rounded-[10px] overflow-hidden max-w-[533px] w-full shadow-sm">
+            <Link href="/analyze" className="border border-[rgba(0,0,0,0.1)] rounded-[10px] overflow-hidden max-w-[533px] w-full shadow-sm hover:shadow-md transition-shadow cursor-pointer block">
               <Image
                 src="/form-screenshot.png"
                 alt="Woven product form interface"
@@ -271,7 +277,7 @@ export default function LandingPage() {
                 height={319}
                 className="w-full h-auto block"
               />
-            </div>
+            </Link>
           </div>
         </div>
       </section>
