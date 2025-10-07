@@ -4,11 +4,11 @@ import { NextRequest, NextResponse } from 'next/server';
 // GET - Fetch a single review
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
-    const { id } = params;
+    const { id } = await params;
 
     const { data: review, error } = await supabase
       .from('user_reviews')
@@ -44,11 +44,11 @@ export async function GET(
 // PATCH - Update a review
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
-    const { id } = params;
+    const { id } = await params;
 
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -183,11 +183,11 @@ export async function PATCH(
 // DELETE - Delete a review
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
-    const { id } = params;
+    const { id } = await params;
 
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();

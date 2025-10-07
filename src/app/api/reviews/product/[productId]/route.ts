@@ -12,11 +12,11 @@ interface Review {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
     const supabase = await createClient();
-    const { productId } = params;
+    const { productId } = await params;
     const { searchParams } = new URL(request.url);
 
     // Get current user to filter by similar measurements
