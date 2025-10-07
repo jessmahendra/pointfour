@@ -219,11 +219,11 @@ export function RecommendationDisplay({
                 return (
                   <div key={index} style={{ marginBottom: "8px" }}>
                     <span style={{ fontWeight: "600" }}>• {label}:</span>{" "}
-                    <span>{content}</span>
+                    <span><MarkdownText text={content} /></span>
                   </div>
                 );
               }
-              return <div key={index} style={{ marginBottom: "8px" }}>{line}</div>;
+              return <div key={index} style={{ marginBottom: "8px" }}><MarkdownText text={line} /></div>;
             })}
           </div>
         </div>

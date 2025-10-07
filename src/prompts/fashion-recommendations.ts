@@ -22,19 +22,20 @@ ${enhancedContext ? `Here's what I know about the brand:\n${enhancedContext}\n` 
 User Query: ${query}
 
 **INSTRUCTIONS:**
-1. **PRIORITIZE** reviews that mention body measurements, sizes worn, or fit details
+1. **PRIORITIZE** reviews that mention body measurements, sizes worn, or fit details - CUSTOMER REVIEWS ARE THE PRIMARY DATA SOURCE
 2. **EXTRACT** and note any body measurements mentioned in reviews (height, size, bust/waist/hips)
 3. **COMPARE** reviewer measurements with user measurements when available
-4. **HIGHLIGHT** fabric composition and stretch information - this is CRITICAL for fit
-5. **SEPARATE** positive and negative feedback clearly
+4. **WEIGHT REVIEWER CONSENSUS HEAVILY** - If most reviewers say "runs small", prioritize this over size calculations
+5. **HIGHLIGHT** fabric composition and stretch information - this is CRITICAL for fit
+6. **SEPARATE** positive and negative feedback clearly
 
 **RESPONSE FORMAT - You MUST structure your response EXACTLY like this (keep the ** markers around section headings):**
 
 **TLDR**
-- Overall recommendation: [One sentence: size up/down/true-to-size with key reason]
-- Fabric & stretch: [One sentence about fabric type and how it affects fit]
-- Best for: [One sentence about which body types/sizes this works best for, or "Reviews from similar body types not available"]
-${userContext ? `- Your fit: [One sentence specific to user's measurements]` : ''}
+- Overall recommendation: [One sentence: size up/down/true-to-size based PRIMARILY on what reviewers say, not just calculations. E.g., "Reviewers consistently say to size down - most find it runs large" or "Order your usual size - reviewers with similar measurements confirm true-to-size fit"]
+- Fabric & stretch: [One sentence about fabric type and how it affects fit, based on reviews when available]
+- Best for: [One sentence about which body types/sizes this works best for based on reviewer feedback, or "Reviews from similar body types not available"]
+${userContext ? `- Your fit: [One sentence specific to user's measurements, referencing similar reviewers when found]` : ''}
 
 **About the brand**
 [2-3 sentences about the brand, their style, and general reputation]
@@ -87,16 +88,19 @@ IMPORTANT:
 - Include specific measurements and sizing comparisons when available in reviews
 
 **SIZING RECOMMENDATION RULES:**
-- ALWAYS recommend ONE primary size first with confidence, personalized to the user's measurements
-- When user measurements are available, MUST reference them explicitly in your recommendation (e.g., "Your 66cm waist puts you in size S" or "Based on your measurements...")
-- When reviews mention similar measurements to the user, MUST call this out explicitly (e.g., "Reviewers with similar measurements to yours (66cm waist) found size S perfect")
+- ALWAYS recommend ONE primary size first with confidence, based PRIMARILY on reviewer consensus and secondarily on measurements
+- PRIORITIZE what reviewers with similar measurements experienced over theoretical size calculations
+- When user measurements are available, MUST reference them explicitly AND reference similar reviewers (e.g., "Reviewers with your measurements (66cm waist) found size S perfect - order size S")
+- When reviews mention similar measurements to the user, MUST call this out explicitly and make it the PRIMARY reasoning (e.g., "Order size S. Three reviewers with similar measurements to yours (66cm waist, 84cm hips) all confirm size S fits perfectly")
+- If reviewers consistently say "runs small/large", this takes precedence over size chart calculations
 - Only suggest a second size if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up one" or "If you prefer non-fitted styles, size up")
 - NEVER give vague advice like "order both and return what doesn't fit"
-- Each size recommendation must be backed by specific reasoning from reviews or measurements
-- Format: "Order [SIZE]. [Specific reason based on USER'S measurements/reviews]. If [specific condition], consider sizing [up/down]."
-- Bad example: "Try S or M and see which fits better"
-- Good example: "Order your usual size (the size you wear in fitted, structured designer denim). Your 66cm waist / 84cm hips align with a slim/straight fit in this style. If you have muscular thighs, prefer a roomier fit, or plan to wear them immediately without a break-in period, size up one."
-- If NO user measurements provided, give general sizing advice but note that it would be more accurate with measurements
+- Each size recommendation must be backed by specific reasoning from REVIEWS first, measurements second
+- Format: "Order [SIZE]. [Review-based reason] + [User measurements confirmation]. If [specific condition from reviews], consider sizing [up/down]."
+- Bad example: "Try S or M and see which fits better" or "Based on calculations, size S"
+- Good example: "Order size S. Reviewers with your measurements (66cm waist / 84cm hips) consistently found size S perfect for a fitted but comfortable fit. Five reviewers mention this exact size worked well for slim/straight fits. If you have muscular thighs or prefer roomier fits, several reviewers recommend sizing up one."
+- If NO reviewers with similar measurements AND no user measurements: give general sizing advice based on overall review consensus
+- If NO reviews available at all: be honest about limited data and provide guidance based on brand standards
 
 Make your response helpful, specific, and actionable based on REAL customer feedback patterns.`;
 }
