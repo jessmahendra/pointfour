@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 
 interface UserReview {
   id: string;
@@ -12,7 +12,7 @@ interface UserReview {
   size_worn: string;
   created_at: string;
   helpful_count: number;
-  measurements_snapshot: any;
+  measurements_snapshot: Record<string, unknown>;
   review_photos: Array<{
     id: string;
     photo_url: string;
@@ -36,11 +36,7 @@ export function UserReviewsSection({
   const [sortBy, setSortBy] = useState("created_at");
   const [isFiltered, setIsFiltered] = useState(false);
 
-  useEffect(() => {
-    fetchReviews();
-  }, [productId, filterBySimilar, sortBy]);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -62,13 +58,17 @@ export function UserReviewsSection({
       const data = await response.json();
       setReviews(data.reviews || []);
       setIsFiltered(data.filtered || false);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error fetching reviews:", err);
-      setError(err.message || "Failed to load reviews");
+      setError(err instanceof Error ? err.message : "Failed to load reviews");
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId, filterBySimilar, sortBy]);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -241,10 +241,12 @@ export function UserReviewsSection({
                   {review.review_photos
                     .sort((a, b) => a.display_order - b.display_order)
                     .map((photo) => (
-                      <img
+                      <Image
                         key={photo.id}
                         src={photo.photo_url}
                         alt="Review photo"
+                        width={96}
+                        height={96}
                         className="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => window.open(photo.photo_url, "_blank")}
                       />

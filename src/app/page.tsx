@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Crimson_Pro } from "next/font/google";
 
 const crimsonPro = Crimson_Pro({
@@ -182,9 +183,11 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="relative flex flex-col md:flex-row items-center justify-center min-h-[600px] md:min-h-[700px]">
             {/* Center product image - lowest z-index */}
-            <img
+            <Image
               src="/jeans.png"
               alt="Frame wide-leg jeans"
+              width={348}
+              height={517}
               className="relative z-0 w-full max-w-[348px] h-auto block shadow-[0px_3.617px_5.426px_0px_rgba(0,0,0,0.02),0px_9.043px_16.277px_0px_rgba(0,0,0,0.02),0px_16.277px_50.639px_0px_rgba(0,0,0,0.04)]"
             />
 
@@ -195,7 +198,7 @@ export default function LandingPage() {
                 style={{ transform: 'rotate(3.276deg)' }}
               >
                 <p className="text-[14px] text-[rgba(0,0,0,0.6)] font-medium mb-4 leading-relaxed">
-                  "Frame wide-leg jeans: soft, curve-friendly, and literally perfect. These jeans are hands-down one of the most comfortable pair I have ever put on my body"
+                  &ldquo;Frame wide-leg jeans: soft, curve-friendly, and literally perfect. These jeans are hands-down one of the most comfortable pair I have ever put on my body&rdquo;
                 </p>
                 <p className="text-[14px] text-[rgba(0,0,0,0.7)] font-semibold underline">
                   themomedit.com
@@ -206,7 +209,7 @@ export default function LandingPage() {
                 style={{ transform: 'rotate(-11.171deg)' }}
               >
                 <p className="text-[14px] text-[rgba(0,0,0,0.6)] font-medium mb-4 leading-relaxed">
-                  "I love these jeans... I'm a size 8 normally and the 26 fit me perfectly"
+                  &ldquo;I love these jeans... I&apos;m a size 8 normally and the 26 fit me perfectly&rdquo;
                 </p>
                 <p className="text-[14px] text-[rgba(0,0,0,0.7)] font-semibold underline">
                   anthropologie.com
@@ -220,7 +223,7 @@ export default function LandingPage() {
                 True to size: order 26
               </h3>
               <p className="text-[14px] text-[rgba(0,0,0,0.6)] font-medium mb-4 leading-relaxed">
-                Based on your UK 6-8 (approx waist 24-26" / 61-66cm) and preference for a well-fitting jean, a size 26 best matches the high-rise, fitted-hip cut
+                Based on your UK 6-8 (approx waist 24-26&rdquo; / 61-66cm) and preference for a well-fitting jean, a size 26 best matches the high-rise, fitted-hip cut
               </p>
               <div className="space-y-2">
                 <h4 className="text-[16px] font-semibold text-black opacity-70">
@@ -245,7 +248,7 @@ export default function LandingPage() {
               fontWeight: 300,
             }}
           >
-            Tell Woven what you want to buy, we'll do all the work for you
+            Tell Woven what you want to buy, we&apos;ll do all the work for you
           </h2>
           <div className="flex justify-center mb-12">
             <Link
@@ -258,9 +261,11 @@ export default function LandingPage() {
           {/* Form Screenshot */}
           <div className="flex justify-center">
             <div className="border border-[rgba(0,0,0,0.1)] rounded-[10px] overflow-hidden max-w-[533px] w-full shadow-sm">
-              <img
+              <Image
                 src="/form-screenshot.png"
                 alt="Woven product form interface"
+                width={533}
+                height={319}
                 className="w-full h-auto block"
               />
             </div>

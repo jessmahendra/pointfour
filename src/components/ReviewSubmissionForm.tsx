@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface ReviewSubmissionFormProps {
   productId: string;
@@ -117,7 +118,7 @@ export function ReviewSubmissionForm({
       }
 
       // Upload photos first if any
-      let photoUrls: string[] = [];
+      const photoUrls: string[] = [];
       if (photos.length > 0) {
         setUploadingPhotos(true);
 
@@ -170,9 +171,9 @@ export function ReviewSubmissionForm({
       } else {
         router.push(`/products/${productId}?reviewSubmitted=true`);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error submitting review:", err);
-      setError(err.message || "Failed to submit review. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to submit review. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -299,9 +300,11 @@ export function ReviewSubmissionForm({
           <div className="grid grid-cols-5 gap-3">
             {photoPreviewUrls.map((url, index) => (
               <div key={index} className="relative">
-                <img
+                <Image
                   src={url}
                   alt={`Preview ${index + 1}`}
+                  width={96}
+                  height={96}
                   className="w-full h-24 object-cover rounded-lg"
                 />
                 <button
@@ -343,7 +346,7 @@ export function ReviewSubmissionForm({
       </div>
 
       <p className="text-sm text-gray-500 text-center">
-        You'll earn <strong>10 points</strong> for this review
+        You&apos;ll earn <strong>10 points</strong> for this review
         {photos.length > 0 && (
           <>
             {" "}
