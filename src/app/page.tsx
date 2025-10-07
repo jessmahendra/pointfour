@@ -136,13 +136,16 @@ export default function LandingPage() {
               margin: '0 auto',
             }}
           >
-            <img
+            <Image
               src="/woven-demo.gif"
               alt="Woven app demonstration"
+              width={849}
+              height={571}
               className="w-full h-auto"
               style={{
                 display: 'block',
               }}
+              unoptimized
             />
           </div>
         </div>

@@ -54,7 +54,7 @@ export async function GET(
         }
 
         // Filter reviews by similar measurements (within 10% tolerance)
-        const similarReviews = (allReviews || []).filter((review: any) => {
+        const similarReviews = (allReviews || []).filter((review: Record<string, any>) => {
           if (!review.measurements_snapshot) return false;
 
           const snapshot = review.measurements_snapshot;
@@ -125,7 +125,7 @@ export async function GET(
   }
 }
 
-function sortReviews(reviews: any[], sortBy: string, sortOrder: string) {
+function sortReviews(reviews: Record<string, any>[], sortBy: string, sortOrder: string) {
   const sorted = [...reviews].sort((a, b) => {
     let aVal, bVal;
 

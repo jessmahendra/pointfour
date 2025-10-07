@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const filePath = `${user.id}/${reviewId || 'temp'}/${fileName}`;
 
     // Upload to Supabase Storage
-    const { data, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('review-photos')
       .upload(filePath, file, {
         cacheControl: '3600',

@@ -91,7 +91,7 @@ export async function PATCH(
     } = body;
 
     // Build update object
-    const updates: any = {};
+    const updates: Record<string, unknown> = {};
     if (rating !== undefined) {
       if (rating < 1 || rating > 5) {
         return NextResponse.json(
