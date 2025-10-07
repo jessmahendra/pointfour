@@ -87,7 +87,7 @@ export async function GET(
           // Check shoe size similarity (exact match or within 1 size)
           if (userMeasurements.uk_shoe_size && snapshot.uk_shoe_size) {
             const shoeSizeDiff = Math.abs(
-              parseFloat(userMeasurements.uk_shoe_size) - parseFloat(snapshot.uk_shoe_size)
+              parseFloat(String(userMeasurements.uk_shoe_size)) - parseFloat(String(snapshot.uk_shoe_size))
             );
             if (shoeSizeDiff > 1) return false;
           }

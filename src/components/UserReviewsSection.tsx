@@ -217,14 +217,14 @@ export function UserReviewsSection({
                     Similar measurements to you
                   </p>
                   <div className="flex gap-4 text-xs text-blue-700">
-                    {review.measurements_snapshot.waist_cm && (
-                      <span>Waist: {review.measurements_snapshot.waist_cm}cm</span>
+                    {Boolean(review.measurements_snapshot.waist_cm) && (
+                      <span>Waist: {String(review.measurements_snapshot.waist_cm)}cm</span>
                     )}
-                    {review.measurements_snapshot.hips_cm && (
-                      <span>Hips: {review.measurements_snapshot.hips_cm}cm</span>
+                    {Boolean(review.measurements_snapshot.hips_cm) && (
+                      <span>Hips: {String(review.measurements_snapshot.hips_cm)}cm</span>
                     )}
-                    {review.measurements_snapshot.bust_cm && (
-                      <span>Bust: {review.measurements_snapshot.bust_cm}cm</span>
+                    {Boolean(review.measurements_snapshot.bust_cm) && (
+                      <span>Bust: {String(review.measurements_snapshot.bust_cm)}cm</span>
                     )}
                   </div>
                 </div>
