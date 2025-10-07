@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ProductRecommendations } from "@/app/products/[id]/ProductRecommendations";
 import { SaveProfileButton } from "@/components/SaveProfileButton";
+import { UserReviewsSection } from "@/components/UserReviewsSection";
 
 interface ProductPageClientProps {
   product: {
@@ -259,6 +260,9 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
           onShareClick={handleShareFunctionReady}
           onShareStateChange={handleShareStateChange}
         />
+
+        {/* User Reviews */}
+        <UserReviewsSection productId={product.id} />
 
         {/* Additional Product Information */}
         <div className="grid gap-6 md:grid-cols-2">
