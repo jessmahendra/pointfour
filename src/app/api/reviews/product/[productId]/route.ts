@@ -1,6 +1,15 @@
 import { createClient } from '@/utils/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
+interface Review {
+  id: string;
+  rating: number;
+  helpful_count: number;
+  created_at: string;
+  measurements_snapshot?: Record<string, number>;
+  [key: string]: unknown;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { productId: string } }
@@ -54,7 +63,7 @@ export async function GET(
         }
 
         // Filter reviews by similar measurements (within 10% tolerance)
-        const similarReviews = (allReviews || []).filter((review: Record<string, any>) => {
+        const similarReviews = (allReviews || []).filter((review: Review) => {
           if (!review.measurements_snapshot) return false;
 
           const snapshot = review.measurements_snapshot;
@@ -125,7 +134,7 @@ export async function GET(
   }
 }
 
-function sortReviews(reviews: Record<string, any>[], sortBy: string, sortOrder: string) {
+function sortReviews(reviews: Review[], sortBy: string, sortOrder: string) {
   const sorted = [...reviews].sort((a, b) => {
     let aVal, bVal;
 
