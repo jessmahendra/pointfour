@@ -61,12 +61,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const supabase = await createClient();
   const { id } = await params;
 
-  const { data: product, error } = await supabase
+  const { data: product, error} = await supabase
     .from("products")
     .select(
       `
       *,
       brand:brands!products_brand_id_fkey (
+        id,
         slug,
         name,
         logo_url,

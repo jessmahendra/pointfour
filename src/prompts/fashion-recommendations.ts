@@ -7,17 +7,19 @@ export interface FashionRecommendationVariables {
   query: string;
   enhancedContext?: string;
   userContext?: string;
+  communityReviews?: string;
 }
 
 export const FASHION_RECOMMENDATIONS_SYSTEM_PROMPT = 
   "You are a helpful fashion expert who provides detailed, accurate sizing and fit advice based on available data. Always be encouraging but honest about data limitations.";
 
 export function buildFashionRecommendationsPrompt(variables: FashionRecommendationVariables): string {
-  const { query, enhancedContext = '', userContext = '' } = variables;
+  const { query, enhancedContext = '', userContext = '', communityReviews = '' } = variables;
 
   return `You are a fashion expert helping users find the right fit for clothing and footwear brands.
 
 ${enhancedContext ? `Here's what I know about the brand:\n${enhancedContext}\n` : ''}${userContext}
+${communityReviews ? `\n**COMMUNITY REVIEWS (PRIORITIZE THESE):**\n${communityReviews}\n` : ''}
 
 User Query: ${query}
 
@@ -125,6 +127,52 @@ export function buildUserContext(userProfile?: {
   if (userProfile.footType) context += `- Foot Type: ${userProfile.footType}\n`;
   if (userProfile.category) context += `- Category: ${userProfile.category}\n`;
   context += '\n';
-  
+
+  return context;
+}
+
+interface CommunityReview {
+  rating: number;
+  fit_rating: string;
+  review_text: string;
+  size_worn: string;
+  measurements_snapshot?: {
+    waist_cm?: number;
+    hips_cm?: number;
+    bust_cm?: number;
+    uk_shoe_size?: string;
+    height_cm?: number;
+  };
+  created_at: string;
+}
+
+export function buildCommunityReviewsContext(reviews: CommunityReview[]): string {
+  if (!reviews || reviews.length === 0) return '';
+
+  let context = '';
+
+  reviews.forEach((review, index) => {
+    const fitLabel = review.fit_rating === 'true-to-size' ? 'True to Size' :
+                     review.fit_rating === 'runs-small' ? 'Runs Small' :
+                     review.fit_rating === 'runs-large' ? 'Runs Large' : review.fit_rating;
+
+    context += `\nReview ${index + 1}:\n`;
+    context += `- Rating: ${review.rating}/5 stars\n`;
+    context += `- Fit: ${fitLabel}\n`;
+    context += `- Size Worn: ${review.size_worn}\n`;
+
+    if (review.measurements_snapshot) {
+      context += `- Reviewer Measurements:`;
+      if (review.measurements_snapshot.waist_cm) context += ` Waist ${review.measurements_snapshot.waist_cm}cm`;
+      if (review.measurements_snapshot.hips_cm) context += ` | Hips ${review.measurements_snapshot.hips_cm}cm`;
+      if (review.measurements_snapshot.bust_cm) context += ` | Bust ${review.measurements_snapshot.bust_cm}cm`;
+      if (review.measurements_snapshot.height_cm) context += ` | Height ${review.measurements_snapshot.height_cm}cm`;
+      if (review.measurements_snapshot.uk_shoe_size) context += ` | UK Shoe ${review.measurements_snapshot.uk_shoe_size}`;
+      context += `\n`;
+    }
+
+    context += `- Review: "${review.review_text}"\n`;
+  });
+
   return context;
 }
