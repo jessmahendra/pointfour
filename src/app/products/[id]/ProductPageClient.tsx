@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ProductRecommendations } from "@/app/products/[id]/ProductRecommendations";
-import { SaveProfileButton } from "@/components/SaveProfileButton";
 import { UserReviewsSection } from "@/components/UserReviewsSection";
 
 interface ProductPageClientProps {
@@ -66,7 +65,6 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
       <div className="max-w-4xl mx-auto px-4 py-8 w-full">
         {/* Top Actions */}
         <div className="flex items-center justify-end gap-3 mb-6">
-          <SaveProfileButton />
           <Link
             href={`/review?productId=${product.id}&brandId=${product.brand.id}&productName=${encodeURIComponent(product.name)}`}
             className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors bg-stone-100 text-stone-700 border border-stone-200 hover:bg-stone-200"

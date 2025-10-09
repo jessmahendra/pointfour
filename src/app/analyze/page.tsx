@@ -9,6 +9,7 @@ import { ChatInterface } from "./components/ChatInterface";
 import MeasurementsForm from "../../components/MeasurementsForm";
 import { createClient } from "@/utils/supabase/client";
 import { User } from "@supabase/supabase-js";
+import { SignupModal } from "@/components/SignupModal";
 
 function BrandAnalysisContent() {
   const [currentStep, setCurrentStep] = useState<
@@ -29,6 +30,8 @@ function BrandAnalysisContent() {
   const [navigating, setNavigating] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [pendingProductId, setPendingProductId] = useState<string | null>(null);
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [signupPromptShown, setSignupPromptShown] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -55,10 +58,11 @@ function BrandAnalysisContent() {
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
 
-  // Load user measurements if authenticated
+  // Load user measurements if authenticated and save temp measurements if available
   useEffect(() => {
     if (user && !measurementsLoading) {
       loadUserMeasurements();
+      saveTempMeasurementsIfAvailable();
     } else if (!user) {
       setMeasurementsLoading(false);
     }
@@ -71,6 +75,37 @@ function BrandAnalysisContent() {
       loadSharedAnalysis(shareId);
     }
   }, [searchParams]);
+
+  // Check for temp measurements when user lands on the page
+  useEffect(() => {
+    console.log("🔍 Checking for signup modal trigger:", {
+      currentStep,
+      hasUser: !!user,
+      signupPromptShown,
+    });
+
+    // Only check when on form step and user is not logged in
+    if (currentStep !== "form" || user) {
+      console.log("❌ Not showing modal - wrong step or user logged in");
+      return;
+    }
+
+    const tempMeasurementsStr = sessionStorage.getItem("tempMeasurements");
+
+    console.log("📦 Session storage check:", {
+      hasTempMeasurements: !!tempMeasurementsStr,
+      signupPromptShown,
+    });
+
+    // If user has temp measurements and hasn't seen the prompt in this session, show modal immediately
+    if (tempMeasurementsStr && !signupPromptShown) {
+      console.log("✅ Showing signup modal!");
+      setShowSignupModal(true);
+      setSignupPromptShown(true);
+    } else {
+      console.log("❌ Not showing modal - conditions not met");
+    }
+  }, [currentStep, user, signupPromptShown]);
 
   const loadUserMeasurements = async () => {
     try {
@@ -88,6 +123,30 @@ function BrandAnalysisContent() {
       console.error("Error loading user measurements:", error);
     } finally {
       setMeasurementsLoading(false);
+    }
+  };
+
+  const saveTempMeasurementsIfAvailable = async () => {
+    const tempMeasurementsStr = sessionStorage.getItem("tempMeasurements");
+    if (tempMeasurementsStr) {
+      try {
+        const measurements = JSON.parse(tempMeasurementsStr);
+
+        // Save to database
+        const response = await fetch("/api/user/save-temp-measurements", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ measurements }),
+        });
+
+        if (response.ok) {
+          console.log("Temp measurements saved successfully");
+          // Clear temp measurements after successful save
+          sessionStorage.removeItem("tempMeasurements");
+        }
+      } catch (error) {
+        console.error("Failed to save temp measurements:", error);
+      }
     }
   };
 
@@ -242,11 +301,29 @@ Query: "${simpleQuery}"`,
             }, 1000); // Reduced delay since we're not showing results
           }
         } else {
-          // User is not logged in, store product ID and show measurements form
+          // User is not logged in
           if (result.product?.id) {
             setParsedData(JSON.stringify(enhancedResult, null, 2));
             setPendingProductId(result.product.id);
-            setCurrentStep("measurements");
+
+            // Check if user has temp measurements from previous search
+            const tempMeasurementsStr = sessionStorage.getItem("tempMeasurements");
+
+            if (tempMeasurementsStr && !signupPromptShown) {
+              // User has previous measurements - show signup modal
+              setShowSignupModal(true);
+              setSignupPromptShown(true);
+              // Stay on form step to show modal
+            } else if (tempMeasurementsStr && signupPromptShown) {
+              // User has measurements and skipped signup - go directly to product page
+              setNavigating(true);
+              setTimeout(() => {
+                router.push(`/products/${result.product.id}`);
+              }, 1000);
+            } else {
+              // No temp measurements - show measurements form
+              setCurrentStep("measurements");
+            }
           }
         }
       } else {
@@ -336,6 +413,34 @@ Query: "${simpleQuery}"`,
     setParsedData(null);
   };
 
+  const handleSignupSuccess = async () => {
+    // The measurements are already in session storage
+    // They will be saved automatically when the user verifies their email
+    // and we detect they have temp measurements on next login
+    console.log("Signup successful - measurements will be saved on first login");
+
+    // Continue with the search
+    if (pendingProductId) {
+      setNavigating(true);
+      setTimeout(() => {
+        router.push(`/products/${pendingProductId}`);
+      }, 500);
+    }
+  };
+
+  const handleSkipSignup = () => {
+    setShowSignupModal(false);
+    // If they already have a pending product, navigate to it
+    // Otherwise they'll continue with entering their query
+    if (pendingProductId) {
+      setNavigating(true);
+      setTimeout(() => {
+        router.push(`/products/${pendingProductId}`);
+      }, 500);
+    }
+    // If no pending product, just close modal and let them continue
+  };
+
   return (
     <div
       className={`min-h-screen bg-stone-50 ${
@@ -343,16 +448,23 @@ Query: "${simpleQuery}"`,
       }`}
     >
       {currentStep === "form" && (
-        <UserProfileForm
-          simpleQuery={simpleQuery}
-          setSimpleQuery={setSimpleQuery}
-          parsedData={parsedData}
-          parsingLoading={parsingLoading}
-          navigating={navigating}
-          handleSimpleFormSubmit={handleSimpleFormSubmit}
-          router={router}
-          setNavigating={setNavigating}
-        />
+        <>
+          <UserProfileForm
+            simpleQuery={simpleQuery}
+            setSimpleQuery={setSimpleQuery}
+            parsedData={parsedData}
+            parsingLoading={parsingLoading}
+            navigating={navigating}
+            handleSimpleFormSubmit={handleSimpleFormSubmit}
+            router={router}
+            setNavigating={setNavigating}
+          />
+          <SignupModal
+            isOpen={showSignupModal}
+            onClose={handleSkipSignup}
+            onSignupSuccess={handleSignupSuccess}
+          />
+        </>
       )}
       {currentStep === "measurements" && (
         <div className="max-w-md mx-auto p-8">

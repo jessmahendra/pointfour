@@ -63,7 +63,7 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
                 ? "Parsing..."
                 : navigating
                 ? "Navigating..."
-                : "Parse"}
+                : "Review item"}
             </button>
           </div>
         </div>

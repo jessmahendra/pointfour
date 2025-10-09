@@ -604,7 +604,7 @@ export default function MeasurementsForm({
               What&apos;s your shoe size?
             </h3>
             <p className="text-sm" style={{ color: "#6C6A68" }}>
-              Select all sizes that fit you well
+              Select your usual shoe size
             </p>
           </div>
 
@@ -631,17 +631,23 @@ export default function MeasurementsForm({
             <div className="flex flex-wrap gap-2">
               {EU_SHOE_SIZES.map((euSize) => {
                 const displaySize = convertShoeSize(euSize, sizeSystem);
+                const isSelected = measurements.usualSize?.shoes?.[0] === euSize;
                 return (
                   <button
                     key={euSize}
                     type="button"
                     onClick={() => {
-                      const isSelected =
-                        measurements.usualSize?.shoes?.includes(euSize) || false;
-                      handleMultiSelectChange("shoes", euSize, !isSelected);
+                      // Single select - replace the array with just this size
+                      setMeasurements({
+                        ...measurements,
+                        usualSize: {
+                          ...measurements.usualSize,
+                          shoes: [euSize],
+                        },
+                      });
                     }}
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      measurements.usualSize?.shoes?.includes(euSize)
+                      isSelected
                         ? "bg-stone-200 text-stone-800"
                         : "bg-stone-100 text-stone-600 hover:bg-stone-150"
                     }`}

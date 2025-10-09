@@ -174,8 +174,7 @@ export function ProductRecommendations({
       try {
         const measurements = JSON.parse(tempMeasurementsStr);
         setTempMeasurements(measurements);
-        // Clear the temporary measurements after using them
-        sessionStorage.removeItem("tempMeasurements");
+        // DON'T clear temp measurements - keep them for future searches until user signs up
       } catch (error) {
         console.error("Failed to parse temporary measurements:", error);
       }
