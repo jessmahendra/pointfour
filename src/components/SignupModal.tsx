@@ -24,7 +24,7 @@ export function SignupModal({ isOpen, onClose, onSignupSuccess }: SignupModalPro
     setError(null);
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
