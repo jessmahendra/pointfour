@@ -34,7 +34,7 @@ User Query: ${query}
 **RESPONSE FORMAT - You MUST structure your response EXACTLY like this (keep the ** markers around section headings):**
 
 **TLDR**
-- Overall recommendation: [One sentence: size up/down/true-to-size based PRIMARILY on what reviewers say, not just calculations. ALWAYS specify the exact size (e.g., "Order size 26" or "Order UK 8"). NEVER say "order your usual size" without specifying what that size is. E.g., "Reviewers consistently say to size down - order size 8 instead of your usual 10" or "Order size 26 - reviewers with similar measurements confirm true-to-size fit"]
+- Overall recommendation: [Start with the size NUMBER/LETTER first, then explain why. Format: "Order size [NUMBER]" or "Order [SIZE LETTER]" as the FIRST TWO WORDS. Then explain the reasoning. NEVER mention color names, style names, or product codes (like "INDIO", "Black Denim", etc.) - only the SIZE. Examples: "Order size 26. Reviewers consistently say to size down" or "Order UK 8. Reviewers with similar measurements confirm true-to-size fit" or "Order size M. Based on your measurements, this will give the best fit"]
 - Fabric & stretch: [One sentence about fabric type and how it affects fit, based on reviews when available]
 - Best for: [One sentence about which body types/sizes this works best for based on reviewer feedback, or "Reviews from similar body types not available"]
 ${userContext ? `- Your fit: [One sentence specific to user's measurements, referencing similar reviewers when found]` : ''}
@@ -43,7 +43,11 @@ ${userContext ? `- Your fit: [One sentence specific to user's measurements, refe
 [2-3 sentences about the brand, their style, and general reputation]
 
 **Choose your size**
-[Give ONE definitive size recommendation as your primary advice based on the user's specific measurements. ALWAYS specify the exact size number/letter (e.g., "Order size 26", "Order UK 8", "Order size M"). NEVER use vague language like "order your usual size" or "stick with your normal size" - always state the specific size. If you found reviews from people with similar measurements, EXPLICITLY reference them (e.g., "Based on your 66cm waist and 84cm hips, which matches reviewers who found size S perfect, order size S"). Always explain WHY this size fits their measurements. Only recommend two sizes if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up to 28" or "If you prefer a roomier fit, order 10 instead of 8"). Never recommend ordering multiple sizes just to try and return. Be confident and specific about which single size will work best based on their measurements and reviews.]
+[Give ONE definitive size recommendation starting with "Order size [NUMBER]" or "Order [SIZE LETTER]" as the very first words. NEVER start with color names, style names, product codes, or anything other than the SIZE. The SIZE is a number (like 26, 8, 10) or letter (like S, M, L) - NOT a word like "INDIO", "Black", "Denim", etc.
+
+Format: "Order size 26. [explanation]" or "Order UK 8. [explanation]" or "Order size M. [explanation]"
+
+If you found reviews from people with similar measurements, reference them in the explanation. Always explain WHY this size fits their measurements. Only recommend two sizes if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up to 28" or "If you prefer a roomier fit, order 10 instead of 8"). Never recommend ordering multiple sizes just to try and return. Be confident and specific about which single size will work best based on their measurements and reviews.]
 
 **Fit details**
 [Detailed fit information organized by:
@@ -90,20 +94,27 @@ IMPORTANT:
 - Include specific measurements and sizing comparisons when available in reviews
 
 **SIZING RECOMMENDATION RULES:**
+- ALWAYS start recommendations with "Order size [NUMBER]" or "Order [SIZE LETTER]" - these MUST be the first 2-3 words
+- The SIZE must be a number (26, 8, 10, etc.) or letter (S, M, L, etc.) - NEVER a color name (INDIO, Black), style name, or product code
+- NEVER use vague terms like "order your usual size" or "stick with your normal size"
+- NEVER mention colors, style names, or product codes when giving size recommendations
+- Format must be: "Order size 26." NOT "Order INDIO." NOT "Order Black Denim size 26."
 - ALWAYS recommend ONE primary size first with confidence, based PRIMARILY on reviewer consensus and secondarily on measurements
-- ALWAYS specify the exact size (e.g., "Order size 26", "Order UK 8", "Order size M") - NEVER use vague terms like "order your usual size" or "stick with your normal size"
 - PRIORITIZE what reviewers with similar measurements experienced over theoretical size calculations
-- When user measurements are available, MUST reference them explicitly AND reference similar reviewers (e.g., "Reviewers with your measurements (66cm waist) found size S perfect - order size S")
-- When reviews mention similar measurements to the user, MUST call this out explicitly and make it the PRIMARY reasoning (e.g., "Order size S. Three reviewers with similar measurements to yours (66cm waist, 84cm hips) all confirm size S fits perfectly")
+- When user measurements are available, MUST reference them explicitly AND reference similar reviewers (e.g., "Order size S. Reviewers with your measurements (66cm waist) found size S perfect")
+- When reviews mention similar measurements to the user, MUST call this out explicitly and make it the PRIMARY reasoning
 - If reviewers consistently say "runs small/large", this takes precedence over size chart calculations
 - Only suggest a second size if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up to 28" or "If you prefer non-fitted styles, order 10 instead of 8")
 - NEVER give vague advice like "order both and return what doesn't fit"
 - Each size recommendation must be backed by specific reasoning from REVIEWS first, measurements second
-- When calculating the user's size, use their body measurements (waist, hips, bust) to determine the specific size they should order in this brand's sizing system
-- Format: "Order [SIZE]. [Review-based reason] + [User measurements confirmation]. If [specific condition from reviews], consider sizing [up/down]."
-- Bad example: "Try S or M and see which fits better" or "Based on calculations, size S"
-- Good example: "Order size S. Reviewers with your measurements (66cm waist / 84cm hips) consistently found size S perfect for a fitted but comfortable fit. Five reviewers mention this exact size worked well for slim/straight fits. If you have muscular thighs or prefer roomier fits, several reviewers recommend sizing up one."
-- If NO reviewers with similar measurements AND no user measurements: give general sizing advice based on overall review consensus
+- When calculating the user's size, use their body measurements (waist, hips, bust) to determine the specific SIZE NUMBER they should order in this brand's sizing system
+
+Examples:
+- ✅ GOOD: "Order size 26. Reviewers with similar measurements confirm true-to-size fit."
+- ✅ GOOD: "Order UK 8. Based on your 66cm waist and 84cm hips."
+- ❌ BAD: "Order INDIO. Reviewers say..." (INDIO is not a size)
+- ❌ BAD: "Order your usual size" (not specific)
+- ❌ BAD: "Try size 26 or 28 and return what doesn't fit" (too vague)
 - If NO reviews available at all: be honest about limited data and provide guidance based on brand standards
 
 Make your response helpful, specific, and actionable based on REAL customer feedback patterns.`;
