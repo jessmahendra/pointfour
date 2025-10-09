@@ -62,37 +62,69 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Breadcrumb */}
-        <nav className="mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-sm text-stone-500">
-              <Link
-                href="/products"
-                className="hover:text-[#928704] font-semibold"
-              >
-                Products
-              </Link>
-              <span>/</span>
-              <Link
-                href={`/brands/${product.brand.slug}`}
-                className="hover:text-[#928704] font-semibold"
-              >
-                {product.brand.name}
-              </Link>
-              <span>/</span>
-              <span className="text-stone-900">{product.name}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <SaveProfileButton />
-              <Link
-                href={`/review?productId=${product.id}&brandId=${product.brand.id}&productName=${encodeURIComponent(product.name)}`}
-                className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors bg-stone-100 text-stone-700 border border-stone-200 hover:bg-stone-200"
-                title="Write a review"
-              >
+    <div className="min-h-screen bg-stone-50 overflow-x-hidden">
+      <div className="max-w-4xl mx-auto px-4 py-8 w-full">
+        {/* Top Actions */}
+        <div className="flex items-center justify-end gap-3 mb-6">
+          <SaveProfileButton />
+          <Link
+            href={`/review?productId=${product.id}&brandId=${product.brand.id}&productName=${encodeURIComponent(product.name)}`}
+            className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors bg-stone-100 text-stone-700 border border-stone-200 hover:bg-stone-200"
+            title="Write a review"
+          >
+            <svg
+              className="w-4 h-4 mr-1.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+            Review
+          </Link>
+          <button
+            onClick={handleShareClick}
+            disabled={isMakingShareable}
+            className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              copiedToClipboard
+                ? "bg-green-100 text-green-700 border border-green-200"
+                : "bg-stone-100 text-stone-700 border border-stone-200 hover:bg-stone-200"
+            }`}
+            title="Share this product"
+          >
+            {isMakingShareable ? (
+              <>
                 <svg
-                  className="w-4 h-4 mr-1.5"
+                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Sharing...
+              </>
+            ) : copiedToClipboard ? (
+              <>
+                <svg
+                  className="mr-1.5 w-4 h-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -101,84 +133,31 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Review
-              </Link>
-              <button
-                onClick={handleShareClick}
-                disabled={isMakingShareable}
-                className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  copiedToClipboard
-                    ? "bg-green-100 text-green-700 border border-green-200"
-                    : "bg-stone-100 text-stone-700 border border-stone-200 hover:bg-stone-200"
-                }`}
-                title="Share this product"
-              >
-                {isMakingShareable ? (
-                  <>
-                    <svg
-                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Sharing...
-                  </>
-                ) : copiedToClipboard ? (
-                  <>
-                    <svg
-                      className="mr-1.5 w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="mr-1.5 w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
-                      />
-                    </svg>
-                    Share
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </nav>
+                Copied!
+              </>
+            ) : (
+              <>
+                <svg
+                  className="mr-1.5 w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
+                />
+                </svg>
+                Share
+              </>
+            )}
+          </button>
+        </div>
 
         {/* Product Header */}
         <div className="bg-white rounded-lg shadow-sm p-8 mb-8 border border-stone-200">
@@ -261,11 +240,8 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
           onShareStateChange={handleShareStateChange}
         />
 
-        {/* User Reviews */}
-        <UserReviewsSection productId={product.id} />
-
         {/* Additional Product Information */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 mb-8">
           {/* Product Details */}
           <div className="bg-white rounded-lg shadow-sm p-6 border border-stone-200">
             <h2 className="text-xl font-semibold mb-4 text-stone-900">
@@ -341,6 +317,13 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
             )}
           </div>
         </div>
+
+        {/* User Reviews */}
+        <UserReviewsSection
+          productId={product.id}
+          brandId={product.brand.id}
+          productName={product.name}
+        />
       </div>
     </div>
   );

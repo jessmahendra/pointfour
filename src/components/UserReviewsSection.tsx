@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 interface UserReview {
   id: string;
@@ -23,11 +24,15 @@ interface UserReview {
 interface UserReviewsSectionProps {
   productId: string;
   className?: string;
+  brandId?: string;
+  productName?: string;
 }
 
 export function UserReviewsSection({
   productId,
   className = "",
+  brandId,
+  productName,
 }: UserReviewsSectionProps) {
   const [reviews, setReviews] = useState<UserReview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,9 +126,32 @@ export function UserReviewsSection({
     <div className={`bg-white rounded-lg shadow-sm p-6 ${className}`}>
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-          Community Reviews
-        </h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-2xl font-semibold text-gray-900">
+            Community Reviews
+          </h2>
+          {brandId && productName && (
+            <Link
+              href={`/review?productId=${productId}&brandId=${brandId}&productName=${encodeURIComponent(productName)}`}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#4E4B4B] rounded-lg hover:bg-[#3E3B3B] transition-colors"
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Create Review
+            </Link>
+          )}
+        </div>
         <p className="text-sm text-gray-600">
           {reviews.length} review{reviews.length !== 1 ? "s" : ""} from our
           community

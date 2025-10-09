@@ -35,7 +35,7 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
       <div className="mb-8">
         <div className="bg-white p-8 rounded-2xl border border-stone-300 shadow-lg">
           <h2 className="text-base font-medium text-gray-800 mb-2">
-            Brand or item you&apos;re interested in
+            What are you thinking about buying?
           </h2>
           <p className="text-gray-600 mb-6 text-sm">
             Enter a product name you&apos;re interested in. Don&apos;t worry

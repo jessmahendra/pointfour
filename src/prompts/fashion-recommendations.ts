@@ -34,7 +34,7 @@ User Query: ${query}
 **RESPONSE FORMAT - You MUST structure your response EXACTLY like this (keep the ** markers around section headings):**
 
 **TLDR**
-- Overall recommendation: [One sentence: size up/down/true-to-size based PRIMARILY on what reviewers say, not just calculations. E.g., "Reviewers consistently say to size down - most find it runs large" or "Order your usual size - reviewers with similar measurements confirm true-to-size fit"]
+- Overall recommendation: [One sentence: size up/down/true-to-size based PRIMARILY on what reviewers say, not just calculations. ALWAYS specify the exact size (e.g., "Order size 26" or "Order UK 8"). NEVER say "order your usual size" without specifying what that size is. E.g., "Reviewers consistently say to size down - order size 8 instead of your usual 10" or "Order size 26 - reviewers with similar measurements confirm true-to-size fit"]
 - Fabric & stretch: [One sentence about fabric type and how it affects fit, based on reviews when available]
 - Best for: [One sentence about which body types/sizes this works best for based on reviewer feedback, or "Reviews from similar body types not available"]
 ${userContext ? `- Your fit: [One sentence specific to user's measurements, referencing similar reviewers when found]` : ''}
@@ -43,7 +43,7 @@ ${userContext ? `- Your fit: [One sentence specific to user's measurements, refe
 [2-3 sentences about the brand, their style, and general reputation]
 
 **Choose your size**
-[Give ONE definitive size recommendation as your primary advice based on the user's specific measurements. If you found reviews from people with similar measurements, EXPLICITLY reference them (e.g., "Based on your 66cm waist and 84cm hips, which matches reviewers who found size S perfect..."). Always explain WHY this size fits their measurements. Only recommend two sizes if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up one" or "If you prefer a roomier fit, size up"). Never recommend ordering multiple sizes just to try and return. Be confident and specific about which single size will work best based on their measurements and reviews.]
+[Give ONE definitive size recommendation as your primary advice based on the user's specific measurements. ALWAYS specify the exact size number/letter (e.g., "Order size 26", "Order UK 8", "Order size M"). NEVER use vague language like "order your usual size" or "stick with your normal size" - always state the specific size. If you found reviews from people with similar measurements, EXPLICITLY reference them (e.g., "Based on your 66cm waist and 84cm hips, which matches reviewers who found size S perfect, order size S"). Always explain WHY this size fits their measurements. Only recommend two sizes if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up to 28" or "If you prefer a roomier fit, order 10 instead of 8"). Never recommend ordering multiple sizes just to try and return. Be confident and specific about which single size will work best based on their measurements and reviews.]
 
 **Fit details**
 [Detailed fit information organized by:
@@ -91,13 +91,15 @@ IMPORTANT:
 
 **SIZING RECOMMENDATION RULES:**
 - ALWAYS recommend ONE primary size first with confidence, based PRIMARILY on reviewer consensus and secondarily on measurements
+- ALWAYS specify the exact size (e.g., "Order size 26", "Order UK 8", "Order size M") - NEVER use vague terms like "order your usual size" or "stick with your normal size"
 - PRIORITIZE what reviewers with similar measurements experienced over theoretical size calculations
 - When user measurements are available, MUST reference them explicitly AND reference similar reviewers (e.g., "Reviewers with your measurements (66cm waist) found size S perfect - order size S")
 - When reviews mention similar measurements to the user, MUST call this out explicitly and make it the PRIMARY reasoning (e.g., "Order size S. Three reviewers with similar measurements to yours (66cm waist, 84cm hips) all confirm size S fits perfectly")
 - If reviewers consistently say "runs small/large", this takes precedence over size chart calculations
-- Only suggest a second size if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up one" or "If you prefer non-fitted styles, size up")
+- Only suggest a second size if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up to 28" or "If you prefer non-fitted styles, order 10 instead of 8")
 - NEVER give vague advice like "order both and return what doesn't fit"
 - Each size recommendation must be backed by specific reasoning from REVIEWS first, measurements second
+- When calculating the user's size, use their body measurements (waist, hips, bust) to determine the specific size they should order in this brand's sizing system
 - Format: "Order [SIZE]. [Review-based reason] + [User measurements confirmation]. If [specific condition from reviews], consider sizing [up/down]."
 - Bad example: "Try S or M and see which fits better" or "Based on calculations, size S"
 - Good example: "Order size S. Reviewers with your measurements (66cm waist / 84cm hips) consistently found size S perfect for a fitted but comfortable fit. Five reviewers mention this exact size worked well for slim/straight fits. If you have muscular thighs or prefer roomier fits, several reviewers recommend sizing up one."

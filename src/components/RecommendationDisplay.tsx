@@ -9,6 +9,7 @@ interface RecommendationDisplayProps {
   loading?: boolean;
   error?: string | null;
   className?: string;
+  hideReviewSources?: boolean;
 }
 
 interface ParsedSection {
@@ -131,6 +132,7 @@ export function RecommendationDisplay({
   loading = false,
   error = null,
   className = "",
+  hideReviewSources = false,
 }: RecommendationDisplayProps) {
   if (loading) {
     return (
@@ -232,14 +234,30 @@ export function RecommendationDisplay({
       {/* Collapsible Sections */}
       {sections.length > 0 ? (
         <div>
-          {sections.map((section, index) => (
-            <CollapsibleSection
-              key={index}
-              title={section.title}
-              content={section.content}
-              defaultOpen={index === 0} // First section open by default
-            />
-          ))}
+          {sections
+            .sort((a, b) => {
+              // Define section order
+              const sectionOrder: Record<string, number> = {
+                "Choose your size": 1,
+                "Fit details": 2,
+                "Materials & fabric": 3,
+                "What customers say": 4,
+                "About the brand": 5,
+              };
+
+              const orderA = sectionOrder[a.title] || 999;
+              const orderB = sectionOrder[b.title] || 999;
+
+              return orderA - orderB;
+            })
+            .map((section, index) => (
+              <CollapsibleSection
+                key={index}
+                title={section.title}
+                content={section.content}
+                defaultOpen={false} // All sections collapsed by default
+              />
+            ))}
         </div>
       ) : (
         // Fallback to original display if parsing fails
@@ -249,7 +267,7 @@ export function RecommendationDisplay({
       )}
 
       {/* Review Sources */}
-      {analysisResult.externalSearchResults && (
+      {!hideReviewSources && analysisResult.externalSearchResults && (
         <div
           style={{
             marginTop: "24px",
