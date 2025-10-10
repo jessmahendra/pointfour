@@ -27,9 +27,10 @@ User Query: ${query}
 1. **PRIORITIZE** reviews that mention body measurements, sizes worn, or fit details - CUSTOMER REVIEWS ARE THE PRIMARY DATA SOURCE
 2. **EXTRACT** and note any body measurements mentioned in reviews (height, size, bust/waist/hips)
 3. **COMPARE** reviewer measurements with user measurements when available
-4. **WEIGHT REVIEWER CONSENSUS HEAVILY** - If most reviewers say "runs small", prioritize this over size calculations
-5. **HIGHLIGHT** fabric composition and stretch information - this is CRITICAL for fit
-6. **SEPARATE** positive and negative feedback clearly
+4. **USE USER'S BODY MEASUREMENTS** - When the user provides waist, bust, or hips measurements in cm, you MUST use these numeric values to calculate the correct size. Compare these measurements against the brand's size chart or standard sizing to determine the SIZE NUMBER they need.
+5. **WEIGHT REVIEWER CONSENSUS HEAVILY** - If most reviewers say "runs small", prioritize this over size calculations
+6. **HIGHLIGHT** fabric composition and stretch information - this is CRITICAL for fit
+7. **SEPARATE** positive and negative feedback clearly
 
 **RESPONSE FORMAT - You MUST structure your response EXACTLY like this (keep the ** markers around section headings):**
 
@@ -107,7 +108,9 @@ IMPORTANT:
 - Only suggest a second size if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up to 28" or "If you prefer non-fitted styles, order 10 instead of 8")
 - NEVER give vague advice like "order both and return what doesn't fit"
 - Each size recommendation must be backed by specific reasoning from REVIEWS first, measurements second
-- When calculating the user's size, use their body measurements (waist, hips, bust) to determine the specific SIZE NUMBER they should order in this brand's sizing system
+- When calculating the user's size, ALWAYS use their body measurements (waist, hips, bust in cm) when available to determine the specific SIZE NUMBER they should order in this brand's sizing system
+- If the user has waist/bust/hips measurements, you MUST use these numeric values to calculate which size matches their measurements, comparing against the brand's size chart or typical sizing standards
+- Example calculation: If user has 28" waist (71cm), and size 26 fits 26" waist (66cm) while size 27 fits 27" waist (68cm) and size 28 fits 28" waist (71cm), recommend size 28 NOT size 26
 
 Examples:
 - ✅ GOOD: "Order size 26. Reviewers with similar measurements confirm true-to-size fit."
@@ -128,6 +131,9 @@ export function buildUserContext(userProfile?: {
   bodyShape?: string;
   footType?: string;
   category?: string;
+  waist?: number;
+  bust?: number;
+  hips?: number;
 }): string {
   if (!userProfile) return '';
 
@@ -135,6 +141,16 @@ export function buildUserContext(userProfile?: {
   if (userProfile.ukClothingSize) context += `- UK Clothing Size: ${userProfile.ukClothingSize}\n`;
   if (userProfile.ukShoeSize) context += `- UK Shoe Size: ${userProfile.ukShoeSize}\n`;
   if (userProfile.height) context += `- Height: ${userProfile.height}\n`;
+
+  // Add body measurements as separate numeric values for precise size calculations
+  if (userProfile.waist || userProfile.bust || userProfile.hips) {
+    context += `- Body Measurements:`;
+    if (userProfile.waist) context += ` Waist ${userProfile.waist}cm`;
+    if (userProfile.bust) context += ` | Bust ${userProfile.bust}cm`;
+    if (userProfile.hips) context += ` | Hips ${userProfile.hips}cm`;
+    context += '\n';
+  }
+
   if (userProfile.fitPreference) context += `- Fit Preference: ${userProfile.fitPreference}\n`;
   if (userProfile.bodyShape) context += `- Body Shape: ${userProfile.bodyShape}\n`;
   if (userProfile.footType) context += `- Foot Type: ${userProfile.footType}\n`;

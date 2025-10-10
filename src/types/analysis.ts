@@ -6,6 +6,10 @@ export interface UserProfile {
   fitPreference: string;
   footType: string;
   category: string;
+  // Body measurements for precise size calculations
+  waist?: number;
+  bust?: number;
+  hips?: number;
 }
 
 export interface Review {

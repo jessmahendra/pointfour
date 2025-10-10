@@ -161,6 +161,10 @@ export function ProductRecommendations({
       fitPreference: fitPreferences.join(", ") || "",
       footType: "", // Not available in new measurement system
       category: category,
+      // Add body measurements as separate numeric fields for AI calculations
+      waist: measurements.bodyMeasurements?.waist,
+      bust: measurements.bodyMeasurements?.bust,
+      hips: measurements.bodyMeasurements?.hips,
     };
 
     console.log("🔍 DEBUG: Converted profile:", convertedProfile);
