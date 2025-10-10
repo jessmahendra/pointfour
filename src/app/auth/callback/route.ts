@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
+  const next = searchParams.get('next') ?? '/analyze'
 
   if (code) {
     const supabase = await createClient()
@@ -22,6 +22,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // For email auth, redirect to home page
-  return NextResponse.redirect(`${origin}/`)
+  // For email auth, redirect to analyze page
+  return NextResponse.redirect(`${origin}/analyze`)
 }
