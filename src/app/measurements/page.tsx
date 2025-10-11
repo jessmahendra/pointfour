@@ -17,7 +17,7 @@ export default function MeasurementsPage() {
   const [editBodyMeasurements, setEditBodyMeasurements] = useState({ bust: undefined as number | undefined, waist: undefined as number | undefined, hips: undefined as number | undefined });
   const [editSizingSystem, setEditSizingSystem] = useState<'UK' | 'US' | 'EU'>('UK');
   const [editUsualSizes, setEditUsualSizes] = useState({ tops: [] as string[], bottoms: [] as string[], shoes: [] as string[] });
-  const [editFitPreferences, setEditFitPreferences] = useState({ tops: "", bottoms: "" });
+  const [editFitPreferences, setEditFitPreferences] = useState<{ tops?: 'true-to-size' | 'loose-relaxed' | 'tight-fitting'; bottoms?: 'true-to-size' | 'loose-relaxed' | 'tight-fitting' }>({ tops: undefined, bottoms: undefined });
 
   useEffect(() => {
     loadMeasurements();
@@ -61,8 +61,8 @@ export default function MeasurementsPage() {
       });
     } else if (section === 'fitPreferences') {
       setEditFitPreferences({
-        tops: measurements.fitPreference?.tops || "",
-        bottoms: measurements.fitPreference?.bottoms || "",
+        tops: measurements.fitPreference?.tops,
+        bottoms: measurements.fitPreference?.bottoms,
       });
     }
 
@@ -152,12 +152,10 @@ export default function MeasurementsPage() {
 
   const shoeSizeOptions = ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45'];
 
-  const fitOptions = [
-    { value: 'tight-fitted', label: 'Tight/Fitted' },
-    { value: 'fitted', label: 'Fitted' },
+  const fitOptions: { value: 'true-to-size' | 'loose-relaxed' | 'tight-fitting'; label: string }[] = [
+    { value: 'tight-fitting', label: 'Tight/Fitted' },
     { value: 'true-to-size', label: 'True to Size' },
-    { value: 'relaxed', label: 'Relaxed' },
-    { value: 'oversized', label: 'Oversized' },
+    { value: 'loose-relaxed', label: 'Loose/Relaxed' },
   ];
 
   return (
@@ -602,8 +600,8 @@ export default function MeasurementsPage() {
                     <div>
                       <label className="text-xs mb-2 block" style={{ color: "#9CA3AF" }}>Tops</label>
                       <select
-                        value={editFitPreferences.tops}
-                        onChange={(e) => setEditFitPreferences({ ...editFitPreferences, tops: e.target.value })}
+                        value={editFitPreferences.tops || ""}
+                        onChange={(e) => setEditFitPreferences({ ...editFitPreferences, tops: e.target.value ? e.target.value as 'true-to-size' | 'loose-relaxed' | 'tight-fitting' : undefined })}
                         className="w-full px-4 py-2 border border-stone-300 rounded-lg text-base"
                         style={{ color: "#4E4B4B" }}
                       >
@@ -616,8 +614,8 @@ export default function MeasurementsPage() {
                     <div>
                       <label className="text-xs mb-2 block" style={{ color: "#9CA3AF" }}>Bottoms</label>
                       <select
-                        value={editFitPreferences.bottoms}
-                        onChange={(e) => setEditFitPreferences({ ...editFitPreferences, bottoms: e.target.value })}
+                        value={editFitPreferences.bottoms || ""}
+                        onChange={(e) => setEditFitPreferences({ ...editFitPreferences, bottoms: e.target.value ? e.target.value as 'true-to-size' | 'loose-relaxed' | 'tight-fitting' : undefined })}
                         className="w-full px-4 py-2 border border-stone-300 rounded-lg text-base"
                         style={{ color: "#4E4B4B" }}
                       >
