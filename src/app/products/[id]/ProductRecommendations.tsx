@@ -165,6 +165,8 @@ export function ProductRecommendations({
       waist: measurements.bodyMeasurements?.waist,
       bust: measurements.bodyMeasurements?.bust,
       hips: measurements.bodyMeasurements?.hips,
+      // Preferred sizing system for recommendations
+      preferredSizingSystem: measurements.preferredSizingSystem || 'UK',
     };
 
     console.log("🔍 DEBUG: Converted profile:", convertedProfile);

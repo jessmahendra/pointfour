@@ -10,6 +10,8 @@ export interface UserProfile {
   waist?: number;
   bust?: number;
   hips?: number;
+  // Preferred sizing system for recommendations
+  preferredSizingSystem?: 'UK' | 'US' | 'EU';
 }
 
 export interface Review {

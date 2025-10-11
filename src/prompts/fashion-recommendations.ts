@@ -95,11 +95,12 @@ IMPORTANT:
 - Include specific measurements and sizing comparisons when available in reviews
 
 **SIZING RECOMMENDATION RULES:**
+- CRITICAL: When the user has specified a preferred sizing system (UK, US, or EU), ALL size recommendations MUST be provided in that sizing system
 - ALWAYS start recommendations with "Order size [NUMBER]" or "Order [SIZE LETTER]" - these MUST be the first 2-3 words
-- The SIZE must be a number (26, 8, 10, etc.) or letter (S, M, L, etc.) - NEVER a color name (INDIO, Black), style name, or product code
+- The SIZE must be in the user's preferred sizing system and be a number (26, 8, 10, etc.) or letter (S, M, L, etc.) - NEVER a color name (INDIO, Black), style name, or product code
 - NEVER use vague terms like "order your usual size" or "stick with your normal size"
 - NEVER mention colors, style names, or product codes when giving size recommendations
-- Format must be: "Order size 26." NOT "Order INDIO." NOT "Order Black Denim size 26."
+- Format must be: "Order size 26." (if preferred system is UK) or "Order US size 2." (if preferred system is US) NOT "Order INDIO." NOT "Order Black Denim size 26."
 - ALWAYS recommend ONE primary size first with confidence, based PRIMARILY on reviewer consensus and secondarily on measurements
 - PRIORITIZE what reviewers with similar measurements experienced over theoretical size calculations
 - When user measurements are available, MUST reference them explicitly AND reference similar reviewers (e.g., "Order size S. Reviewers with your measurements (66cm waist) found size S perfect")
@@ -113,11 +114,14 @@ IMPORTANT:
 - Example calculation: If user has 28" waist (71cm), and size 26 fits 26" waist (66cm) while size 27 fits 27" waist (68cm) and size 28 fits 28" waist (71cm), recommend size 28 NOT size 26
 
 Examples:
-- ✅ GOOD: "Order size 26. Reviewers with similar measurements confirm true-to-size fit."
-- ✅ GOOD: "Order UK 8. Based on your 66cm waist and 84cm hips."
+- ✅ GOOD (UK sizing): "Order size 26. Reviewers with similar measurements confirm true-to-size fit."
+- ✅ GOOD (UK sizing): "Order UK 8. Based on your 66cm waist and 84cm hips."
+- ✅ GOOD (US sizing): "Order US size 2. Based on your measurements and reviewer consensus."
+- ✅ GOOD (EU sizing): "Order EU size 36. Your measurements align with this size based on reviews."
 - ❌ BAD: "Order INDIO. Reviewers say..." (INDIO is not a size)
 - ❌ BAD: "Order your usual size" (not specific)
 - ❌ BAD: "Try size 26 or 28 and return what doesn't fit" (too vague)
+- ❌ BAD: "Order UK size 8" when user prefers US sizing (wrong system)
 - If NO reviews available at all: be honest about limited data and provide guidance based on brand standards
 
 Make your response helpful, specific, and actionable based on REAL customer feedback patterns.`;
@@ -134,10 +138,15 @@ export function buildUserContext(userProfile?: {
   waist?: number;
   bust?: number;
   hips?: number;
+  preferredSizingSystem?: 'UK' | 'US' | 'EU';
 }): string {
   if (!userProfile) return '';
 
+  const sizingSystem = userProfile.preferredSizingSystem || 'UK';
+
   let context = '\n**USER MEASUREMENTS AND PREFERENCES:**\n';
+  context += `- Preferred Sizing System: ${sizingSystem} (IMPORTANT: Provide all size recommendations in ${sizingSystem} sizing)\n`;
+
   if (userProfile.ukClothingSize) context += `- UK Clothing Size: ${userProfile.ukClothingSize}\n`;
   if (userProfile.ukShoeSize) context += `- UK Shoe Size: ${userProfile.ukShoeSize}\n`;
   if (userProfile.height) context += `- Height: ${userProfile.height}\n`;

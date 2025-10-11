@@ -189,6 +189,7 @@ export default function MeasurementsForm({
           setMeasurements({
             DOB: profile.measurements.DOB || "",
             height: profile.measurements.height || undefined,
+            preferredSizingSystem: profile.measurements.preferredSizingSystem,
             usualSize: {
               tops: profile.measurements.usualSize?.tops || [],
               bottoms: profile.measurements.usualSize?.bottoms || [],
@@ -205,6 +206,10 @@ export default function MeasurementsForm({
               unit: profile.measurements.bodyMeasurements?.unit || "cm",
             },
           });
+          // Set the size system dropdown to match loaded preference
+          if (profile.measurements.preferredSizingSystem) {
+            setSizeSystem(profile.measurements.preferredSizingSystem);
+          }
         }
       } else if (response.status === 401) {
         setError("Please sign in to view your measurements");
@@ -223,11 +228,17 @@ export default function MeasurementsForm({
     setError(null);
     setSuccess(null);
 
+    // Include the preferred sizing system in measurements
+    const measurementsWithSizingSystem = {
+      ...measurements,
+      preferredSizingSystem: sizeSystem,
+    };
+
     try {
       if (skipSaving) {
         // Skip database saving, just call onSave and complete
         setSuccess("Measurements completed!");
-        onSave?.(measurements);
+        onSave?.(measurementsWithSizingSystem);
         setCurrentStep("complete");
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(null), 3000);
@@ -238,14 +249,14 @@ export default function MeasurementsForm({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ measurements }),
+          body: JSON.stringify({ measurements: measurementsWithSizingSystem }),
         });
 
         const data = await response.json();
 
         if (response.ok) {
           setSuccess("Measurements saved successfully!");
-          onSave?.(measurements);
+          onSave?.(measurementsWithSizingSystem);
           setCurrentStep("complete");
           // Clear success message after 3 seconds
           setTimeout(() => setSuccess(null), 3000);
