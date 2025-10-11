@@ -78,7 +78,7 @@ export default function MeasurementsPage() {
 
     setSaving(true);
     try {
-      let updatedMeasurements = { ...measurements };
+      const updatedMeasurements = { ...measurements };
 
       if (section === 'height') {
         updatedMeasurements.height = editHeight;
