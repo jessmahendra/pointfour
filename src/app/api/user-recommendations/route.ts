@@ -156,74 +156,69 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/user-recommendations/[token] - Get a shared recommendation by token
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ token: string }> }
-) {
+// GET /api/user-recommendations - Get user's recommendation history
+export async function GET(request: NextRequest) {
   try {
-    const { token } = await params;
-    
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Share token is required' },
-        { status: 400 }
-      );
-    }
-    
     const supabase = await createClient();
     
-    // Get the shared recommendation
-    const { data: sharedRecommendation, error } = await supabase
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const offset = parseInt(searchParams.get('offset') || '0');
+    
+    // Fetch all user recommendations with product details, ordered by most recent
+    const { data: recommendations, error } = await supabase
       .from('user_recommendations')
       .select(`
-        *,
+        id,
+        product_id,
+        query,
+        created_at,
+        recommendation_data,
         product:products!user_recommendations_product_id_fkey (
           id,
           name,
-          url,
-          description,
           image_url,
-          price,
-          currency,
           brand:brands!products_brand_id_fkey (
-            id,
-            slug,
             name,
-            logo_url,
-            description,
-            url
+            slug
           )
         )
       `)
-      .eq('share_token', token)
-      .eq('is_shared', true)
-      .gt('expires_at', new Date().toISOString())
-      .single();
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
     
-    if (error || !sharedRecommendation) {
+    if (error) {
+      console.error('Error fetching user recommendations:', error);
       return NextResponse.json(
-        { error: 'Shared recommendation not found or expired' },
-        { status: 404 }
+        { error: 'Failed to fetch recommendations' },
+        { status: 500 }
       );
     }
     
-    // Increment view count
-    await supabase.rpc('increment_shared_recommendation_view', {
-      share_token_param: token
+    // Deduplicate by product_id, keeping most recent per product
+    const seenProducts = new Set<number>();
+    const uniqueRecommendations = (recommendations || []).filter(rec => {
+      if (seenProducts.has(rec.product_id)) {
+        return false;
+      }
+      seenProducts.add(rec.product_id);
+      return true;
     });
+    
+    // Apply pagination
+    const paginatedRecommendations = uniqueRecommendations.slice(offset, offset + limit);
     
     return NextResponse.json({
       success: true,
-      data: {
-        recommendation: sharedRecommendation.recommendation_data,
-        product: sharedRecommendation.product,
-        userProfile: sharedRecommendation.user_profile,
-        productQuery: sharedRecommendation.query,
-        createdAt: sharedRecommendation.created_at,
-        viewCount: sharedRecommendation.view_count + 1, // Include the incremented count
-        expiresAt: sharedRecommendation.expires_at
-      }
+      recommendations: paginatedRecommendations,
+      total: uniqueRecommendations.length,
+      hasMore: offset + limit < uniqueRecommendations.length
     });
     
   } catch (error) {

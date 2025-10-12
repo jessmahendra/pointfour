@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { RecommendationHistory } from "./RecommendationHistory";
 
 interface UserProfileFormProps {
   simpleQuery: string;
@@ -11,6 +12,7 @@ interface UserProfileFormProps {
   handleSimpleFormSubmit: () => void;
   router: AppRouterInstance;
   setNavigating: React.Dispatch<React.SetStateAction<boolean>>;
+  isAuthenticated: boolean;
 }
 
 export const UserProfileForm: React.FC<UserProfileFormProps> = ({
@@ -22,6 +24,7 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
   handleSimpleFormSubmit,
   router,
   setNavigating,
+  isAuthenticated,
 }) => {
   return (
     <div className="max-w-md mx-auto">
@@ -157,6 +160,9 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
           </div>
         )}
       </div>
+
+      {/* Recommendation History */}
+      <RecommendationHistory isAuthenticated={isAuthenticated} />
     </div>
   );
 };
