@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRecommendations } from "@/lib/useRecommendations";
 import { RecommendationDisplay } from "@/components/RecommendationDisplay";
 import { ReviewSection } from "../../analyze/components/ReviewSection";
@@ -51,6 +52,10 @@ export function ProductRecommendations({
   const [generatedShareUrl, setGeneratedShareUrl] = useState<string | null>(
     null
   );
+  const [loadingCachedRecommendation, setLoadingCachedRecommendation] = useState(false);
+  
+  const searchParams = useSearchParams();
+  const recommendationId = searchParams.get('recommendationId');
 
   // Debug logging for share URL state
   useEffect(() => {
@@ -245,7 +250,44 @@ export function ProductRecommendations({
     getUserEmail();
   }, [supabase.auth]);
 
-  // Auto-run recommendations on mount - only run once
+  // Load cached recommendation if recommendationId is present
+  useEffect(() => {
+    if (!recommendationId) return;
+    
+    const loadCachedRecommendation = async () => {
+      try {
+        setLoadingCachedRecommendation(true);
+        console.log("📦 Loading cached recommendation:", recommendationId);
+        
+        const response = await fetch(`/api/user-recommendations/${recommendationId}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log("✅ Loaded cached recommendation:", data);
+          
+          // Load the cached recommendation data
+          if (data.data?.recommendation) {
+            loadCachedResult(data.data.recommendation);
+            setHasRun(true);
+            setIsInitialized(true);
+            initializationRef.current = true;
+          }
+        } else {
+          console.error("Failed to load cached recommendation:", response.status);
+          // Fall back to auto-run if cached load fails
+        }
+      } catch (error) {
+        console.error("Error loading cached recommendation:", error);
+        // Fall back to auto-run if cached load fails
+      } finally {
+        setLoadingCachedRecommendation(false);
+      }
+    };
+    
+    loadCachedRecommendation();
+  }, [recommendationId, loadCachedResult]);
+
+  // Auto-run recommendations on mount - only run once (skip if loading cached)
   useEffect(() => {
     console.log("🤖 ProductRecommendations: Auto-run check", {
       userEmail: userEmail !== null,
@@ -253,7 +295,14 @@ export function ProductRecommendations({
       tempMeasurements: tempMeasurements !== null,
       measurementsLoading,
       initializationRef: initializationRef.current,
+      hasRecommendationId: !!recommendationId,
     });
+
+    // Skip auto-run if we have a recommendationId (loading cached instead)
+    if (recommendationId) {
+      console.log("⏭️ Skipping auto-run - loading cached recommendation");
+      return;
+    }
 
     // Wait for measurements to load before auto-running
     if (measurementsLoading) return;
@@ -324,6 +373,7 @@ export function ProductRecommendations({
     savedMeasurements,
     tempMeasurements,
     measurementsLoading,
+    recommendationId,
   ]);
 
   // Save to cache when analysis result changes
@@ -499,11 +549,13 @@ export function ProductRecommendations({
               Your Recommendations
             </h2>
             <p className="text-gray-600 mb-6">
-              {loading
+              {loadingCachedRecommendation
+                ? "Loading your previous recommendation..."
+                : loading
                 ? "Getting personalized fit recommendations and reviews..."
                 : "Get personalized fit recommendations and reviews for this product"}
             </p>
-            {loading && (
+            {(loading || loadingCachedRecommendation) && (
               <div className="flex items-center justify-center">
                 <svg
                   className="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600"
@@ -526,7 +578,7 @@ export function ProductRecommendations({
                   ></path>
                 </svg>
                 <span className="text-blue-600 font-medium">
-                  Getting Recommendations...
+                  {loadingCachedRecommendation ? "Loading..." : "Getting Recommendations..."}
                 </span>
               </div>
             )}

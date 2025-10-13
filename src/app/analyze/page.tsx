@@ -458,6 +458,7 @@ Query: "${simpleQuery}"`,
             handleSimpleFormSubmit={handleSimpleFormSubmit}
             router={router}
             setNavigating={setNavigating}
+            isAuthenticated={!!user}
           />
           <SignupModal
             isOpen={showSignupModal}

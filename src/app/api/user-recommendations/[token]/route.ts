@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 
-// GET /api/user-recommendations/[token] - Get a shared recommendation by token (public access)
+// GET /api/user-recommendations/[token] - Get a recommendation by ID (authenticated) or share token (public)
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -11,13 +11,74 @@ export async function GET(
     
     if (!token) {
       return NextResponse.json(
-        { error: 'Share token is required' },
+        { error: 'Token or ID is required' },
         { status: 400 }
       );
     }
     
     const supabase = await createClient();
     
+    // Check if token is a UUID (recommendation ID) or a share token
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token);
+    
+    // If it's a UUID, treat it as a recommendation ID (requires authentication)
+    if (isUUID) {
+      console.log('🔍 DEBUG: Fetching recommendation by ID:', token);
+      
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      
+      // Fetch the recommendation with product details
+      const { data: recommendation, error } = await supabase
+        .from('user_recommendations')
+        .select(`
+          *,
+          product:products!user_recommendations_product_id_fkey (
+            id,
+            name,
+            url,
+            description,
+            image_url,
+            price,
+            currency,
+            brand:brands!products_brand_id_fkey (
+              id,
+              slug,
+              name,
+              logo_url,
+              description,
+              url
+            )
+          )
+        `)
+        .eq('id', token)
+        .eq('user_id', user.id) // Ensure user owns this recommendation
+        .single();
+      
+      if (error || !recommendation) {
+        return NextResponse.json(
+          { error: 'Recommendation not found' },
+          { status: 404 }
+        );
+      }
+      
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: recommendation.id,
+          recommendation: recommendation.recommendation_data,
+          product: recommendation.product,
+          userProfile: recommendation.user_profile,
+          productQuery: recommendation.query,
+          createdAt: recommendation.created_at
+        }
+      });
+    }
+    
+    // Otherwise, treat it as a share token (public access)
     console.log('🔍 DEBUG: Fetching shared recommendation for token:', token);
     
     // Get the shared recommendation (public access - no auth required)
