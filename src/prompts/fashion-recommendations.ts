@@ -24,18 +24,21 @@ ${communityReviews ? `\n**COMMUNITY REVIEWS (PRIORITIZE THESE):**\n${communityRe
 User Query: ${query}
 
 **INSTRUCTIONS:**
-1. **PRIORITIZE** reviews that mention body measurements, sizes worn, or fit details - CUSTOMER REVIEWS ARE THE PRIMARY DATA SOURCE
-2. **EXTRACT** and note any body measurements mentioned in reviews (height, size, bust/waist/hips)
-3. **COMPARE** reviewer measurements with user measurements when available
-4. **USE USER'S BODY MEASUREMENTS** - When the user provides waist, bust, or hips measurements in cm, you MUST use these numeric values to calculate the correct size. Compare these measurements against the brand's size chart or standard sizing to determine the SIZE NUMBER they need.
-5. **WEIGHT REVIEWER CONSENSUS HEAVILY** - If most reviewers say "runs small", prioritize this over size calculations
-6. **HIGHLIGHT** fabric composition and stretch information - this is CRITICAL for fit
-7. **SEPARATE** positive and negative feedback clearly
+1. **IDENTIFY BRAND'S SIZING SYSTEM FIRST** - Look at the size chart to determine if this brand uses waist-based sizing (24, 25, 26, 27...), standard UK/US/EU sizing (6,8,10 or 0,2,4 or 34,36,38), or alpha sizing (XS, S, M, L)
+2. **USE USER'S BODY MEASUREMENTS** - When the user provides waist, bust, or hips measurements in cm, you MUST use these numeric values to calculate the correct size in THE BRAND'S sizing system (not the user's preferred system)
+3. **COMPARE WITH SIZE CHART** - Match user's measurements to the brand's size chart to find the correct size NUMBER/LETTER
+4. **PRIORITIZE** reviews that mention body measurements, sizes worn, or fit details to validate your calculation
+5. **EXTRACT** and note any body measurements mentioned in reviews (height, size, bust/waist/hips)
+6. **VALIDATE WITH REVIEWER CONSENSUS** - If most reviewers say "runs small", adjust your recommendation accordingly
+7. **HIGHLIGHT** fabric composition and stretch information - this is CRITICAL for fit
+8. **SEPARATE** positive and negative feedback clearly
+
+**SIZING PRIORITY ORDER: Brand's Size Chart → User's Body Measurements → Customer Reviews**
 
 **RESPONSE FORMAT - You MUST structure your response EXACTLY like this (keep the ** markers around section headings):**
 
 **TLDR**
-- Overall recommendation: [Start with the size NUMBER/LETTER first, then explain why. Format: "Order size [NUMBER]" or "Order [SIZE LETTER]" as the FIRST TWO WORDS. Then explain the reasoning. NEVER mention color names, style names, or product codes (like "INDIO", "Black Denim", etc.) - only the SIZE. Examples: "Order size 26. Reviewers consistently say to size down" or "Order UK 8. Reviewers with similar measurements confirm true-to-size fit" or "Order size M. Based on your measurements, this will give the best fit"]
+- Overall recommendation: [Start with the size NUMBER/LETTER first, then explain why. Use the BRAND'S sizing format. Format: "Order size [NUMBER]" or "Order [SIZE LETTER]" as the FIRST TWO WORDS. Then explain the reasoning. NEVER mention color names, style names, or product codes (like "INDIO", "Black Denim", etc.) - only the SIZE. Examples: "Order size 28. Based on your 71cm waist, this matches the brand's size chart" or "Order UK 10. Your measurements align with this size" or "Order size M. Based on your measurements and reviews"]
 - Fabric & stretch: [One sentence about fabric type and how it affects fit, based on reviews when available]
 - Best for: [One sentence about which body types/sizes this works best for based on reviewer feedback, or "Reviews from similar body types not available"]
 ${userContext ? `- Your fit: [One sentence specific to user's measurements, referencing similar reviewers when found]` : ''}
@@ -44,11 +47,17 @@ ${userContext ? `- Your fit: [One sentence specific to user's measurements, refe
 [2-3 sentences about the brand, their style, and general reputation]
 
 **Choose your size**
-[Give ONE definitive size recommendation starting with "Order size [NUMBER]" or "Order [SIZE LETTER]" as the very first words. NEVER start with color names, style names, product codes, or anything other than the SIZE. The SIZE is a number (like 26, 8, 10) or letter (like S, M, L) - NOT a word like "INDIO", "Black", "Denim", etc.
+[Give ONE definitive size recommendation starting with "Order size [NUMBER]" or "Order [SIZE LETTER]" as the very first words. Use the BRAND'S sizing format (waist-based like 26, 27, 28 OR standard UK/US/EU OR alpha sizing). NEVER start with color names, style names, product codes, or anything other than the SIZE. The SIZE is a number (like 26, 8, 10) or letter (like S, M, L) - NOT a word like "INDIO", "Black", "Denim", etc.
 
-Format: "Order size 26. [explanation]" or "Order UK 8. [explanation]" or "Order size M. [explanation]"
+Format examples:
+- Waist-based brand: "Order size 28. [explanation]"
+- UK sizing brand (if user prefers UK): "Order UK 10. [explanation]"
+- US sizing brand (if user prefers US): "Order US size 6. [explanation]"
+- Alpha sizing: "Order size M. [explanation]"
 
-If you found reviews from people with similar measurements, reference them in the explanation. Always explain WHY this size fits their measurements. Only recommend two sizes if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up to 28" or "If you prefer a roomier fit, order 10 instead of 8"). Never recommend ordering multiple sizes just to try and return. Be confident and specific about which single size will work best based on their measurements and reviews.]
+CRITICAL: Match the size format to what the BRAND uses, not what the user prefers. If brand uses waist sizing (24, 25, 26, 27, 28), use that format even if user prefers UK sizing.
+
+Explain your calculation clearly: reference the user's body measurements (waist/bust/hips in cm), how you matched them to the brand's size chart, and what reviewers with similar measurements experienced. Only recommend two sizes if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up to 29" or "If you prefer a roomier fit, order M instead of S"). Never recommend ordering multiple sizes just to try and return. Be confident and specific about which single size will work best.]
 
 **Fit details**
 [Detailed fit information organized by:
@@ -95,34 +104,64 @@ IMPORTANT:
 - Include specific measurements and sizing comparisons when available in reviews
 
 **SIZING RECOMMENDATION RULES:**
-- CRITICAL: When the user has specified a preferred sizing system (UK, US, or EU), ALL size recommendations MUST be provided in that sizing system
-- ALWAYS start recommendations with "Order size [NUMBER]" or "Order [SIZE LETTER]" - these MUST be the first 2-3 words
-- The SIZE must be in the user's preferred sizing system and be a number (26, 8, 10, etc.) or letter (S, M, L, etc.) - NEVER a color name (INDIO, Black), style name, or product code
+
+**PRIORITY ORDER FOR RECOMMENDATIONS:**
+1. **Brand's Size Chart** - Identify what sizing system THIS specific brand uses
+2. **User's Body Measurements** - Use waist, bust, hips (in cm) to calculate correct size
+3. **Customer Reviews** - Validate and refine recommendation based on real experiences
+
+**STEP 1: IDENTIFY BRAND'S SIZING FORMAT**
+- First, look at the size chart/product information to determine what sizing system THIS BRAND uses:
+  - **Waist-based sizing**: 24, 25, 26, 27, 28, 29, 30, 31, 32, etc. (common in jeans/denim brands like Agolde, Frame, Levi's, Free People)
+  - **Standard UK sizing**: 4, 6, 8, 10, 12, 14, 16, 18, 20, 22 (common in UK brands)
+  - **Standard US sizing**: 0, 2, 4, 6, 8, 10, 12, 14, 16 (common in US brands)
+  - **Standard EU sizing**: 34, 36, 38, 40, 42, 44, 46, 48, 50 (common in EU brands)
+  - **Alpha sizing**: XS, S, M, L, XL, XXL (common across many brands)
+
+**STEP 2: CALCULATE CORRECT SIZE USING USER'S BODY MEASUREMENTS**
+- **If brand uses waist-based sizing (24-32):**
+  - Use user's waist measurement in cm to calculate size
+  - Example: User has 71cm waist = 28 inches → recommend size 28
+  - IGNORE user's "usual UK size" - waist measurement is what matters
+  - Use size chart if available to find exact match
+
+- **If brand uses standard UK/US/EU sizing (6,8,10 or 0,2,4 or 34,36,38):**
+  - Use user's body measurements (waist, bust, hips) to find correct size in BRAND'S sizing system
+  - Then convert to user's preferred system (UK, US, or EU) if different
+  - Example: Size chart says 71cm waist = UK 12 = US 8 → if user prefers UK, say "Order UK 12"
+
+- **If brand uses alpha sizing (XS, S, M, L):**
+  - Use size chart to match user's measurements to alpha sizes
+  - Example: 71cm waist, 97cm hips = size M based on brand's chart
+
+**STEP 3: VALIDATE WITH CUSTOMER REVIEWS**
+- Cross-reference with reviews from people with similar measurements
+- If reviewers consistently say "runs small/large", adjust recommendation accordingly
+- Reviewer consensus takes precedence over theoretical calculations
+
+**FORMATTING RULES:**
+- ALWAYS start recommendations with "Order size [NUMBER]" or "Order [SIZE]" - these MUST be the first 2-3 words
+- Use the BRAND'S sizing format, not necessarily the user's preferred system
 - NEVER use vague terms like "order your usual size" or "stick with your normal size"
 - NEVER mention colors, style names, or product codes when giving size recommendations
-- Format must be: "Order size 26." (if preferred system is UK) or "Order US size 2." (if preferred system is US) NOT "Order INDIO." NOT "Order Black Denim size 26."
-- ALWAYS recommend ONE primary size first with confidence, based PRIMARILY on reviewer consensus and secondarily on measurements
-- PRIORITIZE what reviewers with similar measurements experienced over theoretical size calculations
-- When user measurements are available, MUST reference them explicitly AND reference similar reviewers (e.g., "Order size S. Reviewers with your measurements (66cm waist) found size S perfect")
-- When reviews mention similar measurements to the user, MUST call this out explicitly and make it the PRIMARY reasoning
-- If reviewers consistently say "runs small/large", this takes precedence over size chart calculations
-- Only suggest a second size if there are SPECIFIC, ACTIONABLE conditions that would change the recommendation (e.g., "If you have muscular thighs, size up to 28" or "If you prefer non-fitted styles, order 10 instead of 8")
+- ALWAYS recommend ONE primary size first with confidence
+- Only suggest a second size if there are SPECIFIC, ACTIONABLE conditions (e.g., "If you prefer a roomier fit, size up to 29")
 - NEVER give vague advice like "order both and return what doesn't fit"
-- Each size recommendation must be backed by specific reasoning from REVIEWS first, measurements second
-- When calculating the user's size, ALWAYS use their body measurements (waist, hips, bust in cm) when available to determine the specific SIZE NUMBER they should order in this brand's sizing system
-- If the user has waist/bust/hips measurements, you MUST use these numeric values to calculate which size matches their measurements, comparing against the brand's size chart or typical sizing standards
-- Example calculation: If user has 28" waist (71cm), and size 26 fits 26" waist (66cm) while size 27 fits 27" waist (68cm) and size 28 fits 28" waist (71cm), recommend size 28 NOT size 26
+- When user measurements are available, MUST reference them explicitly in your reasoning
 
-Examples:
-- ✅ GOOD (UK sizing): "Order size 26. Reviewers with similar measurements confirm true-to-size fit."
-- ✅ GOOD (UK sizing): "Order UK 8. Based on your 66cm waist and 84cm hips."
-- ✅ GOOD (US sizing): "Order US size 2. Based on your measurements and reviewer consensus."
-- ✅ GOOD (EU sizing): "Order EU size 36. Your measurements align with this size based on reviews."
+**Examples:**
+- ✅ GOOD (waist-based brand): "Order size 28. Based on your 71cm waist measurement, this matches the brand's size 28 (28-inch waist). Reviewers with similar measurements confirm true-to-size fit."
+- ✅ GOOD (UK sizing brand, user prefers UK): "Order UK 10. Your 71cm waist and 97cm hips align with UK 10 in this brand's size chart."
+- ✅ GOOD (US sizing brand, user prefers US): "Order US size 6. Based on your measurements and reviewer consensus."
+- ✅ GOOD (EU sizing brand, user prefers EU): "Order EU size 38. Your measurements match this size based on the size chart and reviews."
+- ✅ GOOD (alpha sizing): "Order size M. Your measurements (71cm waist, 97cm hips) fit the brand's medium based on their size chart."
+- ❌ BAD (waist-based brand): "Order UK 18" when brand uses waist sizing (24, 25, 26...) - wrong format!
 - ❌ BAD: "Order INDIO. Reviewers say..." (INDIO is not a size)
 - ❌ BAD: "Order your usual size" (not specific)
-- ❌ BAD: "Try size 26 or 28 and return what doesn't fit" (too vague)
-- ❌ BAD: "Order UK size 8" when user prefers US sizing (wrong system)
-- If NO reviews available at all: be honest about limited data and provide guidance based on brand standards
+- ❌ BAD: "Try size 28 or 29 and return what doesn't fit" (too vague)
+- ❌ BAD: Recommending size 8 when user has 71cm waist and brand's size 8 fits 66cm waist (wrong calculation!)
+
+**If NO size chart or reviews available:** Be honest about limited data and provide best guidance based on user's measurements and brand reputation
 
 Make your response helpful, specific, and actionable based on REAL customer feedback patterns.`;
 }
@@ -145,7 +184,7 @@ export function buildUserContext(userProfile?: {
   const sizingSystem = userProfile.preferredSizingSystem || 'UK';
 
   let context = '\n**USER MEASUREMENTS AND PREFERENCES:**\n';
-  context += `- Preferred Sizing System: ${sizingSystem} (IMPORTANT: Provide all size recommendations in ${sizingSystem} sizing)\n`;
+  context += `- Preferred Sizing System: ${sizingSystem} (use this ONLY if the brand uses standard UK/US/EU sizing; if brand uses waist-based sizing like 24-32, ignore this and use waist measurements instead)\n`;
 
   if (userProfile.ukClothingSize) context += `- UK Clothing Size: ${userProfile.ukClothingSize}\n`;
   if (userProfile.ukShoeSize) context += `- UK Shoe Size: ${userProfile.ukShoeSize}\n`;
@@ -153,11 +192,12 @@ export function buildUserContext(userProfile?: {
 
   // Add body measurements as separate numeric values for precise size calculations
   if (userProfile.waist || userProfile.bust || userProfile.hips) {
-    context += `- Body Measurements:`;
+    context += `- Body Measurements (CRITICAL - use these to calculate correct size):`;
     if (userProfile.waist) context += ` Waist ${userProfile.waist}cm`;
     if (userProfile.bust) context += ` | Bust ${userProfile.bust}cm`;
     if (userProfile.hips) context += ` | Hips ${userProfile.hips}cm`;
     context += '\n';
+    context += `  → For waist-based sizing brands (24, 25, 26, 27, 28, etc.), convert waist cm to inches and match to brand's size chart\n`;
   }
 
   if (userProfile.fitPreference) context += `- Fit Preference: ${userProfile.fitPreference}\n`;
