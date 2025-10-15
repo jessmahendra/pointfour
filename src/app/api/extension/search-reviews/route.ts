@@ -847,8 +847,8 @@ export async function POST(request: NextRequest) {
     
     console.log('🔍 SERPER API KEY DEBUG:', {
       hasKey: !!serperApiKey,
-      keyLength: serperApiKey ? serperApiKey.length : 0,
-      keyPrefix: serperApiKey ? serperApiKey.substring(0, 8) + '...' : 'none',
+      keyLength: serperApiKey?.length ?? 0,
+      keyPrefix: serperApiKey ? `${serperApiKey?.substring(0, 8)}...` : 'none',
       environment: process.env.NODE_ENV
     });
     
@@ -931,7 +931,7 @@ export async function POST(request: NextRequest) {
           const response = await fetch('https://google.serper.dev/search', {
             method: 'POST',
             headers: {
-              'X-API-KEY': serperApiKey,
+              'X-API-KEY': serperApiKey!,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({ q: query, gl: 'us', num: 20 }),
@@ -1091,9 +1091,9 @@ export async function POST(request: NextRequest) {
     if (analysis.fit) {
       sections.fit = {
         title: 'Fit',
-        recommendation: analysis.fit.recommendation,
-        confidence: analysis.fit.confidence,
-        evidence: analysis.fit.evidence
+        recommendation: analysis.fit!.recommendation,
+        confidence: analysis.fit!.confidence,
+        evidence: analysis.fit!.evidence
       };
     }
     
@@ -1655,8 +1655,8 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
       console.log('🔍 API: Analysis object keys:', Object.keys(analysis));
       const fallbackFitAnalysis = generateFallbackFitAnalysis(finalPrioritizedReviews, brand, category);
       if (fallbackFitAnalysis) {
-        sections.fit = fallbackFitAnalysis;
-        console.log('🔍 API: Fit analysis created:', fallbackFitAnalysis.recommendation.substring(0, 100));
+        sections.fit = fallbackFitAnalysis!;
+        console.log('🔍 API: Fit analysis created:', fallbackFitAnalysis!.recommendation.substring(0, 100));
       } else {
         console.log('🔍 API: Fit analysis failed to generate');
       }
@@ -1674,45 +1674,45 @@ if (uniqueReviews.length < 5 && formattedReviews.length >= 10) {
       let qualityMaterialsConfidence: 'low' | 'medium' | 'high' = 'low';
       
       // Start with materials if available
-      if (analysis.materials && analysis.materials.composition.length > 0) {
-        const cleanMaterials = analysis.materials.composition.join(', ');
+      if (analysis.materials && analysis.materials!.composition.length > 0) {
+        const cleanMaterials = analysis.materials!.composition.join(', ');
         qualityMaterialsRecommendation = `Materials: ${cleanMaterials}\n\n`;
-        qualityMaterialsEvidence.push(...analysis.materials.evidence);
-        qualityMaterialsConfidence = analysis.materials.confidence;
+        qualityMaterialsEvidence.push(...analysis.materials!.evidence);
+        qualityMaterialsConfidence = analysis.materials!.confidence;
       }
       
       // Add quality information
       if (analysis.quality) {
         if (qualityMaterialsRecommendation) {
-          qualityMaterialsRecommendation += `Quality: ${analysis.quality.recommendation}`;
+          qualityMaterialsRecommendation += `Quality: ${analysis.quality!.recommendation}`;
         } else {
-          qualityMaterialsRecommendation = analysis.quality.recommendation;
+          qualityMaterialsRecommendation = analysis.quality!.recommendation;
         }
-        qualityMaterialsEvidence.push(...analysis.quality.evidence);
-        
+        qualityMaterialsEvidence.push(...analysis.quality!.evidence);
+
         // Use highest confidence
-        if (analysis.quality.confidence === 'high' || qualityMaterialsConfidence !== 'high') {
-          qualityMaterialsConfidence = analysis.quality.confidence;
+        if (analysis.quality!.confidence === 'high' || qualityMaterialsConfidence !== 'high') {
+          qualityMaterialsConfidence = analysis.quality!.confidence;
         }
       }
       
       // Add fabric information if no quality info
       if (analysis.fabric && !analysis.quality) {
         if (qualityMaterialsRecommendation) {
-          qualityMaterialsRecommendation += `Fabric: ${analysis.fabric.recommendation}`;
+          qualityMaterialsRecommendation += `Fabric: ${analysis.fabric!.recommendation}`;
         } else {
-          qualityMaterialsRecommendation = analysis.fabric.recommendation;
+          qualityMaterialsRecommendation = analysis.fabric!.recommendation;
         }
-        qualityMaterialsEvidence.push(...analysis.fabric.evidence);
-        
-        if (analysis.fabric.confidence === 'high' || qualityMaterialsConfidence !== 'high') {
-          qualityMaterialsConfidence = analysis.fabric.confidence;
+        qualityMaterialsEvidence.push(...analysis.fabric!.evidence);
+
+        if (analysis.fabric!.confidence === 'high' || qualityMaterialsConfidence !== 'high') {
+          qualityMaterialsConfidence = analysis.fabric!.confidence;
         }
       }
       
       sections.quality = {
         overallQuality: qualityMaterialsRecommendation,
-        postWashCare: analysis.washCare ? analysis.washCare.recommendation : "Care information not available from reviews",
+        postWashCare: analysis.washCare ? analysis.washCare!.recommendation : "Care information not available from reviews",
         confidence: qualityMaterialsConfidence,
         evidence: Array.from(new Set(qualityMaterialsEvidence)).slice(0, 3) // Remove duplicates, limit to 3
       };
