@@ -5,7 +5,7 @@
 // Debug: Log all environment variables to apply the changes
 console.log('🔍 ENVIRONMENT DEBUG:', {
   NODE_ENV: process.env.NODE_ENV,
-  OPENAI_API_KEY2: process.env.OPENAI_API_KEY2 ? 'SET' : 'NOT SET'
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'SET' : 'NOT SET'
 });
 
 

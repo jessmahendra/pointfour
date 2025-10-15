@@ -25,7 +25,7 @@ console.log('🔍 ENVIRONMENT DEBUG:', {
   NODE_ENV: process.env.NODE_ENV,
   ENABLE_GPT5_TESTING: process.env.ENABLE_GPT5_TESTING,
   GPT5_TEST_PERCENTAGE: process.env.GPT5_TEST_PERCENTAGE,
-  OPENAI_API_KEY2: process.env.OPENAI_API_KEY2 ? 'SET' : 'NOT SET'
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'SET' : 'NOT SET'
 });
 
 // GPT-5 testing is now handled by the centralized LLM service
@@ -706,8 +706,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Extension discontinued - block all requests
+  return createCorsResponse({
+    error: 'This service has been discontinued'
+  }, { status: 410 });
+
   let brand = ''; // Declare brand outside try block for error handling
-  
+
   try {
     const body = await request.json();
     const brandData = body.brand;
