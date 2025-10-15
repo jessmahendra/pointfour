@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
     console.log('=== DEBUG: Starting recommendation request ===');
     console.log('Query received:', query);
     console.log('User profile received:', userProfile);
-    console.log('OpenAI API Key exists:', !!process.env.OPENAI_API_KEY);
+    console.log('OpenAI API Key exists:', !!process.env.OPENAI_API_KEY2);
     
     // Generate cache key early for potential cache hits
     // Handle both "Brand/Item: text" format and direct brand query format
@@ -309,8 +309,8 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('❌ OPENAI_API_KEY is missing!');
+    if (!process.env.OPENAI_API_KEY2) {
+      console.error('❌ OPENAI_API_KEY2 is missing!');
       return NextResponse.json(
         { 
           success: false,

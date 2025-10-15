@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     
     // Check environment variables first
     const envCheck = {
-      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY2,
       hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
       hasSerperKey: !!process.env.SERPER_API_KEY,
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         { 
           error: 'Missing critical environment variables',
           details: envCheck,
-          message: 'Please check that OPENAI_API_KEY, NEXT_PUBLIC_SUPABASE_URL, and SUPABASE_SERVICE_ROLE_KEY are set in production environment'
+          message: 'Please check that OPENAI_API_KEY2, NEXT_PUBLIC_SUPABASE_URL, and SUPABASE_SERVICE_ROLE_KEY are set in production environment'
         },
         { status: 500 }
       );
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         details: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
         environment: {
-          hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+          hasOpenAIKey: !!process.env.OPENAI_API_KEY2,
           hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
           hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
           hasSerperKey: !!process.env.SERPER_API_KEY,

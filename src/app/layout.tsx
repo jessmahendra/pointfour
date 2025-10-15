@@ -5,14 +5,11 @@ import GlobalNavigation from "@/components/GlobalNavigation";
 import "./globals.css";
 import { AiInspector } from "@/components/AiInspector";
 
-
-
 // Debug: Log all environment variables to see what's loaded
 console.log("🔍 ENVIRONMENT DEBUG:", {
   NODE_ENV: process.env.NODE_ENV,
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY ? "SET" : "NOT SET",
+  OPENAI_API_KEY2: process.env.OPENAI_API_KEY2 ? "SET" : "NOT SET",
 });
-
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

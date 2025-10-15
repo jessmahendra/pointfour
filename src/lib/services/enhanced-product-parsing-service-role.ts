@@ -46,7 +46,7 @@ export class EnhancedProductParsingServiceServiceRole {
 
       console.log('🚀 EnhancedProductParsingService (Service Role): Starting enhanced product parsing...');
       console.log('🔍 Service environment check:', {
-        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+        hasOpenAIKey: !!process.env.OPENAI_API_KEY2,
         hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
         hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
       });
