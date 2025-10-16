@@ -61,9 +61,9 @@ DECLARE
   exists boolean;
 BEGIN
   LOOP
-    -- Generate a random 16-character token
-    token := encode(gen_random_bytes(12), 'base64url');
-    -- Remove any padding characters
+    -- Generate a random 16-character token using base64, then make it URL-safe
+    token := encode(gen_random_bytes(12), 'base64');
+    -- Remove any padding characters and make URL-safe
     token := replace(replace(token, '=', ''), '+', '-');
     token := replace(token, '/', '_');
     
